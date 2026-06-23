@@ -7,6 +7,8 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { GlobalModule } from './global/global.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     }),
     GlobalModule,
     DatabaseModule,
+    AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_FILTER, useClass: AllExceptionsFilter }],
