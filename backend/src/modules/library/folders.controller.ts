@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '../../enums';
 
 @ApiTags('library - folders')
@@ -18,6 +19,7 @@ export class FoldersController {
   constructor(private readonly foldersService: FoldersService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Danh sách thư mục theo parentId (null = thư mục gốc)' })
   list(@Query() dto: ListFoldersDto) {
     return this.foldersService.list(dto);

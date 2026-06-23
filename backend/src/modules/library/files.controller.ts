@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '../../enums';
 
 @ApiTags('library - files')
@@ -18,6 +19,7 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Danh sách tài liệu (phân trang, lọc folder/subject/grade)' })
   list(@Query() dto: ListFilesDto) {
     return this.filesService.list(dto);
@@ -30,6 +32,7 @@ export class FilesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Chi tiết tài liệu (tăng lượt xem)' })
   findOne(@Param('id') id: string) {
     return this.filesService.findOne(id);
