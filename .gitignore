@@ -1,0 +1,16 @@
+# local agent / tooling state
+.claude/
+.agents/
+
+# dependencies & build output (also covered by per-app .gitignore)
+node_modules/
+.next/
+dist/
+
+# env files (per-app .env.example stays tracked)
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db

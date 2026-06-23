@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ── Base reset (from the LMS Học Viện prototype) ─────────────────────────── */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-bvp), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Be Vietnam Pro', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: #f7f4ef;
+  color: rgba(31, 24, 16, 0.9);
+}
+input, textarea, select, button { font-family: inherit; }
+textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────── */
+.lms-scroll { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.18) transparent; }
+.lms-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.lms-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.16); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+.lms-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); background-clip: content-box; }
+
+/* ── Cards / rows / nav / links / buttons (airy, soft elevation) ──────────── */
+.lms-card { transition: box-shadow .22s, border-color .22s, transform .22s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 14px rgba(0,0,0,.04); }
+.lms-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.07), 0 12px 32px rgba(0,0,0,.08); transform: translateY(-1px); }
+.lms-row { transition: background-color .15s; }
+.lms-row:hover { background: rgba(0,0,0,.025); }
+.lms-nav-item { transition: color .15s; }
+.lms-nav-item:hover { background: rgba(0,0,0,.035); }
+.lms-link { transition: color .15s, gap .15s; }
+.lms-link:hover { gap: 9px; }
+.lms-btn { transition: filter .15s, box-shadow .15s, opacity .15s; }
+.lms-btn:hover { opacity: .92; }
+.lms-btn:active { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) { .lms-card, .lms-row { transition: none; } }
+
+/* ── Bento grid (public pages) ────────────────────────────────────────────── */
+.bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+.bento .col-3 { grid-column: span 3; } .bento .col-4 { grid-column: span 4; }
+.bento .col-5 { grid-column: span 5; } .bento .col-6 { grid-column: span 6; }
+.bento .col-7 { grid-column: span 7; } .bento .col-8 { grid-column: span 8; }
+.bento .col-12 { grid-column: span 12; } .bento .row-2 { grid-row: span 2; }
+.bento-tile { border-radius: 18px; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s; }
+.bento-tile.hovlift:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,.10); }
+@media (max-width: 920px) { .bento > * { grid-column: span 12 !important; grid-row: auto !important; } }
+
+/* scroll/mount reveal — content is always visible (Motion was dropped on port) */
+.reveal { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1 !important; transform: none !important; } }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+.lms-rail-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.42); z-index: 55; opacity: 0; transition: opacity .25s; }
+@media (max-width: 960px) {
+  .lms-rail { position: fixed !important; left: 0; top: 0; bottom: 0; height: 100% !important;
+    transform: translateX(-100%); transition: transform .26s cubic-bezier(.2,.7,.3,1); z-index: 70 !important;
+    box-shadow: 0 12px 48px rgba(0,0,0,.28); }
+  .lms-rail.is-open { transform: none; }
+  .lms-rail-backdrop.is-open { display: block; opacity: 1; }
+  .lms-hamburger { display: flex !important; }
+  [style*="grid-template-columns: 1.5fr 1fr"],
+  [style*="grid-template-columns: 1.6fr 1fr"],
+  [style*="grid-template-columns: 1.25fr 1fr"],
+  [style*="grid-template-columns: 1.4fr 1fr"],
+  [style*="grid-template-columns: 1.4fr 1.4fr"],
+  [style*="grid-template-columns: 230px 1fr"],
+  [style*="grid-template-columns: 210px 1fr"],
+  [style*="grid-template-columns: repeat(3, 1fr)"] { grid-template-columns: 1fr !important; }
+  .lms-statstrip { flex-wrap: wrap !important; }
+  .lms-statstrip > * { flex: 1 1 44% !important; border-left: none !important; }
+  .lms-scrollx { overflow-x: auto !important; }
+  .lms-scrollx > * { min-width: 560px; }
+}
+@media (max-width: 560px) {
+  .lms-hide-xs { display: none !important; }
+  .lms-content-pad { padding-left: 16px !important; padding-right: 16px !important; }
+  [style*="grid-template-columns: repeat(2, 1fr)"] { grid-template-columns: 1fr !important; }
+  .lms-statstrip > * { flex: 1 1 100% !important; }
+}
+@media (max-width: 960px) { .lms-header { padding: 0 16px !important; gap: 12px !important; } }
+@media (max-width: 1080px) { .lms-hide-sm { display: none !important; } }
+@media (max-width: 920px) { .lms-foot-grid { grid-template-columns: 1fr 1fr !important; } }
+@media (max-width: 560px) { .lms-foot-grid { grid-template-columns: 1fr !important; } }

@@ -1,0 +1,74 @@
+// icons.ts — 24×24 stroke icon path data. The prototype optionally rendered
+// Lucide via a CDN global; this port drops that external dependency and renders
+// these self-contained paths directly (see ui/primitives.tsx → Icon).
+
+export type IconName =
+  | 'overview' | 'class' | 'assign' | 'grade' | 'bank' | 'docs' | 'rubric'
+  | 'results' | 'students' | 'users' | 'notify' | 'settings' | 'search'
+  | 'report' | 'globe' | 'message' | 'chevronDown' | 'chevronRight'
+  | 'chevronLeft' | 'plus' | 'arrowRight' | 'arrowLeft' | 'arrowUpRight'
+  | 'check' | 'checkCircle' | 'x' | 'pen' | 'trash' | 'copy' | 'drag' | 'star'
+  | 'paperclip' | 'download' | 'upload' | 'eye' | 'filter' | 'send' | 'calendar'
+  | 'clock' | 'more' | 'cloud' | 'folder' | 'flame' | 'target' | 'book' | 'sun'
+  | 'moon' | 'grid' | 'list' | 'play' | 'link' | 'bulb' | 'video' | 'image'
+  | 'question' | 'award' | 'logout';
+
+export const ICONS: Record<string, string> = {
+  overview: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  class: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z',
+  assign: 'M9 4.5h6M8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2H9zM8.5 14l2 2 4-4',
+  grade: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12l2.5 2.5L16 9',
+  bank: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.6 9.2A2.5 2.5 0 0 1 14 10.7c0 1.6-2 2-2 3.3M12 17h.01',
+  docs: 'M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v4h4M9 13h6M9 17h5',
+  rubric: 'M4 5h16v14H4zM4 9.5h16M4 14.5h16M9 5v14',
+  results: 'M5 21V10M12 21V4M19 21v-7',
+  students: 'M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M17 4.6a3 3 0 0 1 0 5.8M21.5 20v-1a3.5 3.5 0 0 0-2.7-3.4',
+  users: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',
+  notify: 'M18 9a6 6 0 1 0-12 0c0 6-2 8-2 8h16s-2-2-2-8M10 20.5a2 2 0 0 0 4 0',
+  settings: 'M4 7h9M17 7h3M4 12h4M12 12h8M4 17h11M19 17h1M13 5v4M8 10v4M17 15v4',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.6-3.6',
+  report: 'M3 8a2 2 0 0 1 2-2h12a1 1 0 0 1 1 1M3 8v9a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1H4a1 1 0 0 1-1-1zM8 13h4M8 16h7',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3.5 12h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+  message: 'M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.4A8 8 0 1 1 21 11.5z',
+  chevronDown: 'M6 9.5l6 6 6-6',
+  chevronRight: 'M9.5 6l6 6-6 6',
+  chevronLeft: 'M14.5 6l-6 6 6 6',
+  plus: 'M12 5v14M5 12h14',
+  arrowRight: 'M4 12h15M13 6l6 6-6 6',
+  arrowLeft: 'M20 12H5M11 6l-6 6 6 6',
+  arrowUpRight: 'M7 17L17 7M8.5 7H17v8.5',
+  check: 'M5 12.5l4.5 4.5L19 7',
+  checkCircle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 12l2.5 2.5 4.5-5',
+  x: 'M6 6l12 12M18 6L6 18',
+  pen: 'M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3zM14.5 7.5l3 3',
+  trash: 'M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6',
+  copy: 'M9 9V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-4M4 10a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z',
+  drag: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
+  star: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z',
+  paperclip: 'M20 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.4 3.4 0 0 1 4.8 4.8l-9 9a1.8 1.8 0 0 1-2.5-2.5l8-8',
+  download: 'M12 16V5M8 12l4 4 4-4M5 19h14',
+  upload: 'M12 5v11M8 9l4-4 4 4M5 19h14',
+  eye: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  filter: 'M4 5h16l-6.5 8v5l-3 1.5V13z',
+  send: 'M21 4L3 11l6.5 2.5L12 20l3-7z',
+  calendar: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3.5 9.5h17M8 3v4M16 3v4',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  cloud: 'M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.5 1.5A3.5 3.5 0 0 1 17 18H7z',
+  folder: 'M4 7a1 1 0 0 1 1-1h3.5l2 2H19a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z',
+  flame: 'M12 21a6 6 0 0 0 6-6c0-4-3-5-3-9 0 0-4 2-4 6 0 0-2-1-2-3-2 2-3 4-3 6a6 6 0 0 0 6 6z',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 12h.01',
+  book: 'M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2V5zM6 18h13',
+  sun: 'M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 2.5v2M12 19.5v2M4.5 12h-2M21.5 12h-2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4',
+  moon: 'M20 13.5A8 8 0 1 1 10.5 4 6.4 6.4 0 0 0 20 13.5z',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  play: 'M7 4l12 8-12 8z',
+  link: 'M10 14a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1M14 10a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3z',
+  video: 'M4 6.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM15 10l5-3v10l-5-3',
+  image: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3.5 16l5-5 4 4 3-3 5 5M9 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+  question: 'M8 9h8M8 13h5M5 4h14a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1z',
+  award: 'M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM9 13l-1.5 7L12 17l4.5 3L15 13',
+  logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 16l4-4-4-4M9 12h11',
+};

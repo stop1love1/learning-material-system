@@ -1,0 +1,34 @@
+// Barrel for all Mongoose schemas (25 collections).
+export * from './user.schema';
+// Kho tài liệu
+export * from './library/folder.schema';
+export * from './library/file.schema';
+export * from './library/download.schema';
+// Ngân hàng câu hỏi
+export * from './question-bank/topic.schema';
+export * from './question-bank/question.schema';
+export * from './question-bank/single-choice-question.schema';
+export * from './question-bank/multiple-choice-question.schema';
+export * from './question-bank/true-false-question.schema';
+export * from './question-bank/short-answer-question.schema';
+export * from './question-bank/essay-question.schema';
+export * from './question-bank/match-question.schema';
+export * from './question-bank/number-question.schema';
+export * from './question-bank/sort-question.schema';
+export * from './question-bank/table-selection-question.schema';
+// Rubric
+export * from './rubric/rubric-group.schema';
+export * from './rubric/rubric.schema';
+export * from './rubric/rubric-level.schema';
+export * from './rubric/rubric-criterion.schema';
+// Bài tập & bài làm
+export * from './exercise/exercise.schema';
+export * from './exercise/exercise-question.schema';
+export * from './exercise/attempt.schema';
+export * from './exercise/participant.schema';
+export * from './exercise/submission.schema';
+export * from './exercise/student-question.schema';
+export * from './exercise/self-assessment.schema';
+// Nội dung & hệ thống
+export * from './article.schema';
+export * from './settings.schema';

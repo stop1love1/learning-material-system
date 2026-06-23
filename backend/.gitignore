@@ -1,0 +1,32 @@
+# compiled output
+/dist
+/node_modules
+
+# logs
+/logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# environment (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# tests / coverage
+/coverage
+
+# misc
+*.tsbuildinfo
