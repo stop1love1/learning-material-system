@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { routeToHref } from '@/app/configs/routes.config';
+import { useLMS } from '@/app/store/store';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 
 export default function ScreenHost({
   Screen,
@@ -22,6 +24,13 @@ export default function ScreenHost({
   const router = useRouter();
   const { t, p, setTweak, resetTheme, defaults } = useLmsTheme();
   const auth = useLmsAuth();
+
+  // Re-render this screen whenever the store changes (incl. after hydration).
+  useLMS();
+  // Pull live backend data for this route into DB on mount (best-effort).
+  React.useEffect(() => {
+    hydrateFor(routeKey);
+  }, [routeKey, auth.loggedIn]);
 
   const setRoute = React.useCallback((key: string) => router.push(routeToHref(key)), [router]);
   const go = React.useCallback(
