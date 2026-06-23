@@ -27,6 +27,24 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   const [pw, setPw] = React.useState('');
   const [pw2, setPw2] = React.useState('');
   const reg = tab === 'register';
+  const [err, setErr] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const submit = async () => {
+    setErr('');
+    setBusy(true);
+    try {
+      if (reg) {
+        if (pw !== pw2) throw new Error('Mật khẩu nhập lại không khớp');
+        await auth.register(name, email, pw);
+      } else {
+        await auth.login(email, pw);
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Có lỗi xảy ra');
+    } finally {
+      setBusy(false);
+    }
+  };
   const tabBtn = (id: string, label: string) => {
     const on = tab === id;
     return (
@@ -53,7 +71,7 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   };
   const ggField = (
     <button
-      onClick={() => auth.login()}
+      onClick={submit}
       className="lms-btn"
       style={{
         width: '100%',
@@ -172,8 +190,11 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
           </div>
         )}
 
-        <Btn p={p} full size="lg" icon={reg ? 'check' : 'logout'} onClick={() => auth.login()} style={{ marginTop: reg ? 8 : 0 }}>
-          {reg ? 'Tạo tài khoản' : 'Đăng nhập'}
+        {err && (
+          <div style={{ color: p.danger, fontSize: 12.5, marginBottom: 10, textAlign: 'center' }}>{err}</div>
+        )}
+        <Btn p={p} full size="lg" icon={reg ? 'check' : 'logout'} onClick={submit} style={{ marginTop: reg ? 8 : 0 }}>
+          {busy ? 'Đang xử lý…' : reg ? 'Tạo tài khoản' : 'Đăng nhập'}
         </Btn>
 
         <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: '18px 0 0' }}>
@@ -182,7 +203,7 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
             {reg ? 'Đăng nhập' : 'Đăng ký miễn phí'}
           </span>
         </p>
-        <p style={{ fontSize: 11, color: p.faint, textAlign: 'center', margin: '14px 0 0' }}>Demo · mọi nút đều đưa bạn vào trải nghiệm</p>
+        <p style={{ fontSize: 11, color: p.faint, textAlign: 'center', margin: '14px 0 0' }}>Đăng nhập qua API · cần backend đang chạy</p>
       </div>
     </div>
   );

@@ -1,0 +1,67 @@
+'use client';
+// Minimal typed fetch client for the LMS backend API.
+// Base URL từ NEXT_PUBLIC_API_URL (mặc định http://localhost:3001/api).
+
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+const TOKEN_KEY = 'lms-token';
+
+export function getToken(): string | null {
+  return typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+}
+export function setToken(token: string): void {
+  if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, token);
+}
+export function clearToken(): void {
+  if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
+}
+
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+  constructor(message: string, status: number, body: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+type Options = Omit<RequestInit, 'body'> & { auth?: boolean; body?: unknown };
+
+export async function apiFetch<T = unknown>(path: string, opts: Options = {}): Promise<T> {
+  const { auth = true, headers, body, ...rest } = opts;
+  const h: Record<string, string> = { 'Content-Type': 'application/json', ...(headers as Record<string, string>) };
+  const token = getToken();
+  if (auth && token) h.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, {
+    ...rest,
+    headers: h,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const msg = data?.message ?? res.statusText;
+    throw new ApiError(Array.isArray(msg) ? msg.join(', ') : String(msg), res.status, data);
+  }
+  return data as T;
+}
+
+export const api = {
+  get: <T = unknown>(path: string, o?: Options) => apiFetch<T>(path, { method: 'GET', ...o }),
+  post: <T = unknown>(path: string, body?: unknown, o?: Options) => apiFetch<T>(path, { method: 'POST', body, ...o }),
+  patch: <T = unknown>(path: string, body?: unknown, o?: Options) =>
+    apiFetch<T>(path, { method: 'PATCH', body, ...o }),
+  del: <T = unknown>(path: string, o?: Options) => apiFetch<T>(path, { method: 'DELETE', ...o }),
+};
+
+/** Build a query string from an object (skips null/undefined/''). */
+export function qs(params: Record<string, unknown> = {}): string {
+  const s = Object.entries(params)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join('&');
+  return s ? `?${s}` : '';
+}

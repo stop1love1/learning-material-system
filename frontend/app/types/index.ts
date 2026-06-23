@@ -53,7 +53,8 @@ export interface Auth {
   name: string;
   initials: string;
   open: () => void;
-  login: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
