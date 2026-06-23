@@ -9,6 +9,12 @@ import { GlobalModule } from './global/global.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { LibraryModule } from './modules/library/library.module';
+import { QuestionBankModule } from './modules/question-bank/question-bank.module';
+import { RubricModule } from './modules/rubric/rubric.module';
+import { ExerciseModule } from './modules/exercise/exercise.module';
+import { ArticleModule } from './modules/article/article.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -23,6 +29,12 @@ import { UsersModule } from './modules/users/users.module';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    LibraryModule,
+    QuestionBankModule,
+    RubricModule,
+    ExerciseModule,
+    ArticleModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_FILTER, useClass: AllExceptionsFilter }],
