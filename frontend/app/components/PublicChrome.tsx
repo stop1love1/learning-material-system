@@ -111,7 +111,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-lms-bg font-sans text-lms-ink">
-      <header className="z-30 shrink-0 border-b border-lms-line-soft bg-[var(--lms-surface-glass)] backdrop-blur-md backdrop-saturate-[1.4]">
+      <header className="z-30 shrink-0 border-b border-lms-line-soft bg-(--lms-surface-glass) backdrop-blur-md backdrop-saturate-[1.4]">
         <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
           <div onClick={() => push(ROUTES.home)} className="flex shrink-0 cursor-pointer items-center gap-[11px]">
             <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">

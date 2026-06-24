@@ -9,7 +9,7 @@ export function ServerStatusBanner() {
   return (
     <div
       role="alert"
-      className="fixed inset-x-0 bottom-0 z-[100] flex items-center justify-center gap-2.5 border-t border-[#d98a7a] bg-[#b35338] px-4 py-2.5 text-white shadow-[0_-2px_12px_rgba(0,0,0,0.18)]"
+      className="fixed inset-x-0 bottom-0 z-100 flex items-center justify-center gap-2.5 border-t border-[#d98a7a] bg-[#b35338] px-4 py-2.5 text-white shadow-[0_-2px_12px_rgba(0,0,0,0.18)]"
     >
       <Icon name="notify" size={16} stroke="#fff" />
       <span className="text-[13px] font-semibold">

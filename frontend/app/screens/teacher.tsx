@@ -33,7 +33,7 @@ export function TOverview({ p, t, setRoute, go }) {
         </div>
       </div>
 
-      <div className={`lms-statstrip mb-6 flex py-[22px] ${cardClass(20)} !p-0`}>
+      <div className={`lms-statstrip mb-6 flex py-[22px] ${cardClass(20)} p-0!`}>
         {[
           { l: 'Học viên đang dạy', v: '95', d: '4 lớp', sp: [8, 10, 9, 12, 11, 14, 13, 16] },
           { l: 'Bài tập đang mở', v: '4', d: '2 sắp đến hạn', sp: [5, 6, 6, 7, 9, 8, 10, 11] },
@@ -89,7 +89,7 @@ export function TOverview({ p, t, setRoute, go }) {
                   <div className="mt-0.5 font-mono text-[10px] text-lms-faint">{s.dur}</div>
                 </div>
                 <div className="relative w-px bg-lms-line">
-                  <span className={`absolute top-1 -left-[2.5px] h-1.5 w-1.5 rounded-[3px] ${i === 0 ? 'bg-lms-accent' : 'bg-lms-faint'}`} />
+                  <span className={`absolute top-1 left-[-2.5px] h-1.5 w-1.5 rounded-[3px] ${i === 0 ? 'bg-lms-accent' : 'bg-lms-faint'}`} />
                 </div>
                 <div>
                   <div className="text-[13.5px] font-semibold text-lms-ink">{s.title}</div>

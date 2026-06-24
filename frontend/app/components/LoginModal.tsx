@@ -66,7 +66,7 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(10,12,16,0.5)] p-5 backdrop-blur-[3px]"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-[rgba(10,12,16,0.5)] p-5 backdrop-blur-[3px]"
     >
       <div
         onMouseDown={(e) => e.stopPropagation()}

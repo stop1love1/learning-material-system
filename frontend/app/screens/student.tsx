@@ -74,7 +74,7 @@ export function UserHome({ p, t, setRoute, go }) {
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-7 pb-2 max-sm:px-4">
       <div className="bento mb-4">
-        <div className="col-8 row-2 reveal bento-tile relative flex min-h-[320px] flex-col justify-center overflow-hidden border border-lms-line bg-[image:var(--lms-hero-gradient)] p-[38px]">
+        <div className="col-8 row-2 reveal bento-tile relative flex min-h-[320px] flex-col justify-center overflow-hidden border border-lms-line bg-(image:--lms-hero-gradient) p-[38px]">
           <span className="mb-[18px] inline-flex items-center gap-[7px] self-start rounded-[20px] border border-lms-line bg-lms-surface px-3 py-[5px] text-[11.5px] font-bold text-lms-accent">
             <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ'}
           </span>
@@ -121,7 +121,7 @@ export function UserHome({ p, t, setRoute, go }) {
           className="col-5 reveal bento-tile hovlift flex cursor-pointer flex-col overflow-hidden border border-lms-line bg-lms-surface"
           onClick={() => go('s-doc', { doc: heroDoc.id })}
         >
-          <div className="flex h-[120px] items-end bg-[image:var(--lms-feature-gradient)] p-4">
+          <div className="flex h-[120px] items-end bg-(image:--lms-feature-gradient) p-4">
             <Tag p={p} color="#fff" soft={false} className="border border-white/50 text-white">HỌC LIỆU NỔI BẬT</Tag>
           </div>
           <div className="p-5">
@@ -133,7 +133,7 @@ export function UserHome({ p, t, setRoute, go }) {
 
         {exercise && (
         <div
-          className="col-4 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-[image:var(--lms-card-gradient)] p-6"
+          className="col-4 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-(image:--lms-card-gradient) p-6"
           onClick={() => go('s-task', { task: exercise.id })}
         >
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-lms-line bg-lms-surface">
@@ -173,7 +173,7 @@ export function UserHome({ p, t, setRoute, go }) {
         emptyDescription="Chưa có chủ đề"
         contentClassName="mb-10"
       >
-        <div className="reveal mb-10 grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
+        <div className="reveal mb-10 grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
           {cats.map((c, i) => (
             <div key={c} onClick={() => setRoute('s-docs')} className="bento-tile hovlift cursor-pointer border border-lms-line bg-lms-surface p-[18px]">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[11px] bg-lms-accent-soft">
@@ -194,7 +194,7 @@ export function UserHome({ p, t, setRoute, go }) {
         emptyDescription="Chưa có học liệu"
         contentClassName="mb-11"
       >
-        <div className="reveal mb-11 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
+        <div className="reveal mb-11 grid gap-4 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
           {featured.map((d) => {
             const m = DOC_TYPE_META[d.type];
             return (
@@ -221,7 +221,7 @@ export function UserHome({ p, t, setRoute, go }) {
         emptyDescription="Chưa có bài viết"
         contentClassName="pb-2"
       >
-        <div className="reveal grid gap-4 pb-2 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+        <div className="reveal grid gap-4 pb-2 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
           {latestArticles.map((a) => (
             <div key={a.id} onClick={() => go('article', { article: a.id })} className="bento-tile hovlift cursor-pointer border border-lms-line bg-lms-surface p-5">
               <span className="mb-2.5 inline-block rounded-md bg-lms-accent-soft px-[9px] py-[3px] text-[11px] font-bold text-lms-accent">{a.cat}</span>
@@ -280,7 +280,7 @@ export function SOverview({ p, t, setRoute, go }) {
         </section>
 
         <div className="flex flex-col gap-[22px]">
-          <section className="rounded-xl border border-lms-line bg-[image:var(--lms-card-gradient)] p-[22px]">
+          <section className="rounded-xl border border-lms-line bg-(image:--lms-card-gradient) p-[22px]">
             <Icon name="book" size={22} stroke={p.accent} />
             <h3 className="my-3 mb-1.5 font-lms-heading text-[19px] font-semibold text-lms-ink">Kho tài liệu</h3>
             <p className="mb-4 mt-0 text-[13px] leading-normal text-lms-sub">Tìm tài liệu, đề thi, sơ đồ tư duy để đọc và ôn tập.</p>
@@ -676,7 +676,7 @@ export function SDocs({ p, t, go }) {
     && (!q || (d.name + ' ' + d.folder).toLowerCase().includes(q.toLowerCase())));
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-[image:var(--lms-hero-gradient)] px-[30px] py-[34px]">
+      <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px]">
         <h2 className="m-0 font-lms-heading text-[26px] font-bold tracking-[-0.4px] text-lms-ink">
           Kho tài liệu <span className="text-lms-accent">Ngữ văn</span>
         </h2>
@@ -706,7 +706,7 @@ export function SDocs({ p, t, go }) {
           />
         </div>
       ) : (
-        <div className="reveal grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="reveal grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
           {list.map((d) => {
             const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
             return (
@@ -714,8 +714,8 @@ export function SDocs({ p, t, go }) {
                 <div className="relative flex h-24 items-center justify-center overflow-hidden bg-lms-accent-soft">
                   <Icon name={m.icon} size={30} stroke={p.accent} sw={1.4} />
                   {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />}
-                  <span className={`absolute top-2.5 left-2.5 z-[2] rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
-                  <span className={`absolute top-2.5 right-2.5 z-[2] rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.sub}>{d.folder}</Tag></span>
+                  <span className={`absolute top-2.5 left-2.5 z-2 rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
+                  <span className={`absolute top-2.5 right-2.5 z-2 rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.sub}>{d.folder}</Tag></span>
                 </div>
                 <div className="p-3.5">
                   <div className="min-h-9 text-[13.5px] font-semibold leading-snug text-lms-ink">{d.name}</div>
@@ -830,7 +830,7 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
       {related.length > 0 && (
         <div>
           <h3 className="mb-3.5 mt-0 font-lms-heading text-lg font-semibold text-lms-ink">Học liệu liên quan</h3>
-          <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+          <div className="grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
             {related.map((r) => {
               const rm = DOC_TYPE_META[r.type] || DOC_TYPE_META.doc;
               return (
@@ -1041,7 +1041,7 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
       {downloaded.length === 0 ? (
         <EmptyState p={p} icon="download" label="Chưa có tài liệu nào" sub="Tải tài liệu từ kho học liệu để lưu lại ở đây." action={<Btn p={p} variant="soft" size="sm" icon="search" onClick={() => setRoute('s-docs')} className="mt-1">Khám phá học liệu</Btn>} />
       ) : (
-        <div className="mb-[34px] grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+        <div className="mb-[34px] grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
           {downloaded.map((d) => {
             const m = DOC_TYPE_META[d.type];
             return (

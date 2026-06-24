@@ -31,7 +31,7 @@ export function LmsTweaks() {
               key={k}
               onClick={() => setTweak('accent', k)}
               title={k}
-              className={`h-[30px] w-[30px] cursor-pointer rounded-xl ${t.accent === k ? 'border-2 border-neutral-900 outline-2 outline-offset-[-4px] outline-white' : 'border-2 border-transparent'}`}
+              className={`h-[30px] w-[30px] cursor-pointer rounded-xl ${t.accent === k ? 'border-2 border-neutral-900 outline-2 -outline-offset-4 outline-white' : 'border-2 border-transparent'}`}
               style={{ background: hex }}
             />
           ))}

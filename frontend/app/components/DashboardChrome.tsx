@@ -14,7 +14,7 @@ function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: stri
   const compact = t.density === 'compact';
   return (
     <aside
-      className="lms-rail relative z-[2] flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg"
+      className="lms-rail relative z-2 flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg"
       style={{ width: t.railWide ? 268 : 244 }}
     >
       <div className={`flex items-center gap-[11px] ${compact ? 'px-5 pt-[18px] pb-3.5' : 'p-[22px_22px_18px]'}`}>
@@ -149,10 +149,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <div className="lms-shell relative flex h-dvh w-full overflow-hidden bg-lms-bg font-sans text-lms-ink">
       <div className={'lms-rail-backdrop' + (navOpen ? ' is-open' : '')} onClick={() => setNavOpen(false)} />
-      <div className={navOpen ? 'is-open-wrap fixed inset-0 z-[70]' : ''}>
+      <div className={navOpen ? 'is-open-wrap fixed inset-0 z-70' : ''}>
         <Rail p={p} t={t} activeKey={navKey} onNavigate={() => setNavOpen(false)} />
       </div>
-      <main className="relative z-[1] flex min-w-0 flex-1 flex-col">
+      <main className="relative z-1 flex min-w-0 flex-1 flex-col">
         <header className="lms-header flex h-16 shrink-0 items-center gap-4 border-b border-lms-line-soft bg-lms-surface px-7">
           <button
             className="lms-hamburger lms-btn hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-lg border border-lms-line bg-lms-surface"

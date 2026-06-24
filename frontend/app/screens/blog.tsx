@@ -122,7 +122,7 @@ export function SArticle({ p, t, ctx, setRoute, go }) {
       <h3 className="mb-4 mt-0 font-lms-heading text-xl font-bold text-lms-ink">Bài viết khác</h3>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5 pb-10">
         {more.map((m) => (
-          <div key={m.id} onClick={() => go('article', { article: m.id })} className={`lms-card lms-row cursor-pointer ${cardClass(16)} !p-3.5`}>
+          <div key={m.id} onClick={() => go('article', { article: m.id })} className={`lms-card lms-row cursor-pointer ${cardClass(16)} p-3.5!`}>
             <span className="mb-2 inline-block rounded-[5px] px-2 py-0.5 text-[10.5px] font-bold" style={{ background: hexA(coverHue(p, m.cover), 0.12), color: coverHue(p, m.cover) }}>{m.cat}</span>
             <div className="text-sm font-semibold leading-snug text-lms-ink">{m.title}</div>
             <div className="mt-2 text-[11.5px] text-lms-faint">{m.read} đọc</div>
@@ -211,7 +211,7 @@ export function ABlog({ p, t, setRoute, go }) {
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
         {DB.ARTICLES.filter((a) => { const k = kw.trim().toLowerCase(); return !k || (a.title || '').toLowerCase().includes(k) || (a.cat || '').toLowerCase().includes(k); }).map((a) => (
-          <div key={a.id} className={`lms-card overflow-hidden ${cardClass(16)} !p-0`}>
+          <div key={a.id} className={`lms-card overflow-hidden ${cardClass(16)} p-0!`}>
             <div className="flex h-[90px] items-end p-3" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>
               <span className="rounded-[5px] bg-white/90 px-[9px] py-[3px] text-[10.5px] font-bold" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
             </div>

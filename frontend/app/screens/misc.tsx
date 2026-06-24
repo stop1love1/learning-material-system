@@ -12,7 +12,7 @@ export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
   const items: any[] = DB.NOTICES || [];
   return (
     <div className="mx-auto max-w-[760px] px-[30px] pt-6 pb-10">
-      <div className={`${cardClass(16)} !p-2`}>
+      <div className={`${cardClass(16)} p-2!`}>
         {items.length === 0 && (
           <div className="px-4 py-7 text-center text-[13.5px] text-lms-faint">Chưa có hoạt động nào.</div>
         )}

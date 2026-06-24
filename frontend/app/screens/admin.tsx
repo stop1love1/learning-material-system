@@ -10,7 +10,7 @@ import { downloadCsv } from '@/app/helpers/export';
 
 function AdminModal({ p, title, onClose, children }) {
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5">
+    <div onClick={onClose} className="fixed inset-0 z-60 flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5">
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[460px] overflow-hidden rounded-[14px] border border-lms-line bg-lms-surface shadow-[0_24px_60px_rgba(15,23,38,0.28)]">
         <div className="flex items-center justify-between border-b border-lms-line-soft px-5 py-4">
           <div className="font-lms-heading text-[17px] font-semibold text-lms-ink">{title}</div>
@@ -64,7 +64,7 @@ export function AOverview({ p, t }) {
       </h2>
       <p className="mb-[26px] mt-0 text-sm text-lms-sub">Tài nguyên & người dùng · cập nhật theo thời gian thực.</p>
 
-      <div className={`lms-statstrip flex ${cardClass(20)} !p-0 !py-[22px] mb-6`}>
+      <div className={`lms-statstrip flex ${cardClass(20)} p-0! py-[22px]! mb-6`}>
         {[
           { l: 'Người dùng', v: fmt(s.users), d: dlt(s.trends?.users), up: (s.trends?.users ?? 0) >= 0, sp: spark },
           { l: 'Học liệu', v: fmt(s.docs ?? DB.DOCS.length), d: dlt(s.trends?.files), up: (s.trends?.files ?? 0) >= 0, sp: spark },
@@ -78,7 +78,7 @@ export function AOverview({ p, t }) {
       </div>
 
       <div className="grid grid-cols-[1.6fr_1fr] items-start gap-[22px]">
-        <section className={`${cardClass(20)} !p-[22px]`}>
+        <section className={`${cardClass(20)} p-[22px]!`}>
           <div className="mb-[18px] flex items-start justify-between">
             <div>
               <h3 className="m-0 font-lms-heading text-xl font-medium text-lms-ink">Lượt làm bài 30 ngày</h3>
@@ -93,7 +93,7 @@ export function AOverview({ p, t }) {
             labels={chartLabels} />
         </section>
 
-        <section className={`${cardClass(20)} !p-[22px]`}>
+        <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-xl font-medium text-lms-ink">Học liệu nổi bật</h3>
           {DB.DOCS.slice(0, 5).map((d, i) => (
             <div key={d.id} className={`flex items-center gap-3 py-[11px] ${i ? 'border-t border-lms-line' : ''}`}>
@@ -186,7 +186,7 @@ export function AUsers({ p, t }) {
     <div className="mx-auto max-w-[1480px] px-[30px] pb-10 pt-6">
       <div className="mb-5 grid grid-cols-2 gap-4">
         {counts.map(([r, ic, col, v]) => (
-          <div key={r} className={`${cardClass(16)} !p-[18px] flex items-center gap-3.5`}>
+          <div key={r} className={`${cardClass(16)} p-[18px]! flex items-center gap-3.5`}>
             <div className="flex h-11 w-11 items-center justify-center rounded-[10px]" style={{ background: hexA(col, 0.12) }}>
               <Icon name={ic} size={20} stroke={col} />
             </div>
@@ -205,7 +205,7 @@ export function AUsers({ p, t }) {
         <Btn p={p} variant="ghost" icon="download" onClick={() => downloadCsv('nguoi-dung.csv', [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'joined', label: 'Tham gia' }], all)}>Xuất danh sách</Btn>
         <Btn p={p} icon="plus" onClick={() => setModal({ mode: 'create' })}>Thêm người dùng</Btn>
       </div>
-      <div className={`lms-scrollx ${cardClass(20)} !p-0`}>
+      <div className={`lms-scrollx ${cardClass(20)} p-0!`}>
         <div className="grid grid-cols-[2.2fr_1.3fr_1.2fr_1fr_86px] border-b border-lms-line px-[22px] py-3 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">
           <span>NGƯỜI DÙNG</span><span>VAI TRÒ</span><span>THAM GIA</span><span>TRẠNG THÁI</span><span className="text-right">THAO TÁC</span>
         </div>
@@ -294,11 +294,11 @@ export function AReports({ p, t }) {
   return (
     <div className="mx-auto max-w-[1480px] px-[30px] pb-10 pt-6">
       <div className="grid grid-cols-2 gap-[22px]">
-        <section className={`${cardClass(20)} !p-[22px]`}>
+        <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Lượt làm bài theo ngày</h3>
           <Bars data={bars} w={520} h={160} track={p.sink} labelColor={p.faint} max={maxBar} />
         </section>
-        <section className={`${cardClass(20)} !p-[22px]`}>
+        <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Học liệu theo chủ đề</h3>
           <div className="mt-1.5 flex flex-col gap-3">
             {DB.DOC_FOLDERS.filter((f) => f !== 'Tất cả').slice(0, 6).map((f, i) => {
@@ -315,7 +315,7 @@ export function AReports({ p, t }) {
             })}
           </div>
         </section>
-        <section className={`${cardClass(20)} !p-[22px] col-span-full`}>
+        <section className={`${cardClass(20)} p-[22px]! col-span-full`}>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Báo cáo có sẵn</h3>
             <Btn p={p} variant="ghost" size="sm" icon="download">Xuất tất cả</Btn>
@@ -422,7 +422,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   );
   return (
     <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-6 px-[30px] pb-10 pt-6">
-      <aside className={`${cardClass(16)} !p-2 sticky top-0`}>
+      <aside className={`${cardClass(16)} p-2! sticky top-0`}>
         {SECTIONS.map((s) => {
           const on = sec === s.id;
           return (
