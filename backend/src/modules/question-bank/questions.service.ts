@@ -13,7 +13,7 @@ import { NumberQuestion } from '../../schemas/question-bank/number-question.sche
 import { SortQuestion } from '../../schemas/question-bank/sort-question.schema';
 import { TableSelectionQuestion } from '../../schemas/question-bank/table-selection-question.schema';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
-import { QuestionModel, QuestionType } from '../../enums';
+import { QuestionModel, QuestionType, UserRole } from '../../enums';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ListQuestionsDto } from './dto/list-questions.dto';
@@ -108,6 +108,7 @@ export class QuestionsService {
         .sort({ createdAt: -1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize)
+        .populate({ path: 'userId', select: 'name avatar' })
         .lean(),
       this.questionModel.countDocuments(query),
     ]);
@@ -154,8 +155,14 @@ export class QuestionsService {
     return { question, detail: detail.toObject() };
   }
 
-  async update(id: string, dto: UpdateQuestionDto) {
-    const base = await this.questionModel.findById(convertStringToObjectId(id));
+  /** Bộ lọc theo chủ sở hữu (Admin bỏ qua kiểm tra). */
+  private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
+    const owner = role === UserRole.Admin ? {} : { userId: convertStringToObjectId(userId) };
+    return { _id: convertStringToObjectId(id), ...owner };
+  }
+
+  async update(id: string, dto: UpdateQuestionDto, userId: string, role?: UserRole) {
+    const base = await this.questionModel.findOne(this.ownerFilter(id, userId, role));
     if (!base) throw new NotFoundException('Không tìm thấy câu hỏi');
 
     if (dto.level !== undefined) base.level = dto.level;
@@ -182,8 +189,8 @@ export class QuestionsService {
     return { question, detail };
   }
 
-  async remove(id: string) {
-    const base = await this.questionModel.findById(convertStringToObjectId(id)).lean();
+  async remove(id: string, userId: string, role?: UserRole) {
+    const base = await this.questionModel.findOne(this.ownerFilter(id, userId, role)).lean();
     if (!base) throw new NotFoundException('Không tìm thấy câu hỏi');
     if (base.questionModel && base.questionDetail) {
       const detailModel = this.modelByQuestionModel(base.questionModel);

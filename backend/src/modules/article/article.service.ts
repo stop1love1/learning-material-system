@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Article } from '../../schemas/article.schema';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { UserRole } from '../../enums';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ListArticlesDto } from './dto/list-articles.dto';
@@ -26,6 +27,7 @@ export class ArticleService {
         .sort({ createdAt: -1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize)
+        .populate({ path: 'userId', select: 'name avatar' })
         .lean(),
       this.articleModel.countDocuments(query),
     ]);
@@ -33,8 +35,14 @@ export class ArticleService {
   }
 
   async findById(id: string) {
+    // Public route: only published articles are visible (no leaking of drafts).
     const article = await this.articleModel
-      .findByIdAndUpdate(convertStringToObjectId(id), { $inc: { viewCount: 1 } }, { new: true })
+      .findOneAndUpdate(
+        { _id: convertStringToObjectId(id), isPublished: true },
+        { $inc: { viewCount: 1 } },
+        { new: true },
+      )
+      .populate({ path: 'userId', select: 'name avatar' })
       .lean();
     if (!article) throw new NotFoundException('Không tìm thấy bài viết');
     return article;
@@ -50,16 +58,22 @@ export class ArticleService {
     return created;
   }
 
-  async update(id: string, dto: UpdateArticleDto) {
+  /** Bộ lọc theo chủ sở hữu (Admin bỏ qua kiểm tra). */
+  private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
+    const owner = role === UserRole.Admin ? {} : { userId: convertStringToObjectId(userId) };
+    return { _id: convertStringToObjectId(id), ...owner };
+  }
+
+  async update(id: string, dto: UpdateArticleDto, userId: string, role?: UserRole) {
     const article = await this.articleModel
-      .findByIdAndUpdate(convertStringToObjectId(id), { ...dto }, { new: true })
+      .findOneAndUpdate(this.ownerFilter(id, userId, role), { ...dto }, { new: true })
       .lean();
     if (!article) throw new NotFoundException('Không tìm thấy bài viết');
     return article;
   }
 
-  async remove(id: string) {
-    const res = await this.articleModel.deleteOne({ _id: convertStringToObjectId(id) });
+  async remove(id: string, userId: string, role?: UserRole) {
+    const res = await this.articleModel.deleteOne(this.ownerFilter(id, userId, role));
     if (res.deletedCount === 0) throw new NotFoundException('Không tìm thấy bài viết');
     return { deleted: true };
   }

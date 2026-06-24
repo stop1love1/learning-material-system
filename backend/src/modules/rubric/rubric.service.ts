@@ -28,13 +28,33 @@ export class RubricService {
       ...(keyword ? { name: { $regex: keyword, $options: 'i' } } : {}),
       ...(dto.groupId ? { groupId: convertStringToObjectId(dto.groupId) } : {}),
     };
+    // Embed levels + criterions per row via an aggregation so the frontend list
+    // loader needs no per-id detail fetch. Lookups run only on the page slice
+    // (after $skip/$limit). Output field names match getRubric.
+    const pipeline: any[] = [
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      { $skip: (page - 1) * pageSize },
+      { $limit: pageSize },
+      {
+        $lookup: {
+          from: 'rubric-levels',
+          let: { rid: '$_id' },
+          pipeline: [{ $match: { $expr: { $eq: ['$rubricId', '$$rid'] } } }, { $sort: { order: 1 } }],
+          as: 'levels',
+        },
+      },
+      {
+        $lookup: {
+          from: 'rubric-criterions',
+          let: { rid: '$_id' },
+          pipeline: [{ $match: { $expr: { $eq: ['$rubricId', '$$rid'] } } }, { $sort: { order: 1 } }],
+          as: 'criterions',
+        },
+      },
+    ];
     const [records, total] = await Promise.all([
-      this.rubricModel
-        .find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .lean(),
+      this.rubricModel.aggregate(pipeline),
       this.rubricModel.countDocuments(query),
     ]);
     return buildPagination(records, total, page, pageSize);

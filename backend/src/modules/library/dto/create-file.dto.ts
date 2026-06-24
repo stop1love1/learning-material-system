@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsEnum, IsMongoId, IsOptional, IsString, MinLength } from 'class-validator';
 import { FileSource, FileType } from '../../../enums';
 
 export class CreateFileDto {
@@ -39,7 +39,7 @@ export class CreateFileDto {
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   folderId?: string;
 
   @ApiPropertyOptional({ type: String, example: 'Tiếng Việt' })

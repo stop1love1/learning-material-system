@@ -39,14 +39,19 @@ export class QuestionsController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật câu hỏi (gốc + chi tiết)' })
-  update(@Param('id') id: string, @Body() dto: UpdateQuestionDto) {
-    return this.questionsService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateQuestionDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.questionsService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa câu hỏi (gốc + chi tiết)' })
-  remove(@Param('id') id: string) {
-    return this.questionsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.questionsService.remove(id, userId, role);
   }
 }

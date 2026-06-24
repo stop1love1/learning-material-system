@@ -8,6 +8,8 @@ import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
 import { lblStyle } from '@/app/helpers/shared';
+import { questionsApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 
 function bCard(p, pad = 20) { return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad }; }
 
@@ -204,9 +206,22 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 export function TBank({ p, t, setRoute }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [type, setType] = React.useState('all');
-  const [sel, setSel] = React.useState(DB.QUESTIONS[0].id);
+  const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
   const list = type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type);
   const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
+  if (!q) {
+    return (
+      <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }} />
+          <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
+        </div>
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: p.ink, opacity: 0.6 }}>
+          Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.
+        </div>
+      </div>
+    );
+  }
   const tm = typeMeta(q.type), lm = levelMeta(q.level);
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
@@ -426,7 +441,38 @@ export function TBankEdit({ p, t, setRoute }) {
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <Btn p={p} variant="ghost" full onClick={() => setRoute('bank')}>Huỷ</Btn>
-            <Btn p={p} icon="check" full onClick={() => { LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới', options: (type === 'single' || type === 'multi') ? options.filter(Boolean) : undefined, answer: correct, pairs: type === 'match' ? [['Vế trái 1', 'Vế phải 1'], ['Vế trái 2', 'Vế phải 2']] : undefined }); setRoute('bank'); }}>Lưu câu hỏi</Btn>
+            <Btn p={p} icon="check" full onClick={async () => {
+              // Filter blank options BEFORE picking the correct index so it stays in range.
+              const opts = (type === 'single' || type === 'multi') ? options.filter(Boolean) : [];
+              let detail: Record<string, any> = {};
+              if (type === 'single') {
+                const idx = correct.filter((i) => i < opts.length);
+                detail = { options: opts, correctOptionIndex: idx.length ? idx[0] : 0 };
+              } else if (type === 'multi') {
+                const idx = correct.filter((i) => i < opts.length);
+                detail = { options: opts, correctOptionIndices: idx.length ? idx : [0] };
+              } else if (type === 'truefalse') {
+                detail = { isCorrect: correct[0] === 0 };
+              } else if (type === 'fill') {
+                detail = { answers: ['—'] }; // ShortAnswer.answers is required & non-empty; inputs not state-wired yet
+              } else if (type === 'essay') {
+                detail = { gradingType: 'manual' };
+              } else if (type === 'match') {
+                detail = { pairs: [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
+              }
+              try {
+                await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail });
+                await hydrateFor('bank'); // re-runs loadQuestions → DB.QUESTIONS from backend
+              } catch {
+                // logged-out / student / API down → optimistic mock add
+                LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',
+                  options: (type === 'single' || type === 'multi') ? opts : undefined,
+                  answer: correct,
+                  pairs: type === 'match' ? [['Vế trái 1', 'Vế phải 1'], ['Vế trái 2', 'Vế phải 2']] : undefined });
+              } finally {
+                setRoute('bank');
+              }
+            }}>Lưu câu hỏi</Btn>
           </div>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
+import { exercisesApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { lblStyle, ToggleRow } from '@/app/helpers/shared';
 import { typeMeta } from '@/app/screens/bank';
 import { DOC_TYPE_META } from '@/app/screens/resources';
@@ -35,7 +37,7 @@ export function TAssignments({ p, t, setRoute, go }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {list.map((a) => {
           const tone = a.status === 'closing' ? p.warn : a.status === 'done' ? p.ok : p.accent;
-          const pct = Math.round((a.submitted / a.total) * 100);
+          const pct = a.total ? Math.round((a.submitted / a.total) * 100) : 0;
           return (
             <div key={a.id} className="lms-card" onClick={() => go('grade-one', { assignment: a.id })}
               style={{ ...aCard(p, 20), cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 18 }}>
@@ -224,10 +226,27 @@ export function TAssignNew({ p, t, setRoute }) {
         {wizard && step > 0 && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setStep(step - 1)}>Quay lại</Btn>}
         {wizard && step < 2
           ? <Btn p={p} iconRight="arrowRight" onClick={() => setStep(step + 1)}>Tiếp tục</Btn>
-          : <><Btn p={p} variant="ghost">Lưu nháp</Btn><Btn p={p} variant="accent" icon="send" onClick={() => {
-              const typeLabel = kind === 'quiz' ? 'Trắc nghiệm' : kind === 'essay' ? 'Tự luận' : 'Nộp tệp';
-              LMS && LMS.addAssignment({ title: title || 'Bài luyện tập mới', type: typeLabel, due: 'Sắp tới', dueIn: 'Mới đăng', points: Number(points) || 10, rubric: rubric !== 'none' ? rubric : undefined, questions: kind === 'quiz' ? picked.length : 1 });
-              setRoute('assignments');
+          : <><Btn p={p} variant="ghost">Lưu nháp</Btn><Btn p={p} variant="accent" icon="send" onClick={async () => {
+              // kind ('quiz'|'essay'|'file') already matches the ExerciseType enum.
+              // dueDate is NOT bound to state (HẠN NỘP is a display string), so omit it.
+              const body: any = { title: title || 'Bài luyện tập mới', type: kind, points: Number(points) || 10, status: 'open' };
+              try {
+                const ex: any = await exercisesApi.create(body);
+                const exId = ex?._id ?? ex?.id;
+                // Best-effort attach picked questions (ids may be mock seeds that 404).
+                if (exId && kind === 'quiz') {
+                  for (const questionId of picked) {
+                    try { await exercisesApi.addQuestion(exId, { questionId }); } catch { /* skip unknown/mock ids */ }
+                  }
+                }
+                await hydrateFor('assignments');
+              } catch {
+                // offline / logged-out fallback: keep the mock store behaviour
+                const typeLabel = kind === 'quiz' ? 'Trắc nghiệm' : kind === 'essay' ? 'Tự luận' : 'Nộp tệp';
+                LMS && LMS.addAssignment({ title: title || 'Bài luyện tập mới', type: typeLabel, due: 'Sắp tới', dueIn: 'Mới đăng', points: Number(points) || 10, rubric: rubric !== 'none' ? rubric : undefined, questions: kind === 'quiz' ? picked.length : 1 });
+              } finally {
+                setRoute('assignments');
+              }
             }}>Đăng bài luyện tập</Btn></>}
       </div>
     </div>

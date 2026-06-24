@@ -48,15 +48,20 @@ export class FilesController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật tài liệu' })
-  update(@Param('id') id: string, @Body() dto: UpdateFileDto) {
-    return this.filesService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateFileDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.filesService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa tài liệu' })
-  remove(@Param('id') id: string) {
-    return this.filesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.filesService.remove(id, userId, role);
   }
 
   @Post(':id/download')

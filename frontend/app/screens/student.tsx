@@ -5,6 +5,8 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
+import { filesApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { lblStyle, tStripe } from '@/app/helpers/shared';
 import { DOC_TYPE_META, RubricMatrix } from '@/app/screens/resources';
 import { DocCardMini } from '@/app/screens/teacher';
@@ -591,7 +593,15 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
         </div>
         {(DB.DOWNLOADS || []).includes(d.id)
           ? <Btn p={p} variant="soft" icon="check">Đã tải</Btn>
-          : <Btn p={p} icon="download" onClick={() => LMS && LMS.download(d.id)}>Tải về</Btn>}
+          : <Btn p={p} icon="download" onClick={async () => {
+              try {
+                await filesApi.download(d.id); // real download: $inc count + upsert Download row
+                if (d.url) window.open(d.url, '_blank');
+                await hydrateFor('s-doc'); // refresh DB.DOWNLOADS so the button flips to "Đã tải"
+              } catch {
+                LMS && LMS.download(d.id); // logged-out (401) / API down → mock fallback
+              }
+            }}>Tải về</Btn>}
       </div>
 
       <div style={{ ...sCard(p, 30), marginBottom: 22 }}>

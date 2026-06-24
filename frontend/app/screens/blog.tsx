@@ -6,6 +6,8 @@ import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
 import { lblStyle } from '@/app/helpers/shared';
+import { articlesApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 
 const BLOG_COVER = {
   clay: { light: '#c2553e', dark: '#e0856b' }, teal: { light: '#0d8276', dark: '#46c2b1' },
@@ -147,10 +149,25 @@ export function ABlog({ p, t }) {
                 color: p.ink, fontFamily: FONTS.sans, fontSize: 14.5, lineHeight: 1.8, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <Btn p={p} variant="ghost" onClick={() => setMode('list')}>Huỷ</Btn>
-              <Btn p={p} icon="send" onClick={() => {
+              <Btn p={p} icon="send" onClick={async () => {
                 const paras = body.split('\n').map((s) => s.trim()).filter(Boolean);
-                LMS && LMS.addArticle({ title: title || 'Bài viết mới', cat, body: paras.length ? paras : ['(Chưa có nội dung)'], cover: 'blue' });
-                setMode('list'); setTitle(''); setBody('');
+                const safeTitle = title || 'Bài viết mới';
+                try {
+                  // content is a single String in the schema/DTO — join paragraphs.
+                  await articlesApi.create({
+                    title: safeTitle,
+                    category: cat,
+                    content: paras.join('\n'),
+                    excerpt: paras[0]?.slice(0, 110) ?? '',
+                    cover: 'blue',
+                  });
+                  await hydrateFor('a-blog'); // re-runs loadArticles → DB.ARTICLES from backend
+                } catch {
+                  // offline / logged-out fallback: optimistic mock insert
+                  LMS && LMS.addArticle({ title: safeTitle, cat, body: paras.length ? paras : ['(Chưa có nội dung)'], cover: 'blue' });
+                } finally {
+                  setMode('list'); setTitle(''); setBody('');
+                }
               }}>Đăng bài</Btn>
             </div>
           </section>

@@ -42,14 +42,19 @@ export class ArticleController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật bài viết' })
-  update(@Param('id') id: string, @Body() dto: UpdateArticleDto) {
-    return this.articleService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateArticleDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.articleService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa bài viết' })
-  remove(@Param('id') id: string) {
-    return this.articleService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.articleService.remove(id, userId, role);
   }
 }

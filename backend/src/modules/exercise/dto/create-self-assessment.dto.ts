@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
+  IsMongoId,
   IsNumber,
   IsOptional,
   IsString,
@@ -14,12 +15,12 @@ import { SelfAssessmentSource } from '../../../enums';
 
 export class SelfAssessmentScoreDto {
   @ApiProperty({ type: String })
-  @IsString()
+  @IsMongoId()
   criterionId: string;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   levelId?: string;
 
   @ApiPropertyOptional({ type: Number, default: 0 })
@@ -32,7 +33,7 @@ export class SelfAssessmentScoreDto {
 
 export class CreateSelfAssessmentDto {
   @ApiProperty({ type: String })
-  @IsString()
+  @IsMongoId()
   rubricId: string;
 
   @ApiProperty({ enum: SelfAssessmentSource })
@@ -41,12 +42,12 @@ export class CreateSelfAssessmentDto {
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   fileId?: string;
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   exerciseId?: string;
 
   @ApiPropertyOptional({ type: String })

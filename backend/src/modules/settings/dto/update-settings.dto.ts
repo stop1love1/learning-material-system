@@ -1,19 +1,92 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsObject, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
+
+/** Thông tin tổ chức. */
+export class OrgSettingsDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  domain?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  timezone?: string;
+}
+
+/** Tùy biến giao diện. */
+export class AppearanceSettingsDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  accent?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  headingFont?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  dark?: boolean;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  density?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  railWide?: boolean;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  assignFlow?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  rubricStyle?: string;
+}
+
+/** Tùy chọn khác. */
+export class MiscSettingsDto {
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  allowGoogleLogin?: boolean;
+}
 
 export class UpdateSettingsDto {
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ type: OrgSettingsDto })
   @IsOptional()
-  @IsObject()
-  org?: Record<string, any>;
+  @ValidateNested()
+  @Type(() => OrgSettingsDto)
+  org?: OrgSettingsDto;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ type: AppearanceSettingsDto })
   @IsOptional()
-  @IsObject()
-  appearance?: Record<string, any>;
+  @ValidateNested()
+  @Type(() => AppearanceSettingsDto)
+  appearance?: AppearanceSettingsDto;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ type: MiscSettingsDto })
   @IsOptional()
-  @IsObject()
-  misc?: Record<string, any>;
+  @ValidateNested()
+  @Type(() => MiscSettingsDto)
+  misc?: MiscSettingsDto;
 }

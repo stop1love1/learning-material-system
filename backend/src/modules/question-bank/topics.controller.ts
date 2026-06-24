@@ -33,14 +33,19 @@ export class TopicsController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật chủ đề' })
-  update(@Param('id') id: string, @Body() dto: UpdateTopicDto) {
-    return this.topicsService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateTopicDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.topicsService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa chủ đề' })
-  remove(@Param('id') id: string) {
-    return this.topicsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.topicsService.remove(id, userId, role);
   }
 }

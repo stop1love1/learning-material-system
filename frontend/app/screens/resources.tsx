@@ -3,8 +3,10 @@ import React from 'react';
 import { Icon, Tag, Btn, IconBtn, Field, Segmented, Progress, Ring } from '@/app/components/ui';
 import { FONTS } from '@/app/theme/fonts';
 import { DB } from '@/app/data/db';
-import { LMS } from '@/app/store/store';
+import { LMS, useLMS } from '@/app/store/store';
 import { lblStyle } from '@/app/helpers/shared';
+import { filesApi, rubricsApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
 
 // screens-resources.tsx — Document repository + Rubric list & builder.
 
@@ -18,14 +20,28 @@ export const DOC_TYPE_META = {
 
 // ── Document repository ──────────────────────────────────────────────────────
 export function TDocs({ p, t }) {
+  useLMS(); // re-render on download/upload mock mutations
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [folder, setFolder] = React.useState('Tất cả');
   const [view, setView] = React.useState('grid');
   const docs = folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder);
+  const doUpload = async () => {
+    const n = DB.DOCS.length + 1;
+    const name = 'Tài liệu mới ' + n;
+    const folderName = folder === 'Tất cả' ? 'Tư liệu' : folder;
+    try {
+      // Library is external-link-first: the schema requires a url for external files.
+      await filesApi.create({ name, fileType: 'doc', source: 'external', url: 'https://example.com/' + n, tags: [folderName] });
+      await hydrateFor('docs'); // re-runs loadLibrary so DB.DOCS reflects the persisted row
+    } catch {
+      LMS && LMS.addDoc({ name, type: 'doc', folder: folderName }); // mock fallback (API down / unauthenticated)
+    }
+  };
+  const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto', display: 'grid', gridTemplateColumns: '210px 1fr', gap: 26 }}>
       <aside>
-        <Btn p={p} icon="upload" full onClick={() => LMS && LMS.addDoc({ name: 'Tài liệu mới ' + (DB.DOCS.length + 1), type: 'doc', folder: folder === 'Tất cả' ? 'Tư liệu' : folder })}>Tải tài liệu lên</Btn>
+        <Btn p={p} icon="upload" full onClick={doUpload}>Tải tài liệu lên</Btn>
         <div style={{ marginTop: 18, fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, padding: '0 6px 8px' }}>THƯ MỤC</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {DB.DOC_FOLDERS.map((f) => {
@@ -79,7 +95,7 @@ export function TDocs({ p, t }) {
                       <span>{d.size}</span><span>↓ {d.downloads}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                      <Btn p={p} variant="soft" size="sm" icon="download" full>Tải về</Btn>
+                      <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d.id)}>Tải về</Btn>
                       <IconBtn name="more" p={p} size={34} />
                     </div>
                   </div>
@@ -102,7 +118,7 @@ export function TDocs({ p, t }) {
                   </div>
                   <div style={{ fontSize: 12, color: p.sub, width: 110 }}>{d.updated}</div>
                   <div style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.faint, width: 60 }}>↓ {d.downloads}</div>
-                  <Btn p={p} variant="soft" size="sm" icon="download">Tải</Btn>
+                  <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
                   <IconBtn name="more" p={p} size={34} />
                 </div>
               );
@@ -220,7 +236,23 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
           style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: serif, fontSize: 28, fontWeight: 600,
             color: p.ink, letterSpacing: -0.4 }} />
         <Btn p={p} variant="ghost" onClick={() => setRoute('rubrics')}>Huỷ</Btn>
-        <Btn p={p} icon="check" onClick={() => { LMS && LMS.saveRubric(rubric); setRoute('rubrics'); }}>Lưu rubric</Btn>
+        <Btn p={p} icon="check" onClick={async () => {
+          // Map the design shape (criteria/scale) → backend DTO (criterions/levels).
+          const body = {
+            name: rubric.name,
+            levels: (rubric.scale || []).map((s: any, i: number) => ({ name: s.label, percentage: s.pct ?? 0, order: i })),
+            criterions: (rubric.criteria || []).map((c: any, i: number) => ({ name: c.name, note: c.desc || '', weight: c.weight ?? 0, order: i })),
+          };
+          try {
+            if (ctx.rubric) await rubricsApi.update(rubric.id, body);
+            else await rubricsApi.create(body);
+            await hydrateFor('rubrics');
+          } catch {
+            LMS && LMS.saveRubric(rubric); // offline / logged-out fallback
+          } finally {
+            setRoute('rubrics');
+          }
+        }}>Lưu rubric</Btn>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 22 }}>

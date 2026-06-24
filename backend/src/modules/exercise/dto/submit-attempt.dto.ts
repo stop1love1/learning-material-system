@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsMongoId, IsNumber, IsOptional, Min, ValidateNested } from 'class-validator';
 
 export class SubmitAnswerDto {
   @ApiProperty({ type: String })
-  @IsString()
+  @IsMongoId()
   questionId: string;
 
   @ApiPropertyOptional({ description: 'Đáp án — shape tùy loại câu hỏi' })

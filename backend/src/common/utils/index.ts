@@ -17,6 +17,9 @@ export const getPagination = (keyword?: string, page?: number, pageSize?: number
   pageSize = pageSize ? Number(pageSize) : 10;
   page = page < 1 ? 1 : page;
   pageSize = pageSize < 1 ? 10 : pageSize;
+  // Cap at 500 so unbounded ?pageSize= can't exhaust memory on @Public lists.
+  // 500 keeps headroom over the 200 the frontend loaders legitimately request.
+  pageSize = Math.min(pageSize, 500);
   return { keyword, page, pageSize };
 };
 

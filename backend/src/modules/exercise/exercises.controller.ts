@@ -43,28 +43,43 @@ export class ExercisesController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật bài tập' })
-  update(@Param('id') id: string, @Body() dto: UpdateExerciseDto) {
-    return this.exercisesService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateExerciseDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.exercisesService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa bài tập (gỡ luôn các câu hỏi liên kết)' })
-  remove(@Param('id') id: string) {
-    return this.exercisesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.exercisesService.remove(id, userId, role);
   }
 
   @Post(':id/questions')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Thêm câu hỏi vào bài tập' })
-  addQuestion(@Param('id') id: string, @Body() dto: AddExerciseQuestionDto) {
-    return this.exercisesService.addQuestion(id, dto);
+  addQuestion(
+    @Param('id') id: string,
+    @Body() dto: AddExerciseQuestionDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.exercisesService.addQuestion(id, dto, userId, role);
   }
 
   @Delete(':id/questions/:questionId')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Gỡ câu hỏi khỏi bài tập' })
-  removeQuestion(@Param('id') id: string, @Param('questionId') questionId: string) {
-    return this.exercisesService.removeQuestion(id, questionId);
+  removeQuestion(
+    @Param('id') id: string,
+    @Param('questionId') questionId: string,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.exercisesService.removeQuestion(id, questionId, userId, role);
   }
 }

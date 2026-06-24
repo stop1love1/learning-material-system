@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SelfAssessment } from '../../schemas/exercise/self-assessment.schema';
+import { Rubric } from '../../schemas/rubric/rubric.schema';
 import { convertStringToObjectId } from '../../common/utils';
 import { CreateSelfAssessmentDto } from './dto/create-self-assessment.dto';
 
@@ -9,6 +10,7 @@ import { CreateSelfAssessmentDto } from './dto/create-self-assessment.dto';
 export class SelfAssessmentService {
   constructor(
     @InjectModel(SelfAssessment.name) private readonly selfAssessmentModel: Model<SelfAssessment>,
+    @InjectModel(Rubric.name) private readonly rubricModel: Model<Rubric>,
   ) {}
 
   async create(dto: CreateSelfAssessmentDto, userId: string) {
@@ -29,6 +31,10 @@ export class SelfAssessmentService {
           }
         : {}),
     });
+    await this.rubricModel.updateOne(
+      { _id: convertStringToObjectId(rubricId) },
+      { $inc: { usedCount: 1 } },
+    );
     return selfAssessment.toObject();
   }
 

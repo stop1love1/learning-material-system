@@ -32,7 +32,7 @@ export class AttemptsController {
 
   @Get(':attemptId/result')
   @ApiOperation({ summary: 'Kết quả một lượt làm (submission + đáp án)' })
-  result(@Param('attemptId') attemptId: string) {
-    return this.attemptsService.result(attemptId);
+  result(@Param('attemptId') attemptId: string, @CurrentUser('sub') userId: string) {
+    return this.attemptsService.result(attemptId, userId);
   }
 }

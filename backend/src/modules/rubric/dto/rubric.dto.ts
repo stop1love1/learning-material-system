@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsMongoId,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -15,7 +16,7 @@ import { PaginationQueryDto } from '../../../common/dtos/pagination-query.dto';
 export class ListRubricsDto extends PaginationQueryDto {
   @ApiPropertyOptional({ type: String, description: 'Lọc theo nhóm rubric' })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   groupId?: string;
 }
 
@@ -84,7 +85,7 @@ export class CriterionDto {
 export class RubricDto {
   @ApiPropertyOptional({ type: String, description: 'ID nhóm rubric' })
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   groupId?: string;
 
   @ApiProperty({ example: 'Tên rubric' })
