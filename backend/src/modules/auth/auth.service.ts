@@ -51,6 +51,23 @@ export class AuthService {
     return this.sanitize(user);
   }
 
+  /** Người dùng tự cập nhật hồ sơ (tên / email / avatar). */
+  async updateProfile(userId: string, dto: { name?: string; email?: string; avatar?: string }) {
+    const patch: Record<string, unknown> = {};
+    if (dto.name) patch.name = dto.name;
+    if (dto.email) {
+      const email = dto.email.toLowerCase();
+      if (await this.userModel.exists({ email, _id: { $ne: userId } })) {
+        throw new ConflictException('Email đã được sử dụng');
+      }
+      patch.email = email;
+    }
+    if (dto.avatar !== undefined) patch.avatar = dto.avatar;
+    const user = await this.userModel.findByIdAndUpdate(userId, patch, { new: true });
+    if (!user) throw new UnauthorizedException();
+    return this.sanitize(user);
+  }
+
   private issue(user: UserDocument) {
     const accessToken = this.jwt.sign({
       sub: user._id.toString(),

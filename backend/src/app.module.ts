@@ -15,6 +15,8 @@ import { RubricModule } from './modules/rubric/rubric.module';
 import { ExerciseModule } from './modules/exercise/exercise.module';
 import { ArticleModule } from './modules/article/article.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { SettingsModule } from './modules/settings/settings.module';
     ExerciseModule,
     ArticleModule,
     SettingsModule,
+    StatsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_FILTER, useClass: AllExceptionsFilter }],

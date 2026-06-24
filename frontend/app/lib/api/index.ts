@@ -11,6 +11,7 @@ export const authApi = {
   register: (name: string, email: string, password: string) =>
     api.post<AuthResult>('/auth/register', { name, email, password }, { auth: false }),
   me: () => api.get<Record<string, any>>('/auth/me'),
+  updateMe: (body: { name?: string; email?: string; avatar?: string }) => api.patch<Record<string, any>>('/auth/me', body),
 };
 
 export const foldersApi = {
@@ -106,4 +107,15 @@ export const usersApi = {
   create: (body: any) => api.post('/users', body),
   update: (id: string, body: any) => api.patch(`/users/${id}`, body),
   remove: (id: string) => api.del(`/users/${id}`),
+};
+
+// Dashboard + báo cáo: số liệu thật tổng hợp từ backend (admin/teacher).
+export const statsApi = {
+  overview: () => api.get<any>('/stats/overview'),
+  reports: () => api.get<any>('/stats/reports'),
+};
+
+// Bảng tin hoạt động (tổng hợp sự kiện gần đây).
+export const notificationsApi = {
+  list: (limit = 20) => api.get<any[]>(`/notifications${qs({ limit })}`),
 };

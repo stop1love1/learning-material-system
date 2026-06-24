@@ -8,32 +8,6 @@ type Rec = Record<string, any>;
 
 const TEACHER: Rec = { name: 'Cô Mai Anh', email: 'maianh@vuonvan.vn', role: 'Giáo viên Tiểu học' };
 
-const CLASSES: Rec[] = [
-  { id: 'c1', code: 'TV5A1', name: 'Tiếng Việt 5A1', subject: 'Tiếng Việt', term: 'Học kỳ II · 2025–2026',
-    students: 35, room: 'P.305', schedule: 'T2-4-6 · 07:15', color: 'clay', cover: 'a',
-    progress: 72, assignmentsDue: 2, ungraded: 12, teacher: 'Cô Mai Anh' },
-  { id: 'c2', code: 'TV4A3', name: 'Tiếng Việt 4A3', subject: 'Tiếng Việt', term: 'Học kỳ II · 2025–2026',
-    students: 38, room: 'P.210', schedule: 'T3-5 · 09:40', color: 'teal', cover: 'b',
-    progress: 58, assignmentsDue: 1, ungraded: 5, teacher: 'Cô Mai Anh' },
-  { id: 'c3', code: 'TV3A2', name: 'Tiếng Việt 3A2', subject: 'Tiếng Việt', term: 'Học kỳ II · 2025–2026',
-    students: 36, room: 'P.118', schedule: 'T2-4 · 13:30', color: 'indigo', cover: 'c',
-    progress: 64, assignmentsDue: 0, ungraded: 0, teacher: 'Thầy Quang Đức' },
-  { id: 'c4', code: 'CLB-VH', name: 'CLB Văn hay chữ tốt', subject: 'Tiếng Việt', term: 'Học kỳ II · 2025–2026',
-    students: 24, room: 'P.401', schedule: 'T6 · 15:15', color: 'plum', cover: 'd',
-    progress: 49, assignmentsDue: 1, ungraded: 7, teacher: 'Cô Mai Anh' },
-];
-
-const STUDENTS: Rec[] = [
-  { id: 's1', name: 'Nguyễn Thu Hà', code: 'HS2401', avg: 8.4, submitted: 12, total: 13, last: 'Hôm nay', status: 'good' },
-  { id: 's2', name: 'Trần Văn Minh', code: 'HS2402', avg: 7.1, submitted: 11, total: 13, last: 'Hôm qua', status: 'good' },
-  { id: 's3', name: 'Lê Thị Phương', code: 'HS2403', avg: 9.0, submitted: 13, total: 13, last: 'Hôm nay', status: 'top' },
-  { id: 's4', name: 'Phạm Quốc Bảo', code: 'HS2404', avg: 5.8, submitted: 8, total: 13, last: '3 ngày trước', status: 'risk' },
-  { id: 's5', name: 'Hoàng Mỹ Linh', code: 'HS2405', avg: 7.9, submitted: 12, total: 13, last: 'Hôm nay', status: 'good' },
-  { id: 's6', name: 'Vũ Đức Anh', code: 'HS2406', avg: 6.4, submitted: 9, total: 13, last: '2 ngày trước', status: 'risk' },
-  { id: 's7', name: 'Đỗ Hải Yến', code: 'HS2407', avg: 8.8, submitted: 13, total: 13, last: 'Hôm nay', status: 'top' },
-  { id: 's8', name: 'Bùi Thanh Tùng', code: 'HS2408', avg: 7.5, submitted: 11, total: 13, last: 'Hôm qua', status: 'good' },
-];
-
 const QTYPES: Rec[] = [
   { id: 'single', label: 'Trắc nghiệm 1 đáp án', icon: 'checkCircle', short: '1 đáp án' },
   { id: 'multi', label: 'Trắc nghiệm nhiều đáp án', icon: 'check', short: 'Nhiều đáp án' },
@@ -196,7 +170,7 @@ const ADMIN_USERS: Rec[] = [
 ];
 
 export const DB: Record<string, any> = {
-  TEACHER, CLASSES, STUDENTS, QTYPES, LEVELS, QUESTIONS, DOCS, DOC_FOLDERS, DOWNLOADS,
+  TEACHER, QTYPES, LEVELS, QUESTIONS, DOCS, DOC_FOLDERS, DOWNLOADS,
   RUBRICS, ASSIGNMENTS, SUBMISSIONS, NOTICES, SCHEDULE, STUDENT_TASKS,
   ADMIN_STATS, ADMIN_USERS, ARTICLES,
 };

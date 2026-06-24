@@ -46,8 +46,6 @@ export const PAGE_TITLES: Record<string, [string, string]> = {
   article: ['Bài viết', ''],
   'a-blog': ['Bài viết / Blog', 'Đăng và quản lý bài viết'],
   overview: ['Tổng quan', 'Bảng điều khiển giảng dạy'],
-  classes: ['Lớp học', 'Quản lý các lớp bạn phụ trách'],
-  class: ['Chi tiết lớp', 'Học viên · Bài tập · Tài liệu'],
   assignments: ['Bài tập & Giao bài', 'Tạo, giao và theo dõi bài tập'],
   'assign-new': ['Giao bài tập mới', 'Soạn và phát cho lớp'],
   grade: ['Chấm điểm', 'Bài nộp đang chờ chấm'],
@@ -68,10 +66,10 @@ export const PAGE_TITLES: Record<string, [string, string]> = {
   's-doc': ['Đọc tài liệu', 'Học liệu trong kho'],
   's-results': ['Kết quả', 'Điểm số & nhận xét'],
   'a-overview': ['Tổng quan', 'Toàn cảnh hệ thống đào tạo'],
-  'a-classes': ['Lớp học', 'Tất cả lớp trong trung tâm'],
   'a-users': ['Người dùng & phân quyền', 'Tài khoản · vai trò · quyền hạn'],
   'a-settings': ['Cài đặt hệ thống', 'Giao diện · cấu hình chung · bảo mật · tích hợp'],
   'a-reports': ['Báo cáo & Thống kê', 'Thống kê toàn hệ thống & xuất dữ liệu'],
+  account: ['Hồ sơ cá nhân', 'Thông tin tài khoản của bạn'],
 };
 
 export const ROLE_META: Record<string, { label: string; sub: string; initials: string }> = {

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 /** Thông tin tổ chức. */
 export class OrgSettingsDto {
@@ -71,6 +71,53 @@ export class MiscSettingsDto {
   allowGoogleLogin?: boolean;
 }
 
+/** Nội dung trang chủ công khai (admin tự chỉnh). */
+export class HomepageSettingsDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  badge?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  heroTitle?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  heroSubtitle?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  ctaLabel?: string;
+}
+
+/** Thông tin SEO trang công khai. */
+export class SeoSettingsDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  keywords?: string[];
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  ogImage?: string;
+}
+
 export class UpdateSettingsDto {
   @ApiPropertyOptional({ type: OrgSettingsDto })
   @IsOptional()
@@ -89,4 +136,16 @@ export class UpdateSettingsDto {
   @ValidateNested()
   @Type(() => MiscSettingsDto)
   misc?: MiscSettingsDto;
+
+  @ApiPropertyOptional({ type: HomepageSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HomepageSettingsDto)
+  homepage?: HomepageSettingsDto;
+
+  @ApiPropertyOptional({ type: SeoSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SeoSettingsDto)
+  seo?: SeoSettingsDto;
 }

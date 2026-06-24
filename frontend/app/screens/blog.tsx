@@ -73,7 +73,7 @@ export function SBlog({ p, t, go }) {
               <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, margin: 0, color: p.ink, lineHeight: 1.3, letterSpacing: -0.2 }}>{a.title}</h3>
               <p style={{ fontSize: 13, color: p.sub, lineHeight: 1.55, margin: '8px 0 14px' }}>{a.excerpt}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: p.faint }}>
-                <Avatar name={a.author} p={p} size={26} /><span>{a.author}</span><span>·</span><span>{a.read}</span>
+                <Avatar name={a.author} p={p} size={26} /><span>{a.author}</span><span>·</span><span>{a.read}</span><span>·</span><span>👁 {a.views ?? 0}</span>
               </div>
             </div>
           </div>
@@ -128,13 +128,23 @@ export function SArticle({ p, t, ctx, setRoute, go }) {
 }
 
 // ── Admin: manage + compose blog ─────────────────────────────────────────────
-export function ABlog({ p, t }) {
+export function ABlog({ p, t, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [mode, setMode] = React.useState('list'); // list | compose
+  const [editId, setEditId] = React.useState(null);
   const [title, setTitle] = React.useState('');
   const [cat, setCat] = React.useState('Tập làm văn');
   const [body, setBody] = React.useState('');
+  const [kw, setKw] = React.useState('');
   const cats = ['Tập làm văn', 'Luyện từ & câu', 'Chính tả', 'Cùng con học', 'Tin tức'];
+  // Mở trình soạn cho bài mới (a=null) hoặc sửa bài có sẵn (prefill từ a).
+  const openCompose = (a) => {
+    setEditId(a ? a.id : null);
+    setTitle(a ? a.title || '' : '');
+    setCat(a ? a.cat || 'Tập làm văn' : 'Tập làm văn');
+    setBody(a ? a.html || '' : '');
+    setMode('compose');
+  };
 
   if (mode === 'compose') {
     return (
@@ -159,21 +169,19 @@ export function ABlog({ p, t }) {
                 const plain = stripHtml(body);
                 try {
                   // content is stored as HTML (authored in CKEditor).
-                  await articlesApi.create({
-                    title: safeTitle,
-                    category: cat,
-                    content: body,
-                    excerpt: plain.slice(0, 110),
-                    cover: 'blue',
-                  });
+                  if (editId) {
+                    await articlesApi.update(editId, { title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110) });
+                  } else {
+                    await articlesApi.create({ title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110), cover: 'blue' });
+                  }
                   await hydrateFor('a-blog'); // re-runs loadArticles → DB.ARTICLES from backend
                 } catch {
                   // offline / logged-out fallback: optimistic mock insert
-                  LMS && LMS.addArticle({ title: safeTitle, cat, body: plain ? [plain] : ['(Chưa có nội dung)'], cover: 'blue' });
+                  if (!editId) LMS && LMS.addArticle({ title: safeTitle, cat, body: plain ? [plain] : ['(Chưa có nội dung)'], cover: 'blue' });
                 } finally {
-                  setMode('list'); setTitle(''); setBody('');
+                  setMode('list'); setTitle(''); setBody(''); setEditId(null);
                 }
-              }}>Đăng bài</Btn>
+              }}>{editId ? 'Lưu thay đổi' : 'Đăng bài'}</Btn>
             </div>
           </section>
           <div style={{ position: 'sticky', top: 0 }}>
@@ -195,22 +203,22 @@ export function ABlog({ p, t }) {
   return (
     <div style={{ maxWidth: 1480, margin: '0 auto', padding: '24px 30px 40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-        <Field p={p} icon="search" placeholder="Tìm bài viết…" style={{ width: 280 }} />
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm bài viết…" style={{ width: 280 }} />
         <div style={{ flex: 1 }} />
-        <Btn p={p} icon="plus" onClick={() => setMode('compose')}>Viết bài mới</Btn>
+        <Btn p={p} icon="plus" onClick={() => openCompose(null)}>Viết bài mới</Btn>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px,1fr))', gap: 16 }}>
-        {DB.ARTICLES.map((a) => (
+        {DB.ARTICLES.filter((a) => { const k = kw.trim().toLowerCase(); return !k || (a.title || '').toLowerCase().includes(k) || (a.cat || '').toLowerCase().includes(k); }).map((a) => (
           <div key={a.id} className="lms-card" style={{ ...bgCard(p, 0), overflow: 'hidden' }}>
             <div style={{ height: 90, background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})`, display: 'flex', alignItems: 'flex-end', padding: 12 }}>
               <span style={{ padding: '3px 9px', borderRadius: 5, background: 'rgba(255,255,255,.9)', color: coverHue(p, a.cover), fontSize: 10.5, fontWeight: 700 }}>{a.cat}</span>
             </div>
             <div style={{ padding: 16 }}>
               <div style={{ fontSize: 14.5, fontWeight: 600, color: p.ink, lineHeight: 1.35 }}>{a.title}</div>
-              <div style={{ fontSize: 11.5, color: p.faint, margin: '8px 0 12px' }}>{a.author} · {a.date}</div>
+              <div style={{ fontSize: 11.5, color: p.faint, margin: '8px 0 12px' }}>{a.author} · {a.date} · 👁 {a.views ?? 0}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <Btn p={p} variant="ghost" size="sm" icon="pen">Sửa</Btn>
-                <Btn p={p} variant="ghost" size="sm" icon="eye">Xem</Btn>
+                <Btn p={p} variant="ghost" size="sm" icon="pen" onClick={() => openCompose(a)}>Sửa</Btn>
+                <Btn p={p} variant="ghost" size="sm" icon="eye" onClick={() => go && go('article', { article: a.id })}>Xem</Btn>
                 <div style={{ flex: 1 }} />
                 <Tag p={p} color={p.ok}>Đã đăng</Tag>
               </div>

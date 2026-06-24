@@ -18,6 +18,7 @@ export async function loadArticles(): Promise<void> {
       author: a.userId?.name ?? '—',
       date: formatDateVi(a.createdAt),
       read: (a.readMinutes ?? 4) + ' phút',
+      views: a.viewCount ?? 0,
       cover: a.cover ?? 'clay',
       body: a.content ? [a.content] : [],
       html: a.content ?? '', // content is stored as HTML; rendered via dangerouslySetInnerHTML.

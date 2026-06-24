@@ -6,32 +6,20 @@
 import React from 'react';
 import { DB } from '@/app/data/db';
 
-const KEY = 'lms-state-v3';
-const COLLS = ['ASSIGNMENTS', 'QUESTIONS', 'RUBRICS', 'SUBMISSIONS', 'STUDENT_TASKS', 'DOCS', 'ARTICLES', 'DOWNLOADS'];
+const LEGACY_KEY = 'lms-state-v3';
 const hasWindow = typeof window !== 'undefined';
 
-// NOTE: we intentionally do NOT restore persisted collections at module load.
-// Restoring on the client diverged the hydration DB from the server-rendered
-// (pure-mock) DB and triggered React #418 hydration mismatches on every screen.
-// Live data now comes from the API loaders (post-mount); the mock fallback is
-// session-only. persist() below is kept write-only (never read back) for the
-// in-session offline-mock flow; it never feeds a render.
+// Live data comes entirely from the API loaders (app/lib/sync). The in-memory
+// mock DB is only a session-only offline fallback and is NEVER persisted.
+// 'lms-state-v3' used to be a write-only cache that was never read back — remove
+// any stale copy so nothing lingers in the user's localStorage.
+if (hasWindow) { try { localStorage.removeItem(LEGACY_KEY); } catch {} }
 
 let ver = 0;
 const subs = new Set<(v: number) => void>();
 
-function persist() {
-  if (!hasWindow) return;
-  try {
-    const o: Record<string, any> = {};
-    COLLS.forEach((k) => (o[k] = DB[k]));
-    localStorage.setItem(KEY, JSON.stringify(o));
-  } catch {}
-}
-
 function bump() {
   ver++;
-  persist();
   subs.forEach((fn) => fn(ver));
 }
 
@@ -41,7 +29,7 @@ export const LMS = {
   bump,
   reset() {
     if (!hasWindow) return;
-    try { localStorage.removeItem(KEY); } catch {}
+    try { localStorage.removeItem(LEGACY_KEY); } catch {}
     location.reload();
   },
 

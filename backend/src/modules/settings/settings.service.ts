@@ -10,18 +10,28 @@ export class SettingsService {
     @InjectModel(Settings.name) private readonly settingsModel: Model<Settings>,
   ) {}
 
-  /** Lấy cấu hình hệ thống (singleton); tạo bản mặc định nếu chưa có. */
+  /** Lấy cấu hình hệ thống (singleton); tạo bản mặc định nếu chưa có và
+   *  bổ sung default cho các nhóm mới (homepage/seo…) trên doc tạo từ trước. */
   async getOrCreate() {
-    const existing = await this.settingsModel.findOne({ key: 'system' }).lean();
-    if (existing) return existing;
-    const created = await this.settingsModel.create({ key: 'system' });
-    return this.settingsModel.findById(created._id).lean();
+    let doc = await this.settingsModel.findOne({ key: 'system' });
+    if (!doc) doc = await this.settingsModel.create({ key: 'system' });
+    // Backfill: doc cũ có thể thiếu nhóm được thêm sau (default chỉ áp dụng lúc tạo).
+    const defaults: any = new this.settingsModel({ key: 'system' }).toObject();
+    let changed = false;
+    for (const group of ['org', 'appearance', 'misc', 'homepage', 'seo'] as const) {
+      if ((doc as any)[group] == null) {
+        (doc as any)[group] = defaults[group];
+        changed = true;
+      }
+    }
+    if (changed) await doc.save();
+    return doc.toObject();
   }
 
   /** Cập nhật cấu hình (upsert). Làm phẳng các object con để $set theo đúng nhánh. */
   async update(dto: UpdateSettingsDto) {
     const flattened: Record<string, any> = {};
-    for (const group of ['org', 'appearance', 'misc'] as const) {
+    for (const group of ['org', 'appearance', 'misc', 'homepage', 'seo'] as const) {
       const value = dto[group];
       if (value && typeof value === 'object') {
         for (const [field, fieldValue] of Object.entries(value)) {

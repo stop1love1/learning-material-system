@@ -58,6 +58,42 @@ export class Settings {
   @ApiProperty({ type: Object })
   misc: { allowGoogleLogin: boolean };
 
+  // Nội dung trang chủ công khai (admin tự chỉnh thay vì fix cứng trong code).
+  @Prop({
+    type: {
+      badge: { type: String, default: 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ' },
+      heroTitle: { type: String, default: 'Học Văn nhẹ nhàng, tài liệu mở cho tất cả.' },
+      heroSubtitle: {
+        type: String,
+        default:
+          'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.',
+      },
+      ctaLabel: { type: String, default: 'Khám phá' },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  homepage: { badge: string; heroTitle: string; heroSubtitle: string; ctaLabel: string };
+
+  // Thông tin SEO cho trang công khai.
+  @Prop({
+    type: {
+      title: { type: String, default: 'Vườn Văn — Học liệu Ngữ văn / Tiếng Việt Tiểu học' },
+      description: {
+        type: String,
+        default:
+          'Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập môn Ngữ văn / Tiếng Việt Tiểu học.',
+      },
+      keywords: { type: [String], default: ['ngữ văn', 'tiếng việt', 'tiểu học', 'học liệu', 'đề thi'] },
+      ogImage: { type: String, default: null },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  seo: { title: string; description: string; keywords: string[]; ogImage: string | null };
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

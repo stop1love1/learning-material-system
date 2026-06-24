@@ -85,10 +85,14 @@ export function TAssignNew({ p, t, setRoute }) {
   const [title, setTitle] = React.useState('');
   const [cls, setCls] = React.useState('public');
   const [kind, setKind] = React.useState('quiz');
-  const [picked, setPicked] = React.useState(['q1', 'q2']);
-  const [docs, setDocs] = React.useState(['d2']);
+  // Start with nothing pre-selected — the teacher picks real questions/docs from
+  // the (live) bank. Seeding mock ids ('q1'/'q2') made the attach-question step
+  // POST non-existent ids → 400s on publish.
+  const [picked, setPicked] = React.useState<string[]>([]);
+  const [docs, setDocs] = React.useState<string[]>([]);
   const [points, setPoints] = React.useState(10);
   const [rubric, setRubric] = React.useState('none');
+  const [due, setDue] = React.useState('26/06/2026 · 23:59');
 
   const togglePick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
@@ -172,7 +176,7 @@ export function TAssignNew({ p, t, setRoute }) {
     <section style={{ ...aCard(p, 24), marginBottom: 20 }}>
       <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 18px', color: p.ink }}>Cài đặt & giao bài</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-        <div><label style={lblStyle(p)}>HẠN NỘP</label><Field p={p} value="26/06/2026 · 23:59" onChange={() => {}} icon="calendar" style={{ marginTop: 8 }} /></div>
+        <div><label style={lblStyle(p)}>HẠN NỘP</label><Field p={p} value={due} onChange={setDue} icon="calendar" style={{ marginTop: 8 }} /></div>
         <div><label style={lblStyle(p)}>ĐIỂM TỐI ĐA</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 40, marginTop: 8, padding: '0 13px', borderRadius: 10, border: `1px solid ${p.line}`, background: p.surface }}>
             <input type="number" value={points} onChange={(e) => setPoints(Number(e.target.value))}

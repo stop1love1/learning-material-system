@@ -17,13 +17,28 @@ const beVietnam = Be_Vietnam_Pro({
 });
 const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dmmono", display: "swap" });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Vườn Văn · Học liệu Ngữ văn Tiểu học",
-    template: "%s · Vườn Văn",
-  },
-  description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập môn Ngữ văn / Tiếng Việt Tiểu học.",
-};
+// SEO lấy từ Cài đặt (settings.seo) để admin tự chỉnh; fallback về mặc định nếu API down.
+export async function generateMetadata(): Promise<Metadata> {
+  const fallback: Metadata = {
+    title: { default: "Vườn Văn · Học liệu Ngữ văn Tiểu học", template: "%s · Vườn Văn" },
+    description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập môn Ngữ văn / Tiếng Việt Tiểu học.",
+  };
+  try {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
+    const res = await fetch(`${base}/settings`, { cache: "no-store" });
+    if (!res.ok) return fallback;
+    const seo = (await res.json())?.seo;
+    if (!seo?.title) return fallback;
+    return {
+      title: { default: seo.title, template: `%s · ${seo.title.split("—")[0].trim() || "Vườn Văn"}` },
+      description: seo.description || fallback.description,
+      keywords: Array.isArray(seo.keywords) && seo.keywords.length ? seo.keywords : undefined,
+      openGraph: { title: seo.title, description: seo.description, images: seo.ogImage ? [seo.ogImage] : undefined },
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 export default function RootLayout({
   children,

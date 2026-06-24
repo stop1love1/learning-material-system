@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Exercise } from '../../schemas/exercise/exercise.schema';
 import { ExerciseQuestion } from '../../schemas/exercise/exercise-question.schema';
 import { Question } from '../../schemas/question-bank/question.schema';
+import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
 import { UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
@@ -17,6 +18,7 @@ export class ExercisesService {
     @InjectModel(Exercise.name) private readonly exerciseModel: Model<Exercise>,
     @InjectModel(ExerciseQuestion.name) private readonly exerciseQuestionModel: Model<ExerciseQuestion>,
     @InjectModel(Question.name) private readonly questionModel: Model<Question>,
+    @InjectModel(Attempt.name) private readonly attemptModel: Model<Attempt>,
   ) {}
 
   async list(dto: ListExercisesDto) {
@@ -46,9 +48,19 @@ export class ExercisesService {
       { $group: { _id: '$exerciseId', n: { $sum: 1 } } },
     ]);
     const countMap = new Map(counts.map((c: any) => [c._id.toString(), c.n]));
+
+    // Lượt làm + số người làm (distinct studentId/sessionId) cho mỗi bài tập.
+    const attemptAgg = await this.attemptModel.aggregate([
+      { $match: { exerciseId: { $in: ids } } },
+      { $group: { _id: '$exerciseId', attempts: { $sum: 1 }, learners: { $addToSet: { $ifNull: ['$studentId', '$sessionId'] } } } },
+      { $project: { attempts: 1, learners: { $size: '$learners' } } },
+    ]);
+    const attemptMap = new Map(attemptAgg.map((a: any) => [a._id.toString(), a]));
     const withCount = records.map((r: any) => ({
       ...r,
       questionCount: countMap.get(r._id.toString()) ?? 0,
+      attemptCount: attemptMap.get(r._id.toString())?.attempts ?? 0,
+      learnerCount: attemptMap.get(r._id.toString())?.learners ?? 0,
     }));
     return buildPagination(withCount, total, page, pageSize);
   }

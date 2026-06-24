@@ -30,14 +30,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { p, t } = useLmsTheme();
   const [user, setUser] = React.useState<{ name: string } | null>(null);
   const [open, setOpen] = React.useState(false);
+  const [ready, setReady] = React.useState(false);
 
   // Restore session from a stored token.
   React.useEffect(() => {
-    if (!getToken()) return;
+    if (!getToken()) { setReady(true); return; }
     authApi
       .me()
       .then((u) => setUser({ name: u.name }))
-      .catch(() => clearToken());
+      .catch(() => clearToken())
+      .finally(() => setReady(true));
   }, []);
 
   const login = React.useCallback(async (email: string, password: string) => {
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const auth: Auth = {
     loggedIn: !!user,
+    ready,
     name: user?.name ?? '',
     initials: user ? initialsOf(user.name) : '',
     open: () => setOpen(true),

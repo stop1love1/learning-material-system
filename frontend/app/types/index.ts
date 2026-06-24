@@ -50,6 +50,7 @@ export interface Palette {
 /** Auth state passed into the public site + gated student screens. */
 export interface Auth {
   loggedIn: boolean;
+  ready: boolean; // true sau khi khôi phục phiên (tránh nháy gate khi đang xác thực)
   name: string;
   initials: string;
   open: () => void;

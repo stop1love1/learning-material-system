@@ -11,6 +11,9 @@ import { loadQuestions } from './load-questions';
 import { loadRubrics } from './load-rubrics';
 import { loadExercises } from './load-exercises';
 import { loadSubmissions } from './load-submissions';
+import { loadStats } from './load-stats';
+import { loadReports } from './load-reports';
+import { loadNotifications } from './load-notifications';
 
 type Loader = () => Promise<void>;
 
@@ -38,7 +41,9 @@ const BY_ROUTE: Record<string, Loader[]> = {
   'grade-one': [loadExercises, loadSubmissions],
   'a-blog': [loadArticles],
   'a-users': [loadUsers],
-  'a-overview': [loadLibrary, loadArticles, loadExercises, loadUsers],
+  'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers],
+  'a-reports': [loadReports],
+  notify: [loadNotifications],
 };
 
 /** Fetch the live collections needed by `routeKey` into DB, then re-render. */

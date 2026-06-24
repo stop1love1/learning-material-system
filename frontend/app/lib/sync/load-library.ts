@@ -47,6 +47,7 @@ export async function loadLibrary(): Promise<void> {
       // we read the name. Falls back to '—' otherwise.
       by: (f.userId && typeof f.userId === 'object' ? f.userId.name : undefined) ?? '—',
       downloads: f.downloadCount ?? 0,
+      views: f.viewCount ?? 0,
       url: f.url ?? '',
       desc: f.description ?? '', // HTML description (per-file), rendered in the reader.
       thumb: f.thumbnailUrl || driveThumb(f.url), // Drive thumbnail (falls back to icon on error).

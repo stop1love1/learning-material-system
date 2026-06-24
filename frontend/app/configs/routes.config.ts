@@ -32,6 +32,7 @@ export const ROUTES = {
   reports: '/quan-tri/bao-cao', // Báo cáo & Thống kê
   settings: '/quan-tri/cai-dat', // Cài đặt hệ thống
   notifications: '/quan-tri/thong-bao', // Nhật ký & thông báo
+  account: '/quan-tri/tai-khoan', // Hồ sơ cá nhân
 } as const;
 
 type Patch = Record<string, string> | undefined;
@@ -58,7 +59,7 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'a-overview': return ROUTES.dashboard;
     case 'docs': return ROUTES.dashLibrary;
     case 'bank': return ROUTES.questionBank;
-    case 'bank-edit': return ROUTES.questionNew;
+    case 'bank-edit': return patch && patch.question ? `${ROUTES.questionNew}?id=${patch.question}` : ROUTES.questionNew;
     case 'assignments': return ROUTES.assignments;
     case 'assign-new': return ROUTES.assignmentNew;
     case 'rubrics': return ROUTES.rubrics;
@@ -71,7 +72,8 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'a-settings': return ROUTES.settings;
     case 'settings': return ROUTES.settings;
     case 'notify': return ROUTES.notifications;
-    // legacy / unrouted teacher+student keys → nearest landing
+    case 'account': return ROUTES.account;
+    // legacy class keys → dashboard (lớp học đã gỡ bỏ).
     case 'classes':
     case 'class': return ROUTES.dashboard;
     default: return ROUTES.home;
@@ -103,6 +105,7 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (seg.startsWith('/quan-tri/bao-cao')) return r('a-reports', 'a-reports');
   if (seg.startsWith('/quan-tri/cai-dat')) return r('a-settings', 'a-settings');
   if (seg.startsWith('/quan-tri/thong-bao')) return r('notify', 'notify');
+  if (seg.startsWith('/quan-tri/tai-khoan')) return r('account', 'account');
 
   // ── công khai ──
   if (/^\/kho-hoc-lieu\/[^/]+/.test(seg)) return r('s-doc', 's-docs');

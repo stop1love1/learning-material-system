@@ -6,8 +6,9 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { tStripe, ToggleRow, lblStyle } from '@/app/helpers/shared';
-import { usersApi, settingsApi } from '@/app/lib/api';
+import { usersApi, settingsApi, filesApi, exercisesApi, articlesApi, rubricsApi, questionsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { downloadCsv, downloadJson } from '@/app/helpers/export';
 
 // Lightweight inline modal (design's inline-style system; no antd).
 function AdminModal({ p, title, onClose, children }) {
@@ -51,6 +52,14 @@ export function LineChart({ data, w = 620, h = 200, stroke, fill, grid, axis, la
 export function AOverview({ p, t }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const s = DB.ADMIN_STATS;
+  // Số liệu thật từ /stats/overview (load-stats). Delta theo % xu hướng thật.
+  const dlt = (pct) => (pct == null ? '—' : (pct >= 0 ? '↑ ' : '↓ ') + Math.abs(pct).toLocaleString('vi-VN') + '%');
+  const spark = (s.enrollTrend || []).slice(-8);
+  const fmtMd = (iso) => { const a = String(iso || '').split('-'); return a[2] && a[1] ? `${a[2]}/${a[1]}` : ''; };
+  const dates = s.enrollDates || [];
+  const chartLabels = dates.length
+    ? [0, 0.25, 0.5, 0.75, 1].map((f) => fmtMd(dates[Math.round(f * (dates.length - 1))]))
+    : ['01/06', '08/06', '15/06', '22/06', '30/06'];
   return (
     <div style={{ padding: '30px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
       <h2 style={{ fontFamily: serif, fontSize: 30, fontWeight: 500, margin: '0 0 6px', color: p.ink, letterSpacing: -0.5 }}>
@@ -60,10 +69,10 @@ export function AOverview({ p, t }) {
 
       <div className="lms-statstrip" style={{ display: 'flex', ...adCard(p, 0), padding: '22px 0', marginBottom: 24 }}>
         {[
-          { l: 'Người dùng', v: fmt(s.users), d: '↑ 8,2%', up: true, sp: [8, 10, 9, 12, 11, 14, 13, 16] },
-          { l: 'Học liệu', v: fmt(DB.DOCS.length), d: 'Đang chia sẻ', sp: [5, 6, 6, 7, 9, 8, 10, 11] },
-          { l: 'Bài luyện tập', v: fmt(DB.STUDENT_TASKS.length), d: 'Mở cho mọi người', sp: [7, 7, 8, 8, 8, 9, 9, 9] },
-          { l: 'Bài viết', v: fmt(DB.ARTICLES.length), d: '↑ mới', up: true, sp: [12, 9, 14, 11, 16, 13, 18, 19] },
+          { l: 'Người dùng', v: fmt(s.users), d: dlt(s.trends?.users), up: (s.trends?.users ?? 0) >= 0, sp: spark },
+          { l: 'Học liệu', v: fmt(s.docs ?? DB.DOCS.length), d: dlt(s.trends?.files), up: (s.trends?.files ?? 0) >= 0, sp: spark },
+          { l: 'Bài luyện tập', v: fmt(s.exercises ?? DB.STUDENT_TASKS.length), d: dlt(s.trends?.exercises), up: (s.trends?.exercises ?? 0) >= 0, sp: spark },
+          { l: 'Bài viết', v: fmt(s.articles ?? DB.ARTICLES.length), d: dlt(s.trends?.articles), up: (s.trends?.articles ?? 0) >= 0, sp: spark },
         ].map((st, i) => (
           <div key={i} style={{ flex: 1, padding: '0 26px', borderLeft: i ? `1px solid ${p.line}` : 'none' }}>
             <Stat p={p} label={st.l} value={st.v} delta={st.d} up={st.up} spark={st.sp} />
@@ -74,13 +83,13 @@ export function AOverview({ p, t }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
         <section style={adCard(p)}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div><h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: 0, color: p.ink }}>Lượt truy cập 30 ngày</h3>
-              <div style={{ fontSize: 12.5, color: p.sub, marginTop: 3 }}>Số lượt xem học liệu theo ngày</div></div>
-            <div style={{ textAlign: 'right' }}><div style={{ fontFamily: serif, fontSize: 28, fontWeight: 600, color: p.ink, lineHeight: 1 }}>342</div>
-              <div style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: p.ok, marginTop: 4 }}>↑ 12,5%</div></div>
+            <div><h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: 0, color: p.ink }}>Lượt làm bài 30 ngày</h3>
+              <div style={{ fontSize: 12.5, color: p.sub, marginTop: 3 }}>Số lượt làm bài tập theo ngày</div></div>
+            <div style={{ textAlign: 'right' }}><div style={{ fontFamily: serif, fontSize: 28, fontWeight: 600, color: p.ink, lineHeight: 1 }}>{fmt(s.activityTotal ?? 0)}</div>
+              <div style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: (s.activityTrend ?? 0) >= 0 ? p.ok : p.danger, marginTop: 4 }}>{dlt(s.activityTrend)}</div></div>
           </div>
           <LineChart data={s.enrollTrend} stroke={p.accent} fill={p.accentSoft} grid={p.line} axis={p.faint}
-            labels={['01/06', '08/06', '15/06', '22/06', '30/06']} />
+            labels={chartLabels} />
         </section>
 
         <section style={adCard(p)}>
@@ -99,38 +108,6 @@ export function AOverview({ p, t }) {
   );
 }
 
-export function AClasses({ p, t }) {
-  return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <Field p={p} icon="search" placeholder="Tìm lớp, mã lớp, giảng viên…" style={{ width: 300 }} />
-        <div style={{ flex: 1 }} />
-        <Btn p={p} variant="ghost" icon="download">Xuất Excel</Btn>
-        <Btn p={p} icon="plus">Tạo lớp</Btn>
-      </div>
-      <div className="lms-scrollx" style={adCard(p, 0)}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1fr 1.4fr 1fr', padding: '12px 22px', borderBottom: `1px solid ${p.line}`,
-          fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint }}>
-          <span>LỚP HỌC</span><span>GIẢNG VIÊN</span><span>SĨ SỐ</span><span>TIẾN ĐỘ</span><span style={{ textAlign: 'right' }}>TRẠNG THÁI</span>
-        </div>
-        {DB.CLASSES.map((c, i) => (
-          <div key={c.id} className="lms-row" style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1fr 1.4fr 1fr', alignItems: 'center', padding: '14px 22px', borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: hexA(tStripe(p, c.color), 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name="class" size={17} stroke={tStripe(p, c.color)} /></div>
-              <div><div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{c.name}</div>
-                <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{c.code}</div></div>
-            </div>
-            <div style={{ fontSize: 13, color: p.sub }}>{c.teacher}</div>
-            <div style={{ fontSize: 13, color: p.sub }}>{c.students}</div>
-            <div style={{ paddingRight: 20 }}><Progress p={p} value={c.progress} height={6} color={tStripe(p, c.color)} /></div>
-            <div style={{ textAlign: 'right' }}><Tag p={p} color={p.ok}>Đang học</Tag></div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // Backend role enum ↔ Vietnamese label used by the admin two-bucket model.
 const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Người dùng', student: 'Người dùng' };
@@ -222,7 +199,7 @@ export function AUsers({ p, t }) {
         <Pill p={p} active={role === 'Người dùng'} onClick={() => setRole('Người dùng')}>Người dùng</Pill>
         <Pill p={p} active={role === 'Quản trị viên'} onClick={() => setRole('Quản trị viên')}>Quản trị</Pill>
         <div style={{ flex: 1 }} />
-        <Btn p={p} variant="ghost" icon="download">Xuất danh sách</Btn>
+        <Btn p={p} variant="ghost" icon="download" onClick={() => downloadCsv('nguoi-dung.csv', [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'joined', label: 'Tham gia' }], all)}>Xuất danh sách</Btn>
         <Btn p={p} icon="plus" onClick={() => setModal({ mode: 'create' })}>Thêm người dùng</Btn>
       </div>
       <div className="lms-scrollx" style={adCard(p, 0)}>
@@ -307,16 +284,20 @@ function UserFormModal({ p, mode, user, busy, onClose, onSave }) {
 
 export function AReports({ p, t }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
-  const bars = [
-    { label: 'T2', value: 42 }, { label: 'T3', value: 55 }, { label: 'T4', value: 48 },
-    { label: 'T5', value: 61 }, { label: 'T6', value: 58 }, { label: 'T7', value: 30 },
-  ].map((b) => ({ ...b, color: p.accent }));
+  // Lượt làm bài 7 ngày gần nhất từ /stats/reports (load-reports).
+  const r = DB.ADMIN_REPORTS || {};
+  const weekdayVi = (iso) => ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][new Date(iso).getDay()];
+  const bars = (Array.isArray(r.weeklySeries) && r.weeklySeries.length
+    ? r.weeklySeries.map((x) => ({ label: weekdayVi(x.date), value: x.count }))
+    : [{ label: 'T2', value: 0 }, { label: 'T3', value: 0 }, { label: 'T4', value: 0 }, { label: 'T5', value: 0 }, { label: 'T6', value: 0 }, { label: 'T7', value: 0 }]
+  ).map((b) => ({ ...b, color: p.accent }));
+  const maxBar = Math.max(10, ...bars.map((b) => b.value));
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }}>
         <section style={adCard(p)}>
-          <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 16px', color: p.ink }}>Lượt truy cập theo ngày</h3>
-          <Bars data={bars} w={520} h={160} track={p.sink} labelColor={p.faint} max={70} />
+          <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 16px', color: p.ink }}>Lượt làm bài theo ngày</h3>
+          <Bars data={bars} w={520} h={160} track={p.sink} labelColor={p.faint} max={maxBar} />
         </section>
         <section style={adCard(p)}>
           <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 16px', color: p.ink }}>Học liệu theo chủ đề</h3>
@@ -355,99 +336,6 @@ export function AReports({ p, t }) {
   );
 }
 
-export function TReports({ p, t }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
-  const [cls, setCls] = React.useState('all');
-  const [range, setRange] = React.useState('week');
-  const dist = [['9–10 · Giỏi', 22, p.ok], ['8–9 · Khá giỏi', 31, p.info], ['6,5–8 · Khá', 30, p.accent], ['5–6,5 · TB', 13, p.warn], ['< 5 · Yếu', 4, p.danger]];
-  const risk = DB.STUDENTS.filter((s) => s.status === 'risk');
-  const top = DB.STUDENTS.filter((s) => s.status === 'top');
-  return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, flexWrap: 'wrap' }}>
-        <Select p={p} value={cls} onChange={setCls} style={{ width: 240 }}
-          options={[{ value: 'all', label: 'Tất cả lớp' }, ...DB.CLASSES.map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))]} />
-        <Segmented p={p} value={range} onChange={setRange}
-          options={[{ value: 'week', label: 'Tuần' }, { value: 'month', label: 'Tháng' }, { value: 'term', label: 'Học kỳ' }]} />
-        <div style={{ flex: 1 }} />
-        <Btn p={p} variant="ghost" icon="download">Xuất báo cáo</Btn>
-      </div>
-
-      <div className="lms-statstrip" style={{ display: 'flex', ...adCard(p, 0), padding: '22px 0', marginBottom: 22 }}>
-        {[
-          { l: 'Tỷ lệ nộp bài', v: '86', u: '%', d: '↑ 3,2%', up: true, sp: [7, 8, 8, 9, 9, 10, 11, 12] },
-          { l: 'Điểm trung bình', v: '7,6', d: '↑ 0,3', up: true, sp: [6, 7, 7, 8, 7, 8, 9, 9] },
-          { l: 'Bài đã chấm', v: '124', d: 'Tuần này', sp: [12, 9, 14, 11, 16, 13, 18, 19] },
-          { l: 'Học viên cần hỗ trợ', v: String(risk.length), d: 'Điểm < 6,5', sp: [4, 5, 4, 6, 5, 4, 3, 2] },
-        ].map((st, i) => (
-          <div key={i} style={{ flex: 1, padding: '0 26px', borderLeft: i ? `1px solid ${p.lineSoft}` : 'none' }}>
-            <Stat p={p} label={st.l} value={st.v} unit={st.u} delta={st.d} up={st.up} spark={st.sp} />
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start', marginBottom: 22 }}>
-        <section style={adCard(p)}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div><h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: 0, color: p.ink }}>Điểm trung bình theo tuần</h3>
-              <div style={{ fontSize: 12.5, color: p.sub, marginTop: 3 }}>8 tuần gần nhất</div></div>
-            <Tag p={p} color={p.ok}>↑ Cải thiện</Tag>
-          </div>
-          <LineChart data={[6.4, 6.8, 6.7, 7.1, 7.0, 7.3, 7.5, 7.6]} stroke={p.accent} fill={p.accentSoft} grid={p.lineSoft} axis={p.faint}
-            labels={['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8']} />
-        </section>
-        <section style={adCard(p)}>
-          <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: '0 0 16px', color: p.ink }}>Phân bố điểm</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {dist.map(([lab, pct, col], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ width: 104, fontSize: 12.5, color: p.sub }}>{lab}</span>
-                <div style={{ flex: 1 }}><Progress p={p} value={pct} height={8} color={col} /></div>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.faint, width: 34, textAlign: 'right' }}>{pct}%</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
-        <section style={adCard(p)}>
-          <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: '0 0 16px', color: p.ink }}>Tỷ lệ nộp bài theo lớp</h3>
-          {DB.CLASSES.map((c, i) => {
-            const rate = [86, 74, 91, 63][i] || 70;
-            return (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: hexA(tStripe(p, c.color), 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="class" size={16} stroke={tStripe(p, c.color)} /></div>
-                <div style={{ width: 150, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{c.code}</div></div>
-                <div style={{ flex: 1 }}><Progress p={p} value={rate} height={7} color={tStripe(p, c.color)} /></div>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: p.sub, width: 38, textAlign: 'right' }}>{rate}%</span>
-              </div>
-            );
-          })}
-        </section>
-        <section style={adCard(p)}>
-          <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: '0 0 14px', color: p.ink }}>Cần quan tâm</h3>
-          {risk.concat(top.slice(0, 1)).map((s, i) => {
-            const tone = s.status === 'risk' ? p.danger : p.ok;
-            return (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 0', borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
-                <Avatar name={s.name} p={p} size={34} color={tone} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: p.ink }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: p.faint }}>{s.status === 'risk' ? 'Điểm thấp, cần hỗ trợ' : 'Tiến bộ tốt'}</div></div>
-                <span style={{ fontFamily: FONTS.display, fontSize: 17, fontWeight: 700, color: tone }}>{s.avg.toFixed(1)}</span>
-              </div>
-            );
-          })}
-        </section>
-      </div>
-    </div>
-  );
-}
-
 export function ASettings({ p, t, setTweak, resetTheme }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const setT = setTweak || (() => {});
@@ -464,6 +352,8 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [misc, setMisc] = React.useState({ allowGoogleLogin: true });
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [homepage, setHomepage] = React.useState({ badge: '', heroTitle: '', heroSubtitle: '', ctaLabel: '' });
+  const [seo, setSeo] = React.useState({ title: '', description: '', keywords: '', ogImage: '' });
 
   React.useEffect(() => {
     let alive = true;
@@ -477,6 +367,8 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           timezone: tzToOpt(s.org.timezone),
         });
         if (s.misc) setMisc({ allowGoogleLogin: s.misc.allowGoogleLogin !== false });
+        if (s.homepage) setHomepage({ badge: s.homepage.badge ?? '', heroTitle: s.homepage.heroTitle ?? '', heroSubtitle: s.homepage.heroSubtitle ?? '', ctaLabel: s.homepage.ctaLabel ?? '' });
+        if (s.seo) setSeo({ title: s.seo.title ?? '', description: s.seo.description ?? '', keywords: (s.seo.keywords ?? []).join(', '), ogImage: s.seo.ogImage ?? '' });
       } catch { /* API down / not authed → keep defaults */ }
     })();
     return () => { alive = false; };
@@ -488,6 +380,8 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       await settingsApi.update({
         org: { name: org.name, domain: org.domain, timezone: optToTz(org.timezone) },
         misc: { allowGoogleLogin: misc.allowGoogleLogin },
+        homepage: { badge: homepage.badge, heroTitle: homepage.heroTitle, heroSubtitle: homepage.heroSubtitle, ctaLabel: homepage.ctaLabel },
+        seo: { title: seo.title, description: seo.description, keywords: seo.keywords.split(',').map((x) => x.trim()).filter(Boolean), ogImage: seo.ogImage || undefined },
       });
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
@@ -495,10 +389,12 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
     }
     setSaving(false);
-  }, [org, misc]);
+  }, [org, misc, homepage, seo]);
   const SECTIONS = [
     { id: 'appearance', icon: 'image', label: 'Giao diện' },
     { id: 'org', icon: 'settings', label: 'Tổ chức' },
+    { id: 'homepage', icon: 'home', label: 'Trang chủ' },
+    { id: 'seo', icon: 'search', label: 'SEO' },
     { id: 'academic', icon: 'grade', label: 'Cấu hình đánh giá' },
     { id: 'security', icon: 'target', label: 'Bảo mật & đăng nhập' },
     { id: 'notifications', icon: 'notify', label: 'Thông báo' },
@@ -719,19 +615,36 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
+        {sec === 'homepage' && (
+          <section style={card(24)}>
+            <H desc="Nội dung hiển thị ngoài trang chủ công khai (admin tự chỉnh).">Trang chủ</H>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div><label style={lblStyle(p)}>NHÃN (BADGE)</label><Field p={p} value={homepage.badge} onChange={(v) => setHomepage((o) => ({ ...o, badge: v }))} style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>TIÊU ĐỀ HERO</label><Field p={p} value={homepage.heroTitle} onChange={(v) => setHomepage((o) => ({ ...o, heroTitle: v }))} style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>MÔ TẢ HERO</label><textarea value={homepage.heroSubtitle} onChange={(e) => setHomepage((o) => ({ ...o, heroSubtitle: e.target.value }))} style={{ width: '100%', minHeight: 70, marginTop: 8, padding: 12, borderRadius: 12, border: `1px solid ${p.line}`, background: p.surface, color: p.ink, fontFamily: FONTS.sans, fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} /></div>
+              <div style={{ maxWidth: 280 }}><label style={lblStyle(p)}>NHÃN NÚT (CTA)</label><Field p={p} value={homepage.ctaLabel} onChange={(v) => setHomepage((o) => ({ ...o, ctaLabel: v }))} style={{ marginTop: 8 }} /></div>
+            </div>
+          </section>
+        )}
+
+        {sec === 'seo' && (
+          <section style={card(24)}>
+            <H desc="Thẻ tiêu đề, mô tả và từ khóa cho trang công khai.">SEO</H>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div><label style={lblStyle(p)}>TIÊU ĐỀ TRANG (TITLE)</label><Field p={p} value={seo.title} onChange={(v) => setSeo((o) => ({ ...o, title: v }))} style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>MÔ TẢ (DESCRIPTION)</label><textarea value={seo.description} onChange={(e) => setSeo((o) => ({ ...o, description: e.target.value }))} style={{ width: '100%', minHeight: 64, marginTop: 8, padding: 12, borderRadius: 12, border: `1px solid ${p.line}`, background: p.surface, color: p.ink, fontFamily: FONTS.sans, fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} /></div>
+              <div><label style={lblStyle(p)}>TỪ KHÓA (cách nhau bằng dấu phẩy)</label><Field p={p} value={seo.keywords} onChange={(v) => setSeo((o) => ({ ...o, keywords: v }))} style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>ẢNH OG (URL)</label><Field p={p} value={seo.ogImage} onChange={(v) => setSeo((o) => ({ ...o, ogImage: v }))} mono style={{ marginTop: 8 }} /></div>
+            </div>
+          </section>
+        )}
+
         {sec === 'data' && (
           <section style={card(24)}>
-            <H desc="Sao lưu tự động và quản lý dung lượng toàn hệ thống.">Dữ liệu & sao lưu</H>
+            <H desc="Sao lưu tự động toàn hệ thống.">Dữ liệu & sao lưu</H>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
               <ToggleRow p={p} label="Tự động sao lưu hằng ngày" def={true} />
               <ToggleRow p={p} label="Mã hoá dữ liệu sao lưu" def={true} />
-            </div>
-            <div style={{ ...card(16), background: p.raise, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: p.ink }}>Dung lượng hệ thống</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.sub }}>64,2 / 200 GB</span>
-              </div>
-              <Progress p={p} value={32} height={8} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <Btn p={p} icon="download">Sao lưu ngay</Btn>

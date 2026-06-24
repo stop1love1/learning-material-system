@@ -5,9 +5,10 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
-import { filesApi, exercisesApi, attemptsApi, selfAssessmentsApi } from '@/app/lib/api';
+import { filesApi, exercisesApi, attemptsApi, selfAssessmentsApi, settingsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { lblStyle, tStripe } from '@/app/helpers/shared';
+import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { DOC_TYPE_META, RubricMatrix } from '@/app/screens/resources';
 import { DocCardMini } from '@/app/screens/teacher';
 import { levelMeta, QuestionView } from '@/app/screens/bank';
@@ -19,6 +20,9 @@ function taskLabel(s) { return { todo: 'Cần làm', done: 'Đã nộp', graded:
 // ── Public home / landing — personal free-resource hub (bento + motion) ──────
 export function UserHome({ p, t, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  // Nội dung trang chủ do admin chỉnh trong Cài đặt (settings.homepage).
+  const [hp, setHp] = React.useState<any>(null);
+  React.useEffect(() => { settingsApi.get().then((s) => setHp(s?.homepage)).catch(() => {}); }, []);
   const featured = DB.DOCS.slice(0, 6);
   const cats = DB.DOC_FOLDERS.filter((f) => f !== 'Tất cả');
   const exercise = DB.STUDENT_TASKS.find((x) => x.status === 'todo') || DB.STUDENT_TASKS[0];
@@ -36,17 +40,17 @@ export function UserHome({ p, t, setRoute, go }) {
           border: `1px solid ${p.line}`, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 320 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, alignSelf: 'flex-start', padding: '5px 12px', borderRadius: 20,
             background: p.surface, border: `1px solid ${p.line}`, fontSize: 11.5, fontWeight: 700, color: p.accent, marginBottom: 18 }}>
-            <Icon name="flame" size={14} stroke={p.accent} /> TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ
+            <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ'}
           </span>
           <h1 style={{ fontFamily: serif, fontSize: 'clamp(30px, 4.4vw, 50px)', fontWeight: 800, color: p.ink, margin: 0, letterSpacing: -1.4, lineHeight: 1.04, maxWidth: 620 }}>
-            Học Văn nhẹ nhàng,<br /><span style={{ color: p.accent }}>tài liệu mở</span> cho tất cả.
+            {hp?.heroTitle || 'Học Văn nhẹ nhàng, tài liệu mở cho tất cả.'}
           </h1>
           <p style={{ fontSize: 16, color: p.sub, margin: '18px 0 24px', maxWidth: 480, lineHeight: 1.6 }}>
-            Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.
+            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
           <form onSubmit={(e) => { e.preventDefault(); setRoute('s-docs'); }} style={{ display: 'flex', gap: 10, maxWidth: 540, flexWrap: 'wrap' }}>
             <Field p={p} icon="search" value="" onChange={() => {}} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" style={{ flex: 1, minWidth: 200, height: 50, borderRadius: 12 }} />
-            <Btn p={p} size="lg" icon="arrowRight" onClick={() => setRoute('s-docs')} style={{ borderRadius: 12 }}>Khám phá</Btn>
+            <Btn p={p} size="lg" icon="arrowRight" onClick={() => setRoute('s-docs')} style={{ borderRadius: 12 }}>{hp?.ctaLabel || 'Khám phá'}</Btn>
           </form>
         </div>
 
@@ -97,7 +101,7 @@ export function UserHome({ p, t, setRoute, go }) {
             <Icon name="assign" size={21} stroke={p.accent} /></div>
           <div style={{ fontSize: 12, fontWeight: 700, color: p.accent, letterSpacing: 0.3, marginBottom: 6 }}>LUYỆN TẬP</div>
           <div style={{ fontFamily: serif, fontSize: 19, fontWeight: 700, color: p.ink, lineHeight: 1.3 }}>{exercise.title}</div>
-          <div style={{ fontSize: 12.5, color: p.sub, marginTop: 8 }}>{exercise.type} · {exercise.questions} câu</div>
+          <div style={{ fontSize: 12.5, color: p.sub, marginTop: 8 }}>{exercise.type} · {exercise.questions} câu{exercise.learners ? ' · ' + exercise.learners + ' người làm' : ''}</div>
           <div style={{ marginTop: 'auto', paddingTop: 16 }}><Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Làm thử ngay</Btn></div>
         </div>
 
@@ -171,6 +175,7 @@ export function UserHome({ p, t, setRoute, go }) {
 // ── Student overview ─────────────────────────────────────────────────────────
 export function SOverview({ p, t, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  const auth = useLmsAuth();
   const todo = DB.STUDENT_TASKS.filter((x) => x.status === 'todo');
   const graded = DB.STUDENT_TASKS.filter((x) => x.status === 'graded' || (x.status === 'done' && x.score));
   return (
@@ -179,7 +184,7 @@ export function SOverview({ p, t, setRoute, go }) {
         <div>
           <div style={{ fontFamily: FONTS.mono, fontSize: 11.5, letterSpacing: 1, color: p.faint, marginBottom: 10 }}>THỨ HAI · 22 THÁNG 6, 2026</div>
           <h2 style={{ fontFamily: serif, fontSize: 36, fontWeight: 500, color: p.ink, margin: 0, letterSpacing: -0.6, lineHeight: 1.05 }}>
-            Chào bạn, <span style={{ color: p.accent }}>Thu Hà.</span>
+            Chào bạn, <span style={{ color: p.accent }}>{auth.name || 'bạn'}.</span>
           </h2>
           <p style={{ fontSize: 14.5, color: p.sub, margin: '12px 0 0', maxWidth: 480, lineHeight: 1.5 }}>
             Bạn có <strong style={{ color: p.ink }}>3 bài tập</strong> cần hoàn thành, trong đó <strong style={{ color: p.ink }}>1 bài đến hạn hôm nay</strong>.
@@ -205,7 +210,7 @@ export function SOverview({ p, t, setRoute, go }) {
                 <Icon name="assign" size={20} stroke={p.accent} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: p.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title}</div>
-                <div style={{ fontSize: 12, color: p.faint, marginTop: 2 }}>{task.type} · {task.questions} câu</div>
+                <div style={{ fontSize: 12, color: p.faint, marginTop: 2 }}>{task.type} · {task.questions} câu{task.learners ? ' · ' + task.learners + ' người làm' : ''}</div>
               </div>
               <Tag p={p} color={task.dueIn === 'Hôm nay' ? p.danger : p.sub}>{task.dueIn}</Tag>
               <Btn p={p} variant="soft" size="sm">Làm bài</Btn>
@@ -234,85 +239,6 @@ export function SOverview({ p, t, setRoute, go }) {
           </section>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Student classes ──────────────────────────────────────────────────────────
-export function SClasses({ p, t, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
-  const mine = DB.CLASSES.filter((c) => ['c1', 'c2'].includes(c.id));
-  return (
-    <div style={{ padding: '26px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px,1fr))', gap: 18 }}>
-        {mine.map((c) => {
-          const hue = tStripe(p, c.color);
-          return (
-            <div key={c.id} onClick={() => go('s-class', { class: c.id })} className="lms-card" style={{ ...sCard(p, 0), overflow: 'hidden', cursor: 'pointer' }}>
-              <div style={{ height: 80, background: hexA(hue, p.dark ? 0.22 : 0.12), display: 'flex', alignItems: 'flex-end', padding: 16, position: 'relative' }}>
-                <span style={{ position: 'absolute', top: 14, left: 16, fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: hue }}>{c.code}</span>
-              </div>
-              <div style={{ padding: 18 }}>
-                <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 600, margin: 0, color: p.ink }}>{c.name}</h3>
-                <div style={{ fontSize: 12.5, color: p.sub, marginTop: 8 }}>{c.teacher} · {c.schedule}</div>
-                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: p.faint, marginBottom: 6 }}>
-                  <span>Tiến độ lớp</span><span style={{ fontFamily: FONTS.mono }}>{c.progress}%</span></div>
-                <Progress p={p} value={c.progress} color={hue} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Student class detail ─────────────────────────────────────────────────────
-export function SClass({ p, t, ctx, setRoute, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
-  const c = DB.CLASSES.find((x) => x.id === ctx.class) || DB.CLASSES[0];
-  const [tab, setTab] = React.useState('tasks');
-  const hue = tStripe(p, c.color);
-  const tasks = DB.STUDENT_TASKS.filter((x) => x.class === c.code);
-  return (
-    <div style={{ padding: '22px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div onClick={() => setRoute('s-classes')} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
-        <Icon name="arrowLeft" size={16} stroke={p.sub} /> Lớp của tôi
-      </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 22 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 8, background: hexA(hue, 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="class" size={24} stroke={hue} /></div>
-        <div><div style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: hue, fontWeight: 600 }}>{c.code}</div>
-          <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 600, margin: '4px 0 0', color: p.ink }}>{c.name}</h2>
-          <div style={{ fontSize: 12.5, color: p.sub, marginTop: 6 }}>{c.teacher} · {c.schedule} · Phòng {c.room}</div></div>
-      </div>
-      <div style={{ display: 'flex', gap: 6, borderBottom: `1px solid ${p.line}`, marginBottom: 22 }}>
-        {[['tasks', 'Bài tập'], ['docs', 'Tài liệu'], ['notices', 'Thông báo']].map(([k, lab]) => {
-          const on = tab === k;
-          return <button key={k} onClick={() => setTab(k)} style={{ padding: '10px 4px', marginRight: 20, border: 'none', background: 'transparent', cursor: 'pointer',
-            fontFamily: FONTS.sans, fontSize: 14, fontWeight: on ? 600 : 500, color: on ? p.ink : p.sub, borderBottom: `2px solid ${on ? p.accent : 'transparent'}`, marginBottom: -1 }}>{lab}</button>;
-        })}
-      </div>
-      {tab === 'tasks' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {tasks.map((task) => <STaskRow key={task.id} task={task} p={p} go={go} />)}
-        </div>
-      )}
-      {tab === 'docs' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px,1fr))', gap: 14 }}>
-          {DB.DOCS.slice(0, 4).map((d) => <DocCardMini key={d.id} d={d} p={p} />)}
-        </div>
-      )}
-      {tab === 'notices' && (
-        <div style={sCard(p)}>
-          {DB.NOTICES.map((n, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, padding: '13px 0', borderTop: i ? `1px solid ${p.line}` : 'none' }}>
-              <div style={{ width: 34, height: 34, borderRadius: 9, background: p.sink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={n.icon} size={16} stroke={p.sub} /></div>
-              <div><div style={{ fontSize: 13.5, color: p.ink }}>{n.title}</div><div style={{ fontSize: 11, color: p.faint, marginTop: 3, fontFamily: FONTS.mono }}>{n.time}</div></div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -447,20 +373,17 @@ export function STask({ p, t, ctx, setRoute, auth }) {
     return () => { alive = false; };
   }, [task?.id]);
 
+  // Chưa đăng nhập → tự bật LoginModal (không hiện trang gate riêng).
+  React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
+
   // Conditional returns are safe below — all hooks have already run.
   if (auth && !auth.loggedIn) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 30, textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 18, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-          <Icon name="logout" size={28} stroke={p.accent} />
-        </div>
-        <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 800, margin: 0, color: p.ink, letterSpacing: -0.5 }}>Đăng nhập để làm bài</h2>
-        <p style={{ fontSize: 14.5, color: p.sub, margin: '12px 0 24px', maxWidth: 420, lineHeight: 1.6 }}>
-          Làm bài tập và xem <strong style={{ color: p.ink }}>phiếu học tập</strong> cần đăng nhập. Việc duyệt và đọc học liệu thì hoàn toàn tự do.
-        </p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '40vh', padding: 30, textAlign: 'center', gap: 14 }}>
+        <p style={{ fontSize: 14.5, color: p.sub, margin: 0, maxWidth: 420, lineHeight: 1.6 }}>Cần đăng nhập để làm bài tập.</p>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn p={p} size="lg" icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
-          <Btn p={p} variant="ghost" size="lg" onClick={() => setRoute('s-tasks')}>Quay lại</Btn>
+          <Btn p={p} icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
+          <Btn p={p} variant="ghost" onClick={() => setRoute('s-tasks')}>Quay lại</Btn>
         </div>
       </div>
     );
@@ -710,8 +633,8 @@ export function SDocs({ p, t, go }) {
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 36 }}>{d.name}</div>
                   {d.desc && <div style={{ fontSize: 11.5, color: p.sub, lineHeight: 1.45, marginTop: 6, maxHeight: 34, overflow: 'hidden' }}>{stripHtml(d.desc).slice(0, 110)}</div>}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{d.size} · ↓ {d.downloads}</span>
-                    <Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Đọc</Btn>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>👁 {d.views ?? 0} · ↓ {d.downloads}</span>
+                    <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go && go('s-doc', { doc: d.id })}>Đọc</Btn>
                   </div>
                 </div>
               </div>
@@ -984,19 +907,15 @@ export function SResults({ p, t }) {
 // ── My library (logged-in): downloaded resources + completed exercises ───────
 export function SLibrary({ p, t, setRoute, go, auth }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  // Chưa đăng nhập → tự bật LoginModal (không hiện trang gate riêng).
+  React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
   if (auth && !auth.loggedIn) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 30, textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 18, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-          <Icon name="star" size={28} stroke={p.accent} />
-        </div>
-        <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 800, margin: 0, color: p.ink, letterSpacing: -0.5 }}>Đăng nhập để xem “Của tôi”</h2>
-        <p style={{ fontSize: 14.5, color: p.sub, margin: '12px 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
-          Sau khi đăng nhập, bạn sẽ thấy <strong style={{ color: p.ink }}>tài liệu đã tải</strong> và <strong style={{ color: p.ink }}>bài tập đã làm</strong> ở đây. Việc duyệt và đọc học liệu thì luôn miễn phí.
-        </p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '40vh', padding: 30, textAlign: 'center', gap: 14 }}>
+        <p style={{ fontSize: 14.5, color: p.sub, margin: 0, maxWidth: 440, lineHeight: 1.6 }}>Cần đăng nhập để xem “Của tôi”.</p>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn p={p} size="lg" icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
-          <Btn p={p} variant="ghost" size="lg" onClick={() => setRoute('s-docs')}>Khám phá học liệu</Btn>
+          <Btn p={p} icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
+          <Btn p={p} variant="ghost" onClick={() => setRoute('s-docs')}>Khám phá học liệu</Btn>
         </div>
       </div>
     );

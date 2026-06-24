@@ -5,6 +5,7 @@
 // routes map. Ported from the prop-based PublicSite.
 import React from 'react';
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
@@ -106,9 +107,9 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   const navLink = (it: { key: string; icon: string; label: string }, block: boolean) => {
     const on = it.key === activeKey;
     return (
-      <button
+      <Link
         key={it.key}
-        onClick={() => push(routeToHref(it.key))}
+        href={routeToHref(it.key)}
         className="lms-btn"
         style={{
           display: 'flex',
@@ -121,6 +122,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           borderRadius: 9,
           cursor: 'pointer',
           border: 'none',
+          textDecoration: 'none',
           background: on ? p.accentSoft : 'transparent',
           color: on ? p.accent : p.sub,
           fontFamily: FONTS.sans,
@@ -130,7 +132,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
       >
         {block && <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} />}
         {it.label}
-      </button>
+      </Link>
     );
   };
 

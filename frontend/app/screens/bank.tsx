@@ -2,6 +2,7 @@
 // bank.tsx — Question bank (master/detail) + question editor.
 // Also exports QuestionView, used by student "do assignment" and review screens.
 import React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Icon, Tag, Pill, Btn, IconBtn, Field, Select } from '@/app/components/ui';
 import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
@@ -203,11 +204,14 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 }
 
 // ── Question bank (master / detail) ──────────────────────────────────────────
-export function TBank({ p, t, setRoute }) {
+export function TBank({ p, t, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [type, setType] = React.useState('all');
+  const [kw, setKw] = React.useState('');
   const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
-  const list = type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type);
+  const k = kw.trim().toLowerCase();
+  const list = (type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type))
+    .filter((q) => !k || (q.stem || '').toLowerCase().includes(k) || (q.topic || '').toLowerCase().includes(k));
   const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
   if (!q) {
     return (
@@ -226,7 +230,7 @@ export function TBank({ p, t, setRoute }) {
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <Field p={p} icon="search" placeholder="Tìm câu hỏi, chủ đề…" style={{ width: 280 }} />
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" style={{ width: 280 }} />
         <div style={{ flex: 1 }} />
         <Btn p={p} variant="ghost" size="md" icon="filter">Bộ lọc</Btn>
         <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
@@ -272,7 +276,7 @@ export function TBank({ p, t, setRoute }) {
                 <Tag p={p} color={lm.color}>{lm.label}</Tag>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <IconBtn name="pen" p={p} size={32} onClick={() => setRoute('bank-edit')} title="Sửa" />
+                <IconBtn name="pen" p={p} size={32} onClick={() => (go ? go('bank-edit', { question: q.id }) : setRoute('bank-edit'))} title="Sửa" />
                 <IconBtn name="copy" p={p} size={32} title="Nhân bản" />
               </div>
             </div>
@@ -297,6 +301,31 @@ export function TBankEdit({ p, t, setRoute }) {
   const [stem, setStem] = React.useState('');
   const [options, setOptions] = React.useState(['', '', '', '']);
   const [correct, setCorrect] = React.useState([0]);
+  const [topic, setTopic] = React.useState('');
+  const [fillAns, setFillAns] = React.useState('');
+  const [essayGrading, setEssayGrading] = React.useState('rubric');
+  const [pairs, setPairs] = React.useState([['', ''], ['', '']]);
+  // Sửa câu hỏi: id lấy từ ?id= (useSearchParams; trang được bọc <Suspense> ở page.tsx).
+  const editId = useSearchParams().get('id');
+  React.useEffect(() => {
+    if (!editId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r: any = await questionsApi.get(editId);
+        if (!alive) return;
+        const q = r.question || r; const d = r.detail || {};
+        setType(q.type); setLevel(q.level || 'medium'); setStem(q.content || '');
+        if (q.type === 'single') { setOptions(d.options?.length ? d.options : ['', '', '', '']); setCorrect([d.correctOptionIndex ?? 0]); }
+        else if (q.type === 'multi') { setOptions(d.options?.length ? d.options : ['', '', '', '']); setCorrect(d.correctOptionIndices?.length ? d.correctOptionIndices : [0]); }
+        else if (q.type === 'truefalse') { setCorrect([d.isCorrect ? 0 : 1]); }
+        else if (q.type === 'fill') { setFillAns((d.answers || []).join(' / ')); }
+        else if (q.type === 'essay') { setEssayGrading(d.gradingType === 'manual' ? 'manual' : 'rubric'); }
+        else if (q.type === 'match') { setPairs((d.pairs || []).map((pp: any) => [pp.left || '', pp.right || ''])); }
+      } catch { /* không nạp được → giữ form trống */ }
+    })();
+    return () => { alive = false; };
+  }, [editId]);
   const tm = typeMeta(type);
 
   const toggleCorrect = (i) => {
@@ -319,7 +348,7 @@ export function TBankEdit({ p, t, setRoute }) {
               {DB.QTYPES.map((qt) => {
                 const on = type === qt.id;
                 return (
-                  <div key={qt.id} onClick={() => setType(qt.id)} className="lms-row"
+                  <div key={qt.id} onClick={() => { if (!editId) setType(qt.id); }} className="lms-row"
                     style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px', borderRadius: 12, cursor: 'pointer',
                       border: `1px solid ${on ? p.accent : p.line}`, background: on ? p.accentSoft : p.surface }}>
                     <Icon name={qt.icon} size={17} stroke={on ? p.accent : p.faint} />
@@ -376,14 +405,14 @@ export function TBankEdit({ p, t, setRoute }) {
             {type === 'fill' && (
               <div style={{ marginTop: 18 }}>
                 <label style={lblStyle(p)}>ĐÁP ÁN (chấp nhận nhiều cách viết, cách nhau bằng dấu /)</label>
-                <Field p={p} value="" onChange={() => {}} placeholder="vd: hùm / cọp" style={{ marginTop: 10, maxWidth: 360 }} />
+                <Field p={p} value={fillAns} onChange={setFillAns} placeholder="vd: hùm / cọp" style={{ marginTop: 10, maxWidth: 360 }} />
               </div>
             )}
 
             {type === 'essay' && (
               <div style={{ marginTop: 18 }}>
                 <label style={lblStyle(p)}>CHẤM BẰNG</label>
-                <Select p={p} value="rubric" onChange={() => {}} style={{ marginTop: 10, maxWidth: 360 }}
+                <Select p={p} value={essayGrading} onChange={setEssayGrading} style={{ marginTop: 10, maxWidth: 360 }}
                   options={[{ value: 'rubric', label: 'Rubric Tập làm văn (tả – kể)' }, { value: 'manual', label: 'Cho điểm thủ công' }]} />
               </div>
             )}
@@ -391,14 +420,14 @@ export function TBankEdit({ p, t, setRoute }) {
             {type === 'match' && (
               <div style={{ marginTop: 18 }}>
                 <label style={lblStyle(p)}>CẶP NỐI</label>
-                {[['', ''], ['', '']].map((_, i) => (
+                {pairs.map((pr, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                    <Field p={p} value="" onChange={() => {}} placeholder="Vế trái" style={{ flex: 1 }} />
+                    <Field p={p} value={pr[0]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [v, x[1]] : x)))} placeholder="Vế trái" style={{ flex: 1 }} />
                     <Icon name="link" size={16} stroke={p.faint} />
-                    <Field p={p} value="" onChange={() => {}} placeholder="Vế phải" style={{ flex: 1 }} />
+                    <Field p={p} value={pr[1]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [x[0], v] : x)))} placeholder="Vế phải" style={{ flex: 1 }} />
                   </div>
                 ))}
-                <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 10, paddingLeft: 0 }}>Thêm cặp</Btn>
+                <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 10, paddingLeft: 0 }} onClick={() => setPairs([...pairs, ['', '']])}>Thêm cặp</Btn>
               </div>
             )}
           </section>
@@ -417,7 +446,7 @@ export function TBankEdit({ p, t, setRoute }) {
               </div>
               <div>
                 <label style={lblStyle(p)}>CHỦ ĐỀ</label>
-                <Field p={p} value="" onChange={() => {}} placeholder="vd: Ngữ pháp N4" style={{ marginTop: 10 }} />
+                <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" style={{ marginTop: 10 }} />
               </div>
             </div>
           </section>
@@ -454,25 +483,28 @@ export function TBankEdit({ p, t, setRoute }) {
               } else if (type === 'truefalse') {
                 detail = { isCorrect: correct[0] === 0 };
               } else if (type === 'fill') {
-                detail = { answers: ['—'] }; // ShortAnswer.answers is required & non-empty; inputs not state-wired yet
+                const answers = fillAns.split('/').map((x) => x.trim()).filter(Boolean);
+                detail = { answers: answers.length ? answers : ['—'] };
               } else if (type === 'essay') {
-                detail = { gradingType: 'manual' };
+                detail = { gradingType: essayGrading === 'manual' ? 'manual' : 'rubric' };
               } else if (type === 'match') {
-                detail = { pairs: [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
+                const ps = pairs.filter(([l, r]) => l.trim() && r.trim()).map(([left, right]) => ({ left: left.trim(), right: right.trim() }));
+                detail = { pairs: ps.length ? ps : [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
               }
               try {
-                await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail });
+                if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail });
+                else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail });
                 await hydrateFor('bank'); // re-runs loadQuestions → DB.QUESTIONS from backend
               } catch {
-                // logged-out / student / API down → optimistic mock add
-                LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',
+                // logged-out / student / API down → optimistic mock add (chỉ khi tạo mới)
+                if (!editId) LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',
                   options: (type === 'single' || type === 'multi') ? opts : undefined,
                   answer: correct,
                   pairs: type === 'match' ? [['Vế trái 1', 'Vế phải 1'], ['Vế trái 2', 'Vế phải 2']] : undefined });
               } finally {
                 setRoute('bank');
               }
-            }}>Lưu câu hỏi</Btn>
+            }}>{editId ? 'Cập nhật câu hỏi' : 'Lưu câu hỏi'}</Btn>
           </div>
         </div>
       </div>

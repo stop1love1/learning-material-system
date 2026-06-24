@@ -128,6 +128,9 @@ export async function loadExercises(): Promise<void> {
         points: e.points ?? 10,
         // questionCount is added by the backend list when available; 0 otherwise.
         questions: e.questionCount ?? 0,
+        // attemptCount/learnerCount come from the backend list (public read).
+        attempts: e.attemptCount ?? 0,
+        learners: e.learnerCount ?? 0,
       };
     });
 
@@ -144,6 +147,8 @@ export async function loadExercises(): Promise<void> {
       status: myStatus[String(e._id)] ?? 'todo',
       points: e.points ?? 10,
       questions: e.questionCount ?? 0,
+      attempts: e.attemptCount ?? 0,
+      learners: e.learnerCount ?? 0,
     }));
   } catch {
     return;

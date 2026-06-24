@@ -42,7 +42,9 @@ export function TDocs({ p, t }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [folder, setFolder] = React.useState('Tất cả');
   const [view, setView] = React.useState('grid');
-  const docs = folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder);
+  const [kw, setKw] = React.useState('');
+  const docs = (folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder))
+    .filter((d) => { const k = kw.trim().toLowerCase(); return !k || (d.name || '').toLowerCase().includes(k); });
 
   // ── "Thêm tài liệu" form (with CKEditor description) ──
   const FTYPES = [
@@ -94,53 +96,40 @@ export function TDocs({ p, t }) {
     }
     await hydrateFor('docs');
   };
-  const doUpload = async () => {
-    const n = DB.DOCS.length + 1;
-    const name = 'Tài liệu mới ' + n;
-    const folderName = folder === 'Tất cả' ? 'Tư liệu' : folder;
-    try {
-      // Library is external-link-first: the schema requires a url for external files.
-      await filesApi.create({ name, fileType: 'doc', source: 'external', url: 'https://example.com/' + n, tags: [folderName] });
-      await hydrateFor('docs'); // re-runs loadLibrary so DB.DOCS reflects the persisted row
-    } catch {
-      LMS && LMS.addDoc({ name, type: 'doc', folder: folderName }); // mock fallback (API down / unauthenticated)
-    }
-  };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
 
-  if (composing) {
-    return (
-      <div style={{ padding: '24px 30px 40px', maxWidth: 920, margin: '0 auto' }}>
-        <div onClick={() => setComposing(false)} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
-          <Icon name="arrowLeft" size={16} stroke={p.sub} /> Kho tài liệu
+  // "Thêm tài liệu" form, rendered as a centered modal overlay (see end of return).
+  const addDocModal = composing && (
+    <div onClick={() => { setComposing(false); setForm(blankForm); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,38,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 620, maxHeight: '88vh', overflowY: 'auto', background: p.surface, borderRadius: 16, border: `1px solid ${p.line}`, padding: 24, boxShadow: '0 24px 70px rgba(0,0,0,.22)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontFamily: serif, fontSize: 20, fontWeight: 700, margin: 0, color: p.ink }}>Thêm tài liệu</h2>
+          <button onClick={() => { setComposing(false); setForm(blankForm); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, color: p.sub, lineHeight: 1 }}>✕</button>
         </div>
-        <section style={rCard(p, 24)}>
-          <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, margin: '0 0 18px', color: p.ink }}>Thêm tài liệu</h2>
-          <label style={lblStyle(p)}>TÊN TÀI LIỆU</label>
-          <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" style={{ marginTop: 8, marginBottom: 16 }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div><label style={lblStyle(p)}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} style={{ marginTop: 8 }} /></div>
-            <div><label style={lblStyle(p)}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} style={{ marginTop: 8 }} /></div>
-          </div>
-          <label style={lblStyle(p)}>LIÊN KẾT (URL)</label>
-          <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" style={{ marginTop: 8, marginBottom: 16 }} />
-          <label style={lblStyle(p)}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
-          <div style={{ marginTop: 8 }}><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-            <Btn p={p} variant="ghost" onClick={() => setComposing(false)}>Huỷ</Btn>
-            <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
-          </div>
-        </section>
+        <label style={lblStyle(p)}>TÊN TÀI LIỆU</label>
+        <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" style={{ marginTop: 8, marginBottom: 16 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div><label style={lblStyle(p)}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} style={{ marginTop: 8 }} /></div>
+          <div><label style={lblStyle(p)}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} style={{ marginTop: 8 }} /></div>
+        </div>
+        <label style={lblStyle(p)}>LIÊN KẾT (URL)</label>
+        <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" style={{ marginTop: 8, marginBottom: 16 }} />
+        <label style={lblStyle(p)}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
+        <div style={{ marginTop: 8 }}><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+          <Btn p={p} variant="ghost" onClick={() => { setComposing(false); setForm(blankForm); }}>Huỷ</Btn>
+          <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto', display: 'grid', gridTemplateColumns: '210px 1fr', gap: 26 }}>
       <aside>
         <Btn p={p} icon="plus" full onClick={() => setComposing(true)}>Thêm tài liệu</Btn>
-        <div style={{ height: 8 }} />
-        <GoogleDrivePicker p={p} full onPicked={importDriveDocs} />
         <div style={{ marginTop: 18, fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, padding: '0 6px 8px' }}>THƯ MỤC</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {DB.DOC_FOLDERS.map((f) => {
@@ -156,30 +145,18 @@ export function TDocs({ p, t }) {
             );
           })}
         </div>
-        <div style={{ marginTop: 22, padding: 16, borderRadius: 12, background: p.surface, border: `1px solid ${p.line}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Icon name="cloud" size={16} stroke={p.accent} /><span style={{ fontSize: 12.5, fontWeight: 600, color: p.ink }}>Dung lượng</span>
-          </div>
-          <Progress p={p} value={21} />
-          <div style={{ fontSize: 11, color: p.faint, marginTop: 8 }}>104,7 / 500 MB</div>
-        </div>
       </aside>
 
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <Field p={p} icon="search" placeholder="Tìm tài liệu…" style={{ width: 260 }} />
+          <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" style={{ width: 260 }} />
+          <GoogleDrivePicker p={p} onPicked={importDriveDocs} label="Google Drive" />
           <div style={{ flex: 1 }} />
           <Segmented p={p} value={view} onChange={setView} options={[{ value: 'grid', icon: 'grid' }, { value: 'list', icon: 'list' }]} />
         </div>
 
         {view === 'grid' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px,1fr))', gap: 16 }}>
-            <div className="lms-card" style={{ border: `1.5px dashed ${p.line}`, borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', minHeight: 150, background: p.raise }}>
-              <Icon name="upload" size={24} stroke={p.accent} />
-              <div style={{ fontSize: 13, fontWeight: 600, color: p.ink }}>Kéo thả tệp vào đây</div>
-              <div style={{ fontSize: 11.5, color: p.faint, textAlign: 'center' }}>hoặc bấm để chọn tệp</div>
-            </div>
             {docs.map((d) => {
               const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
@@ -192,8 +169,8 @@ export function TDocs({ p, t }) {
                   <div style={{ padding: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 34 }}>{d.name}</div>
                     {d.desc && <div style={{ fontSize: 11, color: p.sub, lineHeight: 1.4, marginTop: 5, maxHeight: 31, overflow: 'hidden' }}>{stripHtml(d.desc).slice(0, 100)}</div>}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, fontSize: 11, color: p.faint, fontFamily: FONTS.mono }}>
-                      <span>{d.size}</span><span>↓ {d.downloads}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11, color: p.faint, fontFamily: FONTS.mono }}>
+                      <span>👁 {d.views ?? 0}</span><span>↓ {d.downloads}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                       <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d.id)}>Tải về</Btn>
@@ -215,10 +192,10 @@ export function TDocs({ p, t }) {
                     <Icon name={m.icon} size={18} stroke={p.accent} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{d.name}</div>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint, marginTop: 2 }}>{m.label} · {d.size} · {d.folder}</div>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint, marginTop: 2 }}>{m.label} · {d.folder}</div>
                   </div>
                   <div style={{ fontSize: 12, color: p.sub, width: 110 }}>{d.updated}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.faint, width: 60 }}>↓ {d.downloads}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.faint, width: 110, whiteSpace: 'nowrap' }}>👁 {d.views ?? 0} · ↓ {d.downloads}</div>
                   <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
                   <IconBtn name="more" p={p} size={34} />
                 </div>
@@ -227,6 +204,7 @@ export function TDocs({ p, t }) {
           </div>
         )}
       </div>
+      {addDocModal}
     </div>
   );
 }
@@ -279,15 +257,17 @@ export function RubricMatrix({ rubric, p, mode = 'view', selected, onSelect }: a
 // ── Rubric list ──────────────────────────────────────────────────────────────
 export function TRubrics({ p, t, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  const [kw, setKw] = React.useState('');
+  const k = kw.trim().toLowerCase();
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-        <Field p={p} icon="search" placeholder="Tìm rubric…" style={{ width: 260 }} />
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" style={{ width: 260 }} />
         <div style={{ flex: 1 }} />
         <Btn p={p} icon="plus" onClick={() => setRoute('rubric-edit')}>Tạo rubric</Btn>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px,1fr))', gap: 20 }}>
-        {DB.RUBRICS.map((r) => (
+        {DB.RUBRICS.filter((r) => !k || (r.name || '').toLowerCase().includes(k)).map((r) => (
           <div key={r.id} onClick={() => go('rubric-edit', { rubric: r.id })} className="lms-card" style={{ ...rCard(p, 22), cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
