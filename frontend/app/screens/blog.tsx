@@ -8,6 +8,9 @@ import { LMS } from '@/app/store/store';
 import { lblStyle } from '@/app/helpers/shared';
 import { articlesApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import RichEditor from '@/app/components/RichEditor';
+
+const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 const BLOG_COVER = {
   clay: { light: '#c2553e', dark: '#e0856b' }, teal: { light: '#0d8276', dark: '#46c2b1' },
@@ -145,28 +148,28 @@ export function ABlog({ p, t }) {
             <Field p={p} value={title} onChange={setTitle} placeholder="vd: Cách giúp con viết mở bài tả con vật" style={{ marginTop: 8, marginBottom: 18 }} />
             <label style={lblStyle(p)}>CHUYÊN MỤC</label>
             <Select p={p} value={cat} onChange={setCat} style={{ marginTop: 8, marginBottom: 18, maxWidth: 280 }} options={cats} />
-            <label style={lblStyle(p)}>NỘI DUNG (mỗi đoạn một dòng)</label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Viết nội dung bài… Mỗi đoạn xuống dòng để tách."
-              style={{ width: '100%', minHeight: 280, marginTop: 8, padding: 14, borderRadius: 8, border: `1px solid ${p.line}`, background: p.surface,
-                color: p.ink, fontFamily: FONTS.sans, fontSize: 14.5, lineHeight: 1.8, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+            <label style={lblStyle(p)}>NỘI DUNG</label>
+            <div style={{ marginTop: 8 }}>
+              <RichEditor value={body} onChange={setBody} placeholder="Soạn nội dung bài viết…" />
+            </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <Btn p={p} variant="ghost" onClick={() => setMode('list')}>Huỷ</Btn>
               <Btn p={p} icon="send" onClick={async () => {
-                const paras = body.split('\n').map((s) => s.trim()).filter(Boolean);
                 const safeTitle = title || 'Bài viết mới';
+                const plain = stripHtml(body);
                 try {
-                  // content is a single String in the schema/DTO — join paragraphs.
+                  // content is stored as HTML (authored in CKEditor).
                   await articlesApi.create({
                     title: safeTitle,
                     category: cat,
-                    content: paras.join('\n'),
-                    excerpt: paras[0]?.slice(0, 110) ?? '',
+                    content: body,
+                    excerpt: plain.slice(0, 110),
                     cover: 'blue',
                   });
                   await hydrateFor('a-blog'); // re-runs loadArticles → DB.ARTICLES from backend
                 } catch {
                   // offline / logged-out fallback: optimistic mock insert
-                  LMS && LMS.addArticle({ title: safeTitle, cat, body: paras.length ? paras : ['(Chưa có nội dung)'], cover: 'blue' });
+                  LMS && LMS.addArticle({ title: safeTitle, cat, body: plain ? [plain] : ['(Chưa có nội dung)'], cover: 'blue' });
                 } finally {
                   setMode('list'); setTitle(''); setBody('');
                 }
@@ -179,9 +182,9 @@ export function ABlog({ p, t }) {
               <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 6, background: p.accentSoft, color: p.accent, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>{cat}</span>
               <h2 style={{ fontFamily: serif, fontSize: 21, fontWeight: 700, margin: 0, color: title ? p.ink : p.faint, lineHeight: 1.3 }}>{title || 'Tiêu đề bài viết…'}</h2>
               <div style={{ fontSize: 12, color: p.faint, margin: '10px 0 14px' }}>Quản trị · Hôm nay</div>
-              {(body ? body.split('\n').filter(Boolean) : ['Nội dung bài viết sẽ hiển thị ở đây…']).slice(0, 4).map((para, i) => (
-                <p key={i} style={{ fontSize: 13.5, lineHeight: 1.7, color: p.sub, margin: '0 0 10px' }}>{para}</p>
-              ))}
+              {body
+                ? <div className="lms-rich" style={{ fontSize: 13.5, lineHeight: 1.7, color: p.sub }} dangerouslySetInnerHTML={{ __html: body }} />
+                : <p style={{ fontSize: 13.5, lineHeight: 1.7, color: p.faint }}>Nội dung bài viết sẽ hiển thị ở đây…</p>}
             </div>
           </div>
         </div>

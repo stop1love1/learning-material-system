@@ -1,12 +1,13 @@
 'use client';
 import React from 'react';
-import { Icon, Tag, Btn, IconBtn, Field, Segmented, Progress, Ring } from '@/app/components/ui';
+import { Icon, Tag, Btn, IconBtn, Field, Select, Segmented, Progress, Ring } from '@/app/components/ui';
 import { FONTS } from '@/app/theme/fonts';
 import { DB } from '@/app/data/db';
 import { LMS, useLMS } from '@/app/store/store';
 import { lblStyle } from '@/app/helpers/shared';
-import { filesApi, rubricsApi } from '@/app/lib/api';
+import { filesApi, foldersApi, rubricsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import RichEditor from '@/app/components/RichEditor';
 
 // screens-resources.tsx — Document repository + Rubric list & builder.
 
@@ -29,6 +30,38 @@ export function TDocs({ p, t }) {
   const [folder, setFolder] = React.useState('Tất cả');
   const [view, setView] = React.useState('grid');
   const docs = folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder);
+
+  // ── "Thêm tài liệu" form (with CKEditor description) ──
+  const FTYPES = [
+    { value: 'pdf', label: 'PDF' }, { value: 'doc', label: 'Tài liệu (Word/Docs)' },
+    { value: 'image', label: 'Ảnh' }, { value: 'video', label: 'Video' },
+    { value: 'audio', label: 'Âm thanh' }, { value: 'slide', label: 'Slide' }, { value: 'link', label: 'Liên kết' },
+  ];
+  const folderNames = DB.DOC_FOLDERS.filter((f) => f !== 'Tất cả');
+  const blankForm = { name: '', ftype: 'pdf', url: '', folderName: folderNames[0] || 'Tư liệu', desc: '' };
+  const [composing, setComposing] = React.useState(false);
+  const [form, setForm] = React.useState(blankForm);
+  const [saving, setSaving] = React.useState(false);
+  const setF = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+  const saveDoc = async () => {
+    if (!form.name.trim() || !form.url.trim()) return;
+    setSaving(true);
+    try {
+      // Resolve the folder id by name so the file is a real folder member.
+      let folderId = null;
+      try {
+        const fl: any = await foldersApi.list();
+        const arr: any[] = Array.isArray(fl) ? fl : (fl?.records ?? []);
+        folderId = (arr.find((x) => x.name === form.folderName) || {})._id ?? null;
+      } catch {}
+      await filesApi.create({ name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: [form.folderName], description: form.desc });
+      await hydrateFor('docs');
+      setComposing(false); setForm(blankForm);
+    } catch {
+      LMS && LMS.addDoc({ name: form.name.trim(), type: form.ftype, folder: form.folderName });
+      setComposing(false); setForm(blankForm);
+    } finally { setSaving(false); }
+  };
   const doUpload = async () => {
     const n = DB.DOCS.length + 1;
     const name = 'Tài liệu mới ' + n;
@@ -42,10 +75,38 @@ export function TDocs({ p, t }) {
     }
   };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
+
+  if (composing) {
+    return (
+      <div style={{ padding: '24px 30px 40px', maxWidth: 920, margin: '0 auto' }}>
+        <div onClick={() => setComposing(false)} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
+          <Icon name="arrowLeft" size={16} stroke={p.sub} /> Kho tài liệu
+        </div>
+        <section style={rCard(p, 24)}>
+          <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, margin: '0 0 18px', color: p.ink }}>Thêm tài liệu</h2>
+          <label style={lblStyle(p)}>TÊN TÀI LIỆU</label>
+          <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" style={{ marginTop: 8, marginBottom: 16 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div><label style={lblStyle(p)}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} style={{ marginTop: 8 }} /></div>
+            <div><label style={lblStyle(p)}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} style={{ marginTop: 8 }} /></div>
+          </div>
+          <label style={lblStyle(p)}>LIÊN KẾT (URL)</label>
+          <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" style={{ marginTop: 8, marginBottom: 16 }} />
+          <label style={lblStyle(p)}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
+          <div style={{ marginTop: 8 }}><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <Btn p={p} variant="ghost" onClick={() => setComposing(false)}>Huỷ</Btn>
+            <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto', display: 'grid', gridTemplateColumns: '210px 1fr', gap: 26 }}>
       <aside>
-        <Btn p={p} icon="upload" full onClick={doUpload}>Tải tài liệu lên</Btn>
+        <Btn p={p} icon="plus" full onClick={() => setComposing(true)}>Thêm tài liệu</Btn>
         <div style={{ marginTop: 18, fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, padding: '0 6px 8px' }}>THƯ MỤC</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {DB.DOC_FOLDERS.map((f) => {
