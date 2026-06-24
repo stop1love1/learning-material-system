@@ -18,6 +18,10 @@ const ACCENT_SWATCH: Record<string, string> = {
   grape: '#8a52d6',
 };
 
+const ACCENT_SWATCH_SELECTED =
+  'border-2 border-neutral-900 outline-2 -outline-offset-4 outline-white';
+const ACCENT_SWATCH_DEFAULT = 'border-2 border-transparent';
+
 export function LmsTweaks() {
   const { t, setTweak, resetTheme } = useLmsTheme();
   return (
@@ -31,7 +35,7 @@ export function LmsTweaks() {
               key={k}
               onClick={() => setTweak('accent', k)}
               title={k}
-              className={`h-[30px] w-[30px] cursor-pointer rounded-xl ${t.accent === k ? 'border-2 border-neutral-900 outline-2 -outline-offset-4 outline-white' : 'border-2 border-transparent'}`}
+              className={`h-[30px] w-[30px] cursor-pointer rounded-xl ${t.accent === k ? ACCENT_SWATCH_SELECTED : ACCENT_SWATCH_DEFAULT}`}
               style={{ background: hex }}
             />
           ))}

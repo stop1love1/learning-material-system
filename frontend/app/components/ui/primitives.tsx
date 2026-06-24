@@ -225,7 +225,7 @@ export function IconBtn({
     >
       <Icon name={name} size={17} stroke={active ? p.accent : p.sub} />
       {badge != null && (
-        <span className="absolute -top-[5px] -right-[5px] flex h-4 min-w-4 items-center justify-center rounded-lg border-2 border-lms-bg bg-lms-accent px-1 font-mono text-[9.5px] font-bold text-white">
+        <span className="absolute top-[-5px] right-[-5px] flex h-4 min-w-4 items-center justify-center rounded-lg border-2 border-lms-bg bg-lms-accent px-1 font-mono text-[9.5px] font-bold text-white">
           {badge}
         </span>
       )}
