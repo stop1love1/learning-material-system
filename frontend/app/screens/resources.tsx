@@ -8,6 +8,19 @@ import { lblStyle } from '@/app/helpers/shared';
 import { filesApi, foldersApi, rubricsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
+import GoogleDrivePicker from '@/app/components/GoogleDrivePicker';
+
+// Map a Google Drive mimeType to our FileType.
+const mimeToType = (mt) => {
+  mt = mt || '';
+  if (mt.includes('pdf')) return 'pdf';
+  if (mt.startsWith('image/')) return 'image';
+  if (mt.startsWith('video/')) return 'video';
+  if (mt.startsWith('audio/')) return 'audio';
+  if (mt.includes('presentation') || mt.includes('powerpoint')) return 'slide';
+  if (mt.includes('document') || mt.includes('word') || mt === 'text/plain') return 'doc';
+  return 'link';
+};
 
 // screens-resources.tsx — Document repository + Rubric list & builder.
 
@@ -62,6 +75,25 @@ export function TDocs({ p, t }) {
       setComposing(false); setForm(blankForm);
     } finally { setSaving(false); }
   };
+
+  // Import files picked from Google Drive into the current folder (external links).
+  const importDriveDocs = async (picked: any[]) => {
+    const folderName = folder !== 'Tất cả' ? folder : (folderNames[0] || 'Tư liệu');
+    let folderId: any = null;
+    try {
+      const fl: any = await foldersApi.list();
+      const arr: any[] = Array.isArray(fl) ? fl : (fl?.records ?? []);
+      folderId = (arr.find((x) => x.name === folderName) || {})._id ?? null;
+    } catch {}
+    for (const d of picked) {
+      const url = d.url || (d.id ? `https://drive.google.com/file/d/${d.id}/view` : '');
+      if (!url) continue;
+      try {
+        await filesApi.create({ name: d.name || 'Tài liệu', fileType: mimeToType(d.mimeType), source: 'external', url, folderId, tags: [folderName], description: '' });
+      } catch {}
+    }
+    await hydrateFor('docs');
+  };
   const doUpload = async () => {
     const n = DB.DOCS.length + 1;
     const name = 'Tài liệu mới ' + n;
@@ -107,6 +139,8 @@ export function TDocs({ p, t }) {
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto', display: 'grid', gridTemplateColumns: '210px 1fr', gap: 26 }}>
       <aside>
         <Btn p={p} icon="plus" full onClick={() => setComposing(true)}>Thêm tài liệu</Btn>
+        <div style={{ height: 8 }} />
+        <GoogleDrivePicker p={p} full onPicked={importDriveDocs} />
         <div style={{ marginTop: 18, fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, padding: '0 6px 8px' }}>THƯ MỤC</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {DB.DOC_FOLDERS.map((f) => {
