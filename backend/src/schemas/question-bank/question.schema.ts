@@ -23,12 +23,10 @@ export class Question {
   @ApiProperty({ type: String, nullable: true })
   topicId: Types.ObjectId | null;
 
-  /** Tiêu đề ngắn để tìm kiếm/liệt kê. */
   @Prop({ type: String, default: null, trim: true, index: true })
   @ApiProperty({ type: String, nullable: true })
   title: string | null;
 
-  /** Nội dung đề bài (stem). */
   @Prop({ type: String, required: true })
   @ApiProperty({ type: String })
   content: string;
@@ -45,12 +43,10 @@ export class Question {
   @ApiProperty({ type: [String] })
   tags: string[];
 
-  /** Trỏ tới bản ghi chi tiết theo loại. */
   @Prop({ type: mongoose.Schema.Types.ObjectId, refPath: 'questionModel', default: null })
   @ApiProperty({ type: String, nullable: true })
   questionDetail: Types.ObjectId | null;
 
-  /** Tên collection chi tiết (SingleChoiceQuestion, EssayQuestion…). */
   @Prop({ type: String, enum: Object.values(QuestionModel), default: null })
   @ApiProperty({ enum: QuestionModel, nullable: true })
   questionModel: QuestionModel | null;
@@ -63,7 +59,6 @@ export class Question {
   @ApiProperty({ type: String, nullable: true })
   grade: string | null;
 
-  /** Số lần được dùng trong các bài tập. */
   @Prop({ type: Number, default: 0, min: 0 })
   @ApiProperty({ type: Number })
   uses: number;

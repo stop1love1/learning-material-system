@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type RubricGroupDocument = HydratedDocument<RubricGroup>;
 
-/** Nhóm rubric (để gom các rubric của một người dùng). */
 @Schema({ collection: 'rubric-groups', timestamps: true, versionKey: false })
 export class RubricGroup {
   @ApiProperty({ type: String })

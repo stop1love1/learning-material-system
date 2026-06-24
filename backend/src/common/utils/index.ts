@@ -2,7 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import mongoose from 'mongoose';
 import { Pagination } from '../types';
 
-/** Chuỗi → ObjectId (ném BadRequest nếu không hợp lệ). Tái dùng từ reference. */
 export const convertStringToObjectId = (value: string) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     throw new BadRequestException('Invalid ObjectId');
@@ -10,7 +9,6 @@ export const convertStringToObjectId = (value: string) => {
   return new mongoose.Types.ObjectId(value);
 };
 
-/** Chuẩn hóa keyword/page/pageSize với mặc định an toàn. */
 export const getPagination = (keyword?: string, page?: number, pageSize?: number) => {
   keyword = keyword || '';
   page = page ? Number(page) : 1;
@@ -23,7 +21,6 @@ export const getPagination = (keyword?: string, page?: number, pageSize?: number
   return { keyword, page, pageSize };
 };
 
-/** Dựng envelope phân trang. */
 export const buildPagination = <T>(records: T[], total: number, page: number, pageSize: number): Pagination<T> => {
   const pages = Math.ceil(total / pageSize);
   return {
@@ -37,7 +34,6 @@ export const buildPagination = <T>(records: T[], total: number, page: number, pa
   };
 };
 
-/** Escape regex để dùng keyword trong $regex. */
 export const parseKeyword = (input: unknown): string | undefined => {
   const s = (input ?? '').toString().trim();
   if (!s) return undefined;

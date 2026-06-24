@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type TableSelectionQuestionDocument = HydratedDocument<TableSelectionQuestion>;
 
-/** Chi tiết câu hỏi chọn Đúng/Sai theo bảng — tái dùng reference `table-selection-question`. */
 @Schema({ collection: 'table-selection-questions', timestamps: true, versionKey: false })
 export class TableSelectionQuestion {
   @ApiProperty({ type: String })

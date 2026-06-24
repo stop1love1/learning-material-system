@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type RubricDocument = HydratedDocument<Rubric>;
 
-/** Bộ tiêu chí chấm điểm — tái dùng reference `rubric` (tách levels/criterions). */
 @Schema({ collection: 'rubrics', timestamps: true, versionKey: false })
 export class Rubric {
   @ApiProperty({ type: String })
@@ -34,7 +33,6 @@ export class Rubric {
   @ApiProperty({ type: Boolean })
   useGrades: boolean;
 
-  /** Số lần được dùng để chấm. */
   @Prop({ type: Number, default: 0, min: 0 })
   @ApiProperty({ type: Number })
   usedCount: number;

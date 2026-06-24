@@ -1,7 +1,3 @@
-// Domain enums for the Vườn Văn / Học Viện LMS. String enums so values are
-// human-readable in the database and stable across refactors.
-
-// ── Tài khoản ────────────────────────────────────────────────────────────────
 export enum UserRole {
   Student = 'student',
   Teacher = 'teacher',
@@ -13,7 +9,6 @@ export enum UserStatus {
   Inactive = 'inactive',
 }
 
-// ── Kho tài liệu ─────────────────────────────────────────────────────────────
 /** Where a file's bytes live. External = chỉ lưu link (mặc định). */
 export enum FileSource {
   External = 'external',
@@ -37,23 +32,22 @@ export enum DownloadKind {
   Save = 'save',
 }
 
-// ── Ngân hàng câu hỏi ────────────────────────────────────────────────────────
 export enum QuestionType {
-  Single = 'single', // Trắc nghiệm 1 đáp án
-  Multi = 'multi', // Trắc nghiệm nhiều đáp án
-  TrueFalse = 'truefalse', // Đúng / Sai
-  Fill = 'fill', // Điền khuyết
-  Essay = 'essay', // Tự luận
-  Match = 'match', // Nối / kéo thả
-  Number = 'number', // Đáp án số
-  Sort = 'sort', // Sắp xếp thứ tự
-  TableSelection = 'tableselection', // Chọn Đúng/Sai trong bảng
+  Single = 'single',
+  Multi = 'multi',
+  TrueFalse = 'truefalse',
+  Fill = 'fill',
+  Essay = 'essay',
+  Match = 'match',
+  Number = 'number',
+  Sort = 'sort',
+  TableSelection = 'tableselection',
 }
 
 export enum QuestionLevel {
-  Easy = 'easy', // Nhận biết
-  Medium = 'medium', // Thông hiểu
-  Hard = 'hard', // Vận dụng
+  Easy = 'easy',
+  Medium = 'medium',
+  Hard = 'hard',
 }
 
 /** Tên collection chi tiết — dùng cho `question.questionModel` + refPath. */
@@ -83,11 +77,10 @@ export enum EssayGradingType {
   Instruction = 'instruction', // chấm theo hướng dẫn (tỉ lệ %)
 }
 
-// ── Bài tập & bài làm ────────────────────────────────────────────────────────
 export enum ExerciseType {
-  Quiz = 'quiz', // Trắc nghiệm
-  Essay = 'essay', // Tự luận
-  FileUpload = 'file', // Nộp tệp
+  Quiz = 'quiz',
+  Essay = 'essay',
+  FileUpload = 'file',
 }
 
 export enum ExerciseStatus {

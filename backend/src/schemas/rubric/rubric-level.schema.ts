@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type RubricLevelDocument = HydratedDocument<RubricLevel>;
 
-/** Một mức trên thang điểm của rubric (Xuất sắc 100% · Tốt 80%…). */
 @Schema({ collection: 'rubric-levels', timestamps: true, versionKey: false })
 export class RubricLevel {
   @ApiProperty({ type: String })

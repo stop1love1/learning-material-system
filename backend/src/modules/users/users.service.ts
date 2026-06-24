@@ -70,7 +70,6 @@ export class UsersService {
     return { deleted: true };
   }
 
-  /** Tạo admin mặc định nếu chưa có (dùng bởi `pnpm seed`). */
   async seedAdmin() {
     const email = (process.env.ADMIN_EMAIL ?? 'admin@vuonvan.vn').toLowerCase();
     if (await this.userModel.exists({ email })) {

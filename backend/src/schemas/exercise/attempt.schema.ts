@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type AttemptDocument = HydratedDocument<Attempt>;
 
-/** Một lượt làm bài tập. Hỗ trợ người đăng nhập (studentId) lẫn khách (sessionId). */
 @Schema({ collection: 'attempts', timestamps: true, versionKey: false })
 export class Attempt {
   @ApiProperty({ type: String })

@@ -5,7 +5,6 @@ import { SelfAssessmentSource } from '../../enums';
 
 export type SelfAssessmentDocument = HydratedDocument<SelfAssessment>;
 
-/** Học viên dùng rubric tự chấm bài của mình (màn "Tự đánh giá"). */
 @Schema({ collection: 'self-assessments', timestamps: true, versionKey: false })
 export class SelfAssessment {
   @ApiProperty({ type: String })
@@ -36,7 +35,6 @@ export class SelfAssessment {
   @ApiProperty({ type: String, nullable: true })
   text: string | null;
 
-  /** Điểm tự chấm theo từng tiêu chí. */
   @Prop({
     type: [
       {

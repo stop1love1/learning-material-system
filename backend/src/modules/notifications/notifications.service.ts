@@ -9,7 +9,6 @@ import { Submission } from '../../schemas/exercise/submission.schema';
 
 type Feed = { id: string; title: string; time: string; at: string; tag: string; icon: string };
 
-/** Khoảng thời gian tương đối kiểu "15 phút trước", "Hôm qua". */
 function relativeTime(date: Date): string {
   const diff = Date.now() - date.getTime();
   const m = Math.floor(diff / 60000);
@@ -33,7 +32,6 @@ export class NotificationsService {
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
   ) {}
 
-  /** Bảng tin hoạt động — tổng hợp từ các sự kiện gần đây trong hệ thống. */
   async feed(limit = 20): Promise<Feed[]> {
     const [exercises, articles, files, users, ungraded] = await Promise.all([
       this.exerciseModel.find({}).sort({ createdAt: -1 }).limit(8).select('title createdAt').lean(),

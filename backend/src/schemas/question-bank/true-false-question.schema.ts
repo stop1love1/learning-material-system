@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type TrueFalseQuestionDocument = HydratedDocument<TrueFalseQuestion>;
 
-/** Chi tiết câu hỏi Đúng / Sai. */
 @Schema({ collection: 'true-false-questions', timestamps: true, versionKey: false })
 export class TrueFalseQuestion {
   @ApiProperty({ type: String })

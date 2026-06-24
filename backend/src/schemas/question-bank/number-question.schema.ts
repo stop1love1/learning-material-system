@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type NumberQuestionDocument = HydratedDocument<NumberQuestion>;
 
-/** Chi tiết câu hỏi đáp án số — tái dùng reference `number-question`. */
 @Schema({ collection: 'number-questions', timestamps: true, versionKey: false })
 export class NumberQuestion {
   @ApiProperty({ type: String })

@@ -12,7 +12,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-/** Điểm + nhận xét giáo viên chấm cho một câu trả lời của học viên. */
 export class GradeAnswerDto {
   @ApiProperty({ type: String })
   @IsMongoId()

@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../enums';
 
-/** Payload đặt vào JWT + gắn vào req.user. */
 export type JwtPayload = {
   sub: string; // userId
   role: UserRole;
@@ -11,7 +10,6 @@ export type JwtPayload = {
   exp?: number;
 };
 
-/** Envelope phân trang (tái dùng từ reference `types`). */
 export type Pagination<T> = {
   pages: number;
   pageSize: number;

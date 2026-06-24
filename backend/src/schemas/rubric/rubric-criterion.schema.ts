@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type RubricCriterionDocument = HydratedDocument<RubricCriterion>;
 
-/** Một tiêu chí chấm của rubric (gắn với một mức điểm). */
 @Schema({ collection: 'rubric-criterions', timestamps: true, versionKey: false })
 export class RubricCriterion {
   @ApiProperty({ type: String })
@@ -31,7 +30,6 @@ export class RubricCriterion {
   @ApiProperty({ type: Number })
   weight: number;
 
-  /** Các gạch đầu dòng mô tả yêu cầu của tiêu chí. */
   @Prop({ type: [String], default: [] })
   @ApiProperty({ type: [String] })
   items: string[];

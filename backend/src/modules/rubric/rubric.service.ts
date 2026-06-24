@@ -18,9 +18,6 @@ export class RubricService {
     @InjectModel(RubricCriterion.name) private readonly rubricCriterionModel: Model<RubricCriterion>,
   ) {}
 
-  // ── Rubrics ────────────────────────────────────────────────────────────────
-
-  /** Danh sách rubric của người dùng (phân trang, lọc theo nhóm + keyword theo tên). */
   async listRubrics(userId: string, dto: { keyword?: string; page?: number; pageSize?: number; groupId?: string }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
     const query: Record<string, any> = {
@@ -60,7 +57,6 @@ export class RubricService {
     return buildPagination(records, total, page, pageSize);
   }
 
-  /** Chi tiết rubric kèm levels + criterions. */
   async getRubric(id: string) {
     const rubricId = convertStringToObjectId(id);
     const rubric = await this.rubricModel.findById(rubricId).lean();
@@ -72,7 +68,6 @@ export class RubricService {
     return { ...rubric, levels, criterions };
   }
 
-  /** Tạo rubric + các mức + các tiêu chí, gắn với người dùng. */
   async createRubric(userId: string, dto: RubricDto) {
     const ownerId = convertStringToObjectId(userId);
     const { levels = [], criterions = [], groupId, ...rest } = dto;
@@ -109,7 +104,6 @@ export class RubricService {
     };
   }
 
-  /** Cập nhật rubric + đối soát levels/criterions (thêm mới, sửa theo _id, xóa cái bị bỏ). */
   async updateRubric(userId: string, id: string, dto: RubricDto) {
     const ownerId = convertStringToObjectId(userId);
     const rubricId = convertStringToObjectId(id);
@@ -138,13 +132,11 @@ export class RubricService {
     const existingLevelIds = new Set(existingLevels.map((l) => l._id.toString()));
     const existingCriterionIds = new Set(existingCriterions.map((c) => c._id.toString()));
 
-    // Levels.
     const newLevels = levels.filter((l) => !l._id);
     const updatedLevels = levels.filter((l) => l._id && existingLevelIds.has(l._id));
     const keptLevelIds = new Set(levels.filter((l) => l._id).map((l) => l._id as string));
     const deletedLevels = existingLevels.filter((l) => !keptLevelIds.has(l._id.toString()));
 
-    // Criterions.
     const newCriterions = criterions.filter((c) => !c._id);
     const updatedCriterions = criterions.filter((c) => c._id && existingCriterionIds.has(c._id));
     const keptCriterionIds = new Set(criterions.filter((c) => c._id).map((c) => c._id as string));
@@ -175,7 +167,6 @@ export class RubricService {
     return this.getRubric(id);
   }
 
-  /** Xóa rubric + toàn bộ levels + criterions của nó. */
   async deleteRubric(userId: string, id: string) {
     const rubricId = convertStringToObjectId(id);
     const deleted = await this.rubricModel.findOneAndDelete({ _id: rubricId, userId: convertStringToObjectId(userId) });
@@ -187,9 +178,6 @@ export class RubricService {
     return { deleted: true };
   }
 
-  // ── Rubric groups ────────────────────────────────────────────────────────────
-
-  /** Danh sách nhóm rubric của người dùng kèm số lượng rubric trong nhóm. */
   async listRubricGroups(userId: string) {
     return this.rubricGroupModel.aggregate([
       { $match: { userId: convertStringToObjectId(userId) } },
@@ -224,7 +212,6 @@ export class RubricService {
     return group;
   }
 
-  /** Xóa nhóm rubric + gỡ các rubric khỏi nhóm (giữ rubric, set groupId = null). */
   async deleteRubricGroup(userId: string, groupId: string) {
     const ownerId = convertStringToObjectId(userId);
     const groupObjectId = convertStringToObjectId(groupId);

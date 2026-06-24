@@ -100,7 +100,6 @@ export class ExercisesService {
     return this.findOne(exercise._id.toString());
   }
 
-  /** Bộ lọc theo chủ sở hữu (Admin bỏ qua kiểm tra). */
   private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
     const owner = role === UserRole.Admin ? {} : { userId: convertStringToObjectId(userId) };
     return { _id: convertStringToObjectId(id), ...owner };

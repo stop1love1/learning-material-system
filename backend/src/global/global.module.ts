@@ -4,7 +4,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtService } from './jwt.service';
 import { BcryptService } from './bcrypt.service';
 
-/** Cung cấp các service dùng chung (JWT, Bcrypt) cho toàn app. */
 @Global()
 @Module({
   imports: [

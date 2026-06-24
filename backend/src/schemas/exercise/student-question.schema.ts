@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type StudentQuestionDocument = HydratedDocument<StudentQuestion>;
 
-/** Đáp án của học viên cho từng câu hỏi trong một lượt làm. */
 @Schema({ collection: 'student-questions', timestamps: true, versionKey: false })
 export class StudentQuestion {
   @ApiProperty({ type: String })
@@ -43,12 +42,10 @@ export class StudentQuestion {
   @ApiProperty({ type: Number, nullable: true })
   grades: number | null;
 
-  /** Nhận xét của giáo viên cho câu này (khi chấm). */
   @Prop({ type: String, default: null })
   @ApiProperty({ type: String, nullable: true })
   feedback: string | null;
 
-  /** Thứ tự lựa chọn sau khi xáo trộn (nếu có). */
   @Prop({ type: [Number], default: [] })
   @ApiProperty({ type: [Number] })
   shuffledOptionIndices: number[];

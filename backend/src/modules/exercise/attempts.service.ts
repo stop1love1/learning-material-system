@@ -170,16 +170,11 @@ export class AttemptsService {
     return { attempt, submission, studentQuestions };
   }
 
-  /**
-   * Giáo viên/quản trị chấm một lượt làm: ghi điểm + nhận xét cho từng câu,
-   * tổng hợp lại submission và đánh dấu đã chấm.
-   */
   async grade(attemptId: string, dto: GradeAttemptDto, graderId: string) {
     const id = convertStringToObjectId(attemptId);
     const attempt = await this.attemptModel.findById(id).lean();
     if (!attempt) throw new NotFoundException('Không tìm thấy lượt làm');
 
-    // (1) Ghi điểm/nhận xét cho từng câu trả lời học viên.
     for (const ans of dto.answers) {
       const questionId = convertStringToObjectId(ans.questionId);
       const patch: Record<string, unknown> = {};
@@ -190,7 +185,6 @@ export class AttemptsService {
       await this.studentQuestionModel.updateOne({ attemptId: id, questionId }, { $set: patch });
     }
 
-    // (2) Tổng hợp lại submission từ các câu đã chấm.
     const studentQuestions = await this.studentQuestionModel.find({ attemptId: id }).lean();
     const links = await this.exerciseQuestionModel
       .find({ exerciseId: attempt.exerciseId })
@@ -252,16 +246,11 @@ export class AttemptsService {
     return submission ? submission.toObject() : null;
   }
 
-  /**
-   * Danh sách lượt làm để giáo viên/quản trị chấm — kèm tên học viên, bài tập,
-   * trạng thái và điểm của submission.
-   */
   async listForGrading(dto: ListAttemptsDto) {
     const { page, pageSize } = getPagination(undefined, dto.page, dto.pageSize);
     const query: Record<string, any> = {
       ...(dto.exerciseId ? { exerciseId: convertStringToObjectId(dto.exerciseId) } : {}),
       ...(dto.studentId ? { studentId: convertStringToObjectId(dto.studentId) } : {}),
-      // Chỉ những lượt đã nộp mới cần chấm.
       submittedAt: { $ne: null },
     };
 
@@ -301,7 +290,6 @@ export class AttemptsService {
     return buildPagination(records, total, page, pageSize);
   }
 
-  /** Các lượt làm của chính học viên hiện tại (trạng thái + điểm submission). */
   async listMine(userId: string) {
     const studentId = convertStringToObjectId(userId);
     const attempts = await this.attemptModel.find({ studentId }).sort({ createdAt: -1 }).lean();

@@ -2,7 +2,6 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
 
-/** Thông tin tổ chức. */
 export class OrgSettingsDto {
   @ApiPropertyOptional({ type: String })
   @IsOptional()
@@ -25,7 +24,6 @@ export class OrgSettingsDto {
   timezone?: string;
 }
 
-/** Tùy biến giao diện. */
 export class AppearanceSettingsDto {
   @ApiPropertyOptional({ type: String })
   @IsOptional()
@@ -63,7 +61,6 @@ export class AppearanceSettingsDto {
   rubricStyle?: string;
 }
 
-/** Tùy chọn khác. */
 export class MiscSettingsDto {
   @ApiPropertyOptional({ type: Boolean })
   @IsOptional()
@@ -71,7 +68,6 @@ export class MiscSettingsDto {
   allowGoogleLogin?: boolean;
 }
 
-/** Nội dung trang chủ công khai (admin tự chỉnh). */
 export class HomepageSettingsDto {
   @ApiPropertyOptional({ type: String })
   @IsOptional()
@@ -94,7 +90,6 @@ export class HomepageSettingsDto {
   ctaLabel?: string;
 }
 
-/** Thông tin SEO trang công khai. */
 export class SeoSettingsDto {
   @ApiPropertyOptional({ type: String })
   @IsOptional()

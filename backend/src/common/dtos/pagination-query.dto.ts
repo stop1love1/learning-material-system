@@ -3,7 +3,6 @@ import { Transform, Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { parseKeyword } from '../utils';
 
-/** Query phân trang chuẩn cho mọi endpoint list. */
 export class PaginationQueryDto {
   @IsOptional()
   @IsString()

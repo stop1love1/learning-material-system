@@ -16,8 +16,6 @@ import { UserRole } from '../../enums';
 export class RubricController {
   constructor(private readonly rubricService: RubricService) {}
 
-  // ── Rubrics ────────────────────────────────────────────────────────────────
-
   @Get('rubrics')
   @ApiOperation({ summary: 'Danh sách rubric của tôi (phân trang, lọc nhóm + tên)' })
   listRubrics(@CurrentUser('sub') userId: string, @Query() dto: ListRubricsDto) {
@@ -50,8 +48,6 @@ export class RubricController {
   deleteRubric(@CurrentUser('sub') userId: string, @Param('id') id: string) {
     return this.rubricService.deleteRubric(userId, id);
   }
-
-  // ── Rubric groups ────────────────────────────────────────────────────────────
 
   @Get('rubric-groups')
   @ApiOperation({ summary: 'Danh sách nhóm rubric của tôi (kèm số lượng rubric)' })

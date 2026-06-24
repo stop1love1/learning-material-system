@@ -12,7 +12,6 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dtos/pagination-query.dto';
 
-/** Query phân trang cho danh sách rubric (lọc thêm theo nhóm). */
 export class ListRubricsDto extends PaginationQueryDto {
   @ApiPropertyOptional({ type: String, description: 'Lọc theo nhóm rubric' })
   @IsOptional()
@@ -20,7 +19,6 @@ export class ListRubricsDto extends PaginationQueryDto {
   groupId?: string;
 }
 
-/** Một mức trên thang điểm của rubric. */
 export class LevelDto {
   @ApiPropertyOptional({ type: String, description: 'ID mức (có khi cập nhật)' })
   @IsOptional()
@@ -43,7 +41,6 @@ export class LevelDto {
   order?: number;
 }
 
-/** Một tiêu chí chấm của rubric. */
 export class CriterionDto {
   @ApiPropertyOptional({ type: String, description: 'ID tiêu chí (có khi cập nhật)' })
   @IsOptional()

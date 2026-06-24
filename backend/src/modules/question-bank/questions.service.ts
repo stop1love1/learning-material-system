@@ -34,7 +34,6 @@ export class QuestionsService {
     @InjectModel(TableSelectionQuestion.name) private readonly tableSelectionModel: Model<TableSelectionQuestion>,
   ) {}
 
-  /** Chọn (model chi tiết, tên QuestionModel) theo loại câu hỏi. */
   private resolveDetail(type: QuestionType): { model: Model<any>; questionModel: QuestionModel } {
     switch (type) {
       case QuestionType.Single:
@@ -60,7 +59,6 @@ export class QuestionsService {
     }
   }
 
-  /** Lấy model chi tiết theo giá trị QuestionModel đã lưu. */
   private modelByQuestionModel(questionModel: QuestionModel): Model<any> {
     switch (questionModel) {
       case QuestionModel.SingleChoice:
@@ -127,7 +125,6 @@ export class QuestionsService {
   }
 
   async create(userId: string, dto: CreateQuestionDto) {
-    // (1) Tạo bản ghi gốc.
     const base = await this.questionModel.create({
       userId: convertStringToObjectId(userId),
       type: dto.type,
@@ -140,13 +137,10 @@ export class QuestionsService {
       grade: dto.grade ?? null,
     });
 
-    // (2) Chọn model chi tiết theo loại.
     const { model: detailModel, questionModel } = this.resolveDetail(dto.type);
 
-    // (3) Tạo bản ghi chi tiết.
     const detail = await detailModel.create({ questionId: base._id, ...dto.detail });
 
-    // (4) Cập nhật con trỏ chi tiết trên bản ghi gốc.
     base.questionDetail = detail._id;
     base.questionModel = questionModel;
     await base.save();
@@ -155,7 +149,6 @@ export class QuestionsService {
     return { question, detail: detail.toObject() };
   }
 
-  /** Bộ lọc theo chủ sở hữu (Admin bỏ qua kiểm tra). */
   private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
     const owner = role === UserRole.Admin ? {} : { userId: convertStringToObjectId(userId) };
     return { _id: convertStringToObjectId(id), ...owner };

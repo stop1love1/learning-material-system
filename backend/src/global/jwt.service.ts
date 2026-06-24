@@ -2,10 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService as NestJwtService, JwtSignOptions } from '@nestjs/jwt';
 import { JwtPayload } from '../common/types';
 
-/**
- * Light JWT helper (tái dùng ý tưởng từ reference `jwt.service`). Secret/expiry
- * cấu hình ở GlobalModule (JwtModule), nên sign/verify tự dùng đúng secret.
- */
 @Injectable()
 export class JwtService {
   constructor(private readonly jwt: NestJwtService) {}
@@ -14,7 +10,6 @@ export class JwtService {
     return this.jwt.sign(payload, options);
   }
 
-  /** Verify chữ ký + hạn; ném Unauthorized nếu sai. */
   verify(token: string): JwtPayload {
     try {
       return this.jwt.verify<JwtPayload>(extractBearer(token));

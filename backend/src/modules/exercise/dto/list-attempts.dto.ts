@@ -2,7 +2,6 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBooleanString, IsMongoId, IsOptional } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dtos/pagination-query.dto';
 
-/** Lọc danh sách lượt làm cần chấm cho giáo viên/quản trị. */
 export class ListAttemptsDto extends PaginationQueryDto {
   @IsOptional()
   @IsMongoId()

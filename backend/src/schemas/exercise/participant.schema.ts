@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type ParticipantDocument = HydratedDocument<Participant>;
 
-/** Người tham gia một lượt làm (trạng thái phiên làm bài). */
 @Schema({ collection: 'participants', timestamps: true, versionKey: false })
 export class Participant {
   @ApiProperty({ type: String })

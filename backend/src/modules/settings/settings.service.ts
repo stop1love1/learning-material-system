@@ -10,8 +10,6 @@ export class SettingsService {
     @InjectModel(Settings.name) private readonly settingsModel: Model<Settings>,
   ) {}
 
-  /** Lấy cấu hình hệ thống (singleton); tạo bản mặc định nếu chưa có và
-   *  bổ sung default cho các nhóm mới (homepage/seo…) trên doc tạo từ trước. */
   async getOrCreate() {
     let doc = await this.settingsModel.findOne({ key: 'system' });
     if (!doc) doc = await this.settingsModel.create({ key: 'system' });
@@ -28,7 +26,6 @@ export class SettingsService {
     return doc.toObject();
   }
 
-  /** Cập nhật cấu hình (upsert). Làm phẳng các object con để $set theo đúng nhánh. */
   async update(dto: UpdateSettingsDto) {
     const flattened: Record<string, any> = {};
     for (const group of ['org', 'appearance', 'misc', 'homepage', 'seo'] as const) {

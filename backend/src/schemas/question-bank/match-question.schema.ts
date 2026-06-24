@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import mongoose, { HydratedDocument, Types } from 'mongoose';
 
-/** Một cặp nối (vế trái ↔ vế phải đúng). */
 class MatchPair {
   @Prop({ type: String, required: true, trim: true })
   @ApiProperty({ type: String })
@@ -15,7 +14,6 @@ class MatchPair {
 
 export type MatchQuestionDocument = HydratedDocument<MatchQuestion>;
 
-/** Chi tiết câu hỏi Nối / kéo thả. */
 @Schema({ collection: 'match-questions', timestamps: true, versionKey: false })
 export class MatchQuestion {
   @ApiProperty({ type: String })

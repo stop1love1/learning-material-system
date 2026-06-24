@@ -3,7 +3,6 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../../enums';
 
-/** Checks req.user.role (set by JwtAuthGuard) against @Roles([...]). */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}

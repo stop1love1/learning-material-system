@@ -5,7 +5,6 @@ import { QuestionMatchMode } from '../../enums';
 
 export type ShortAnswerQuestionDocument = HydratedDocument<ShortAnswerQuestion>;
 
-/** Chi tiết câu hỏi Điền khuyết / trả lời ngắn. */
 @Schema({ collection: 'short-answer-questions', timestamps: true, versionKey: false })
 export class ShortAnswerQuestion {
   @ApiProperty({ type: String })
@@ -15,7 +14,6 @@ export class ShortAnswerQuestion {
   @ApiProperty({ type: String })
   questionId: Types.ObjectId;
 
-  /** Các đáp án được chấp nhận. */
   @Prop({ type: [String], required: true })
   @ApiProperty({ type: [String] })
   answers: string[];

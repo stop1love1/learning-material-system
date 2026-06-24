@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type ArticleDocument = HydratedDocument<Article>;
 
-/** Bài viết / blog — tái dùng reference `article`. */
 @Schema({ collection: 'articles', timestamps: true, versionKey: false })
 export class Article {
   @ApiProperty({ type: String })
@@ -38,7 +37,6 @@ export class Article {
   @ApiProperty({ type: String, nullable: true, example: 'Tập làm văn' })
   category: string | null;
 
-  /** Khóa màu bìa hoặc URL ảnh bìa. */
   @Prop({ type: String, default: 'clay' })
   @ApiProperty({ type: String })
   cover: string;

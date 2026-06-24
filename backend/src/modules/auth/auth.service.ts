@@ -51,7 +51,6 @@ export class AuthService {
     return this.sanitize(user);
   }
 
-  /** Người dùng tự cập nhật hồ sơ (tên / email / avatar). */
   async updateProfile(userId: string, dto: { name?: string; email?: string; avatar?: string }) {
     const patch: Record<string, unknown> = {};
     if (dto.name) patch.name = dto.name;

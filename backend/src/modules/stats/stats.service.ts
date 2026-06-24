@@ -10,7 +10,7 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const fmtDay = (d: Date) => d.toISOString().slice(0, 10); // YYYY-MM-DD
+const fmtDay = (d: Date) => d.toISOString().slice(0, 10);
 
 @Injectable()
 export class StatsService {
@@ -24,18 +24,15 @@ export class StatsService {
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
   ) {}
 
-  /** Đếm tài liệu tạo trong [from, to). */
   private countIn(model: Model<any>, from: Date, to: Date) {
     return model.countDocuments({ createdAt: { $gte: from, $lt: to } });
   }
 
-  /** % thay đổi kỳ này so với kỳ trước (null nếu kỳ trước = 0). */
   private trendPct(curr: number, prev: number): number | null {
     if (!prev) return curr > 0 ? 100 : null;
     return Math.round(((curr - prev) / prev) * 1000) / 10;
   }
 
-  /** Chuỗi số lượt làm bài theo ngày, lấp đủ `days` ngày gần nhất (không bỏ ngày 0). */
   private async attemptsSeries(days: number) {
     const now = new Date();
     const from = new Date(now.getTime() - days * DAY_MS);
@@ -52,7 +49,6 @@ export class StatsService {
     return series;
   }
 
-  /** Dashboard tổng quan — đếm thật + xu hướng 30 ngày + chuỗi lượt làm bài. */
   async overview() {
     const now = new Date();
     const d30 = new Date(now.getTime() - 30 * DAY_MS);
@@ -70,7 +66,6 @@ export class StatsService {
         this.submissionModel.countDocuments({ isGraded: true }),
       ]);
 
-    // Xu hướng cho 4 thẻ chính: tạo trong 30 ngày qua vs 30 ngày trước đó.
     const trendFor = async (model: Model<any>) => {
       const [curr, prev] = await Promise.all([this.countIn(model, d30, now), this.countIn(model, d60, d30)]);
       return this.trendPct(curr, prev);
@@ -90,7 +85,6 @@ export class StatsService {
     ]);
     const activityTrend = this.trendPct(attemptsCurr, attemptsPrev);
 
-    // Học liệu nổi bật: theo lượt xem + lượt tải.
     const topFiles = await this.fileModel
       .find({ isActive: { $ne: false } })
       .sort({ viewCount: -1, downloadCount: -1, createdAt: -1 })
@@ -107,7 +101,6 @@ export class StatsService {
     };
   }
 
-  /** Báo cáo & thống kê — phân bố điểm, tỷ lệ chấm, điểm TB, theo bài tập. */
   async reports() {
     const [distRows, avgRow, totalSub, gradedSub] = await Promise.all([
       this.submissionModel.aggregate([
@@ -141,7 +134,6 @@ export class StatsService {
       count: (distRows.find((r: any) => r._id === b) || {}).count || 0,
     }));
 
-    // Theo bài tập: số lượt làm + số bài đã chấm (top 8 theo lượt làm).
     const perExerciseRaw = await this.attemptModel.aggregate([
       { $group: { _id: '$exerciseId', attempts: { $sum: 1 } } },
       { $sort: { attempts: -1 } },

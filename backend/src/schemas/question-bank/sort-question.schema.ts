@@ -4,7 +4,6 @@ import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export type SortQuestionDocument = HydratedDocument<SortQuestion>;
 
-/** Chi tiết câu hỏi sắp xếp thứ tự — tái dùng reference `sort-question`. */
 @Schema({ collection: 'sort-questions', timestamps: true, versionKey: false })
 export class SortQuestion {
   @ApiProperty({ type: String })
