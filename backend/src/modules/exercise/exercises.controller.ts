@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '../../enums';
 
 @ApiTags('exercise')
@@ -19,12 +20,14 @@ export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Danh sách bài tập (phân trang, lọc type/subject/grade/status)' })
   list(@Query() dto: ListExercisesDto) {
     return this.exercisesService.list(dto);
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Chi tiết bài tập kèm danh sách câu hỏi' })
   findOne(@Param('id') id: string) {
     return this.exercisesService.findOne(id);
