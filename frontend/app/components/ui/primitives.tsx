@@ -1,26 +1,22 @@
-// primitives.tsx — the LMS design-system primitives, ported from theme.jsx.
-// Inline-styled, palette-driven components: Icon, Tag, Pill, Avatar, Btn,
-// IconBtn, Field, Select, Progress, Ring, Spark, Bars, EmptyState, Segmented,
-// Stat, plus the `fmt` number formatter.
 import React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Palette } from '@/app/types';
 import { hexA } from '@/app/theme/palette';
-import { FONTS } from '@/app/theme/fonts';
 import { ICONS } from '@/app/theme/icons';
 
-// ── Icon (24×24 stroke) ──────────────────────────────────────────────────────
 export function Icon({
   name,
   size = 18,
   stroke = 'currentColor',
   sw = 1.7,
+  className,
   style,
 }: {
   name: string;
   size?: number;
   stroke?: string;
   sw?: number;
+  className?: string;
   style?: CSSProperties;
 }) {
   return (
@@ -33,40 +29,34 @@ export function Icon({
       strokeWidth={sw}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ flexShrink: 0, ...style }}
+      className={`shrink-0 ${className || ''}`}
+      style={style}
     >
       <path d={ICONS[name] || ICONS.overview} />
     </svg>
   );
 }
 
-// ── Tag ──────────────────────────────────────────────────────────────────────
 export function Tag({
   children,
   color,
   p,
   soft = true,
+  className,
   style,
 }: {
   children?: ReactNode;
   color?: string;
   p?: Palette;
   soft?: boolean;
+  className?: string;
   style?: CSSProperties;
 }) {
   const c = color || (p && p.accent) || '#888';
   return (
     <span
+      className={`inline-flex items-center gap-[5px] rounded-md px-[9px] py-[3px] text-[11px] font-semibold tracking-[0.1px] ${className || ''}`}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        fontFamily: FONTS.sans,
-        fontSize: 11,
-        letterSpacing: 0.1,
-        fontWeight: 600,
-        padding: '3px 9px',
-        borderRadius: 6,
         color: c,
         background: soft ? hexA(c, p && p.dark ? 0.18 : 0.1) : 'transparent',
         border: soft ? 'none' : `1px solid ${hexA(c, 0.4)}`,
@@ -78,7 +68,6 @@ export function Tag({
   );
 }
 
-// ── Pill ─────────────────────────────────────────────────────────────────────
 export function Pill({
   children,
   p,
@@ -95,23 +84,9 @@ export function Pill({
   return (
     <button
       onClick={onClick}
-      className="lms-btn"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 7,
-        height: 34,
-        padding: '0 15px',
-        borderRadius: 10,
-        cursor: 'pointer',
-        fontFamily: FONTS.sans,
-        fontSize: 13,
-        fontWeight: active ? 600 : 500,
-        whiteSpace: 'nowrap',
-        border: `1px solid ${active ? p.accent : p.line}`,
-        background: active ? p.accentSoft : p.surface,
-        color: active ? p.accent : p.sub,
-      }}
+      className={`lms-btn inline-flex h-[34px] cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[10px] px-[15px] font-sans text-[13px] ${
+        active ? 'border border-lms-accent bg-lms-accent-soft font-semibold text-lms-accent' : 'border border-lms-line bg-lms-surface font-medium text-lms-sub'
+      }`}
     >
       {icon && <Icon name={icon} size={15} stroke={active ? p.accent : p.faint} />}
       {children}
@@ -119,7 +94,6 @@ export function Pill({
   );
 }
 
-// ── Avatar ───────────────────────────────────────────────────────────────────
 export function Avatar({
   name,
   p,
@@ -142,20 +116,14 @@ export function Avatar({
   const c = color || (accent ? p.accent : p.sub);
   return (
     <div
+      className="flex shrink-0 items-center justify-center font-lms-heading font-bold tracking-[-0.3px]"
       style={{
         width: size,
         height: size,
         borderRadius: size * 0.3,
-        flexShrink: 0,
         background: hexA(c, p.dark ? 0.22 : 0.12),
         color: c,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: FONTS.display,
-        fontWeight: 700,
         fontSize: size * 0.38,
-        letterSpacing: -0.3,
       }}
     >
       {initials}
@@ -163,8 +131,22 @@ export function Avatar({
   );
 }
 
-// ── Btn ──────────────────────────────────────────────────────────────────────
 type BtnVariant = 'primary' | 'accent' | 'dark' | 'ghost' | 'soft' | 'quiet' | 'danger';
+const BTN_VARIANT: Record<BtnVariant, string> = {
+  primary: 'bg-lms-accent text-white border-0 shadow-[0_2px_0_var(--lms-glow)]',
+  accent: 'bg-lms-accent text-white border-0 shadow-[0_2px_0_var(--lms-glow)]',
+  dark: 'bg-lms-contrast text-lms-contrast-text border-0',
+  ghost: 'bg-lms-surface text-lms-ink border border-lms-line',
+  soft: 'bg-lms-accent-soft text-lms-accent border-0',
+  quiet: 'bg-transparent text-lms-sub border-0',
+  danger: 'bg-transparent text-lms-danger border border-[color:var(--lms-danger-border)]',
+};
+const BTN_SIZE: Record<string, string> = {
+  sm: 'h-[34px] px-3.5 text-[12.5px]',
+  md: 'h-10 px-[18px] text-[13.5px]',
+  lg: 'h-[46px] px-[18px] text-[13.5px]',
+};
+
 export function Btn({
   children,
   p,
@@ -173,6 +155,7 @@ export function Btn({
   iconRight,
   onClick,
   size = 'md',
+  className,
   style,
   full,
 }: {
@@ -183,44 +166,28 @@ export function Btn({
   iconRight?: string;
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
+  className?: string;
   style?: CSSProperties;
   full?: boolean;
 }) {
-  const h = size === 'sm' ? 34 : size === 'lg' ? 46 : 40;
-  const base: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: h,
-    padding: size === 'sm' ? '0 14px' : '0 18px',
-    borderRadius: 11,
-    cursor: 'pointer',
-    fontFamily: FONTS.sans,
-    fontSize: size === 'sm' ? 12.5 : 13.5,
-    fontWeight: 600,
-    width: full ? '100%' : undefined,
-    whiteSpace: 'nowrap',
-    transition: 'all .15s',
-    ...style,
-  };
-  const variants: Record<BtnVariant, CSSProperties> = {
-    primary: { background: p.accent, color: '#fff', border: 'none', boxShadow: `0 2px 0 ${p.glow}` },
-    accent: { background: p.accent, color: '#fff', border: 'none', boxShadow: `0 2px 0 ${p.glow}` },
-    dark: { background: p.ink, color: p.surface, border: 'none' },
-    ghost: { background: p.surface, color: p.ink, border: `1px solid ${p.line}` },
-    soft: { background: p.accentSoft, color: p.accent, border: 'none' },
-    quiet: { background: 'transparent', color: p.sub, border: 'none' },
-    danger: { background: 'transparent', color: p.danger, border: `1px solid ${hexA(p.danger, 0.35)}` },
-  };
   const sc =
     variant === 'primary' || variant === 'accent'
       ? '#fff'
       : variant === 'dark'
-        ? p.surface
-        : (variants[variant].color as string);
+        ? p.contrastText
+        : variant === 'soft'
+          ? p.accent
+          : variant === 'danger'
+            ? p.danger
+            : variant === 'ghost'
+              ? p.ink
+              : p.sub;
   return (
-    <button onClick={onClick} className="lms-btn" style={{ ...base, ...variants[variant] }}>
+    <button
+      onClick={onClick}
+      className={`lms-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[11px] font-sans font-semibold transition-all duration-150 ${BTN_SIZE[size]} ${BTN_VARIANT[variant]} ${full ? 'w-full' : ''} ${className || ''}`}
+      style={style}
+    >
       {icon && <Icon name={icon} size={size === 'sm' ? 15 : 16} stroke={sc} sw={1.9} />}
       {children}
       {iconRight && <Icon name={iconRight} size={size === 'sm' ? 15 : 16} stroke={sc} sw={1.9} />}
@@ -228,7 +195,6 @@ export function Btn({
   );
 }
 
-// ── IconBtn ──────────────────────────────────────────────────────────────────
 export function IconBtn({
   name,
   p,
@@ -237,6 +203,7 @@ export function IconBtn({
   badge,
   size = 38,
   title,
+  className,
 }: {
   name: string;
   p: Palette;
@@ -245,48 +212,20 @@ export function IconBtn({
   badge?: number | null;
   size?: number;
   title?: string;
+  className?: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="lms-btn"
-      style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: size,
-        height: size,
-        borderRadius: 8,
-        cursor: 'pointer',
-        border: `1px solid ${active ? p.accent : p.line}`,
-        background: active ? p.accentSoft : p.surface,
-        color: active ? p.accent : p.sub,
-      }}
+      className={`lms-btn relative flex cursor-pointer items-center justify-center rounded-lg ${
+        active ? 'border border-lms-accent bg-lms-accent-soft text-lms-accent' : 'border border-lms-line bg-lms-surface text-lms-sub'
+      } ${className || ''}`}
+      style={{ width: size, height: size }}
     >
       <Icon name={name} size={17} stroke={active ? p.accent : p.sub} />
       {badge != null && (
-        <span
-          style={{
-            position: 'absolute',
-            top: -5,
-            right: -5,
-            minWidth: 16,
-            height: 16,
-            padding: '0 4px',
-            borderRadius: 8,
-            background: p.accent,
-            color: '#fff',
-            fontSize: 9.5,
-            fontWeight: 700,
-            fontFamily: FONTS.mono,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: `2px solid ${p.bg}`,
-          }}
-        >
+        <span className="absolute -top-[5px] -right-[5px] flex h-4 min-w-4 items-center justify-center rounded-lg border-2 border-lms-bg bg-lms-accent px-1 font-mono text-[9.5px] font-bold text-white">
           {badge}
         </span>
       )}
@@ -294,13 +233,13 @@ export function IconBtn({
   );
 }
 
-// ── Field ────────────────────────────────────────────────────────────────────
 export function Field({
   p,
   value,
   onChange,
   placeholder,
   icon,
+  className,
   style,
   type = 'text',
   mono,
@@ -310,23 +249,15 @@ export function Field({
   onChange?: (value: string) => void;
   placeholder?: string;
   icon?: string;
+  className?: string;
   style?: CSSProperties;
   type?: string;
   mono?: boolean;
 }) {
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 9,
-        height: 40,
-        padding: '0 13px',
-        borderRadius: 10,
-        border: `1px solid ${p.line}`,
-        background: p.surface,
-        ...style,
-      }}
+      className={`flex h-10 items-center gap-[9px] rounded-[10px] border border-lms-line bg-lms-surface px-[13px] ${className || ''}`}
+      style={style}
     >
       {icon && <Icon name={icon} size={16} stroke={p.faint} />}
       <input
@@ -334,53 +265,33 @@ export function Field({
         onChange={(e) => onChange && onChange(e.target.value)}
         placeholder={placeholder}
         type={type}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          border: 'none',
-          outline: 'none',
-          background: 'transparent',
-          color: p.ink,
-          fontFamily: mono ? FONTS.mono : FONTS.sans,
-          fontSize: 13.5,
-        }}
+        className={`min-w-0 flex-1 border-0 bg-transparent text-[13.5px] text-lms-ink outline-none ${mono ? 'font-mono' : 'font-sans'}`}
       />
     </div>
   );
 }
 
-// ── Select ───────────────────────────────────────────────────────────────────
 export function Select({
   p,
   value,
   onChange,
   options,
+  className,
   style,
 }: {
   p: Palette;
   value?: string | number;
   onChange?: (value: string) => void;
   options: Array<{ value?: string | number; label?: ReactNode } | string>;
+  className?: string;
   style?: CSSProperties;
 }) {
   return (
-    <div style={{ position: 'relative', ...style }}>
+    <div className={`relative ${className || ''}`} style={style}>
       <select
         value={value}
         onChange={(e) => onChange && onChange(e.target.value)}
-        style={{
-          appearance: 'none',
-          height: 40,
-          padding: '0 36px 0 13px',
-          borderRadius: 8,
-          border: `1px solid ${p.line}`,
-          background: p.surface,
-          color: p.ink,
-          fontFamily: FONTS.sans,
-          fontSize: 13.5,
-          cursor: 'pointer',
-          width: '100%',
-        }}
+        className="h-10 w-full cursor-pointer appearance-none rounded-lg border border-lms-line bg-lms-surface pr-9 pl-[13px] font-sans text-[13.5px] text-lms-ink"
       >
         {options.map((o, i) => {
           const opt = o as { value?: string | number; label?: ReactNode };
@@ -391,17 +302,11 @@ export function Select({
           );
         })}
       </select>
-      <Icon
-        name="chevronDown"
-        size={15}
-        stroke={p.faint}
-        style={{ position: 'absolute', right: 12, top: 12, pointerEvents: 'none' }}
-      />
+      <Icon name="chevronDown" size={15} stroke={p.faint} className="pointer-events-none absolute top-3 right-3" />
     </div>
   );
 }
 
-// ── Progress ─────────────────────────────────────────────────────────────────
 export function Progress({
   p,
   value,
@@ -416,29 +321,15 @@ export function Progress({
   track?: string;
 }) {
   return (
-    <div
-      style={{
-        height,
-        borderRadius: height / 2,
-        background: track || p.sink,
-        overflow: 'hidden',
-        width: '100%',
-      }}
-    >
+    <div className="w-full overflow-hidden" style={{ height, borderRadius: height / 2, background: track || p.sink }}>
       <div
-        style={{
-          width: `${Math.min(100, value)}%`,
-          height: '100%',
-          borderRadius: height / 2,
-          background: color || p.accent,
-          transition: 'width .4s',
-        }}
+        className="h-full transition-[width] duration-400"
+        style={{ width: `${Math.min(100, value)}%`, borderRadius: height / 2, background: color || p.accent }}
       />
     </div>
   );
 }
 
-// ── Ring ─────────────────────────────────────────────────────────────────────
 export function Ring({
   value,
   size = 64,
@@ -459,8 +350,8 @@ export function Ring({
   const r = (size - thickness) / 2,
     c = 2 * Math.PI * r;
   return (
-    <div style={{ position: 'relative', width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track || p.sink} strokeWidth={thickness} />
         <circle
           cx={size / 2}
@@ -472,23 +363,13 @@ export function Ring({
           strokeDasharray={c}
           strokeDashoffset={c * (1 - value / 100)}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset .5s' }}
+          className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
       {label && (
         <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: FONTS.display,
-            fontSize: size * 0.28,
-            fontWeight: 700,
-            color: p.ink,
-            letterSpacing: -0.5,
-          }}
+          className="absolute inset-0 flex items-center justify-center font-lms-heading font-bold tracking-[-0.5px] text-lms-ink"
+          style={{ fontSize: size * 0.28 }}
         >
           {label}
         </div>
@@ -497,7 +378,6 @@ export function Ring({
   );
 }
 
-// ── Spark ────────────────────────────────────────────────────────────────────
 export function Spark({
   data,
   w = 96,
@@ -519,14 +399,13 @@ export function Spark({
   const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - ((v - min) / rng) * (h - 4) - 2]);
   const line = pts.map((pt, i) => `${i ? 'L' : 'M'}${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`).join(' ');
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }}>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block overflow-visible">
       {fill && <path d={`${line} L${w} ${h} L0 ${h} Z`} fill={fill} stroke="none" />}
       <path d={line} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// ── Bars ─────────────────────────────────────────────────────────────────────
 export function Bars({
   data,
   w = 260,
@@ -551,7 +430,7 @@ export function Bars({
   const mx = max || Math.max(...data.map((d) => d.value)) || 1;
   const bw = (w - gap * (data.length - 1)) / data.length;
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block' }}>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
       {data.map((d, i) => {
         const bh = (d.value / mx) * (h - 22);
         const x = i * (bw + gap);
@@ -559,14 +438,7 @@ export function Bars({
           <g key={i}>
             <rect x={x} y={0} width={bw} height={h - 22} rx={radius} fill={track} />
             <rect x={x} y={h - 22 - bh} width={bw} height={bh} rx={radius} fill={d.color || color} />
-            <text
-              x={x + bw / 2}
-              y={h - 6}
-              fontSize="10.5"
-              fill={labelColor}
-              textAnchor="middle"
-              fontFamily={FONTS.mono}
-            >
+            <text x={x + bw / 2} y={h - 6} fontSize="10.5" fill={labelColor} textAnchor="middle" className="font-mono">
               {d.label}
             </text>
           </g>
@@ -576,7 +448,6 @@ export function Bars({
   );
 }
 
-// ── EmptyState ───────────────────────────────────────────────────────────────
 export function EmptyState({
   label,
   sub,
@@ -591,38 +462,17 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        padding: '48px 0',
-        textAlign: 'center',
-      }}
-    >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 14,
-          background: p.sink,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+    <div className="flex flex-col items-center justify-center gap-2.5 py-12 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-lms-sink">
         <Icon name={icon} size={26} stroke={p.faint} sw={1.5} />
       </div>
-      <div style={{ color: p.sub, fontSize: 14, fontWeight: 600 }}>{label}</div>
-      {sub && <div style={{ color: p.faint, fontSize: 12.5, maxWidth: 300, lineHeight: 1.5 }}>{sub}</div>}
+      <div className="text-sm font-semibold text-lms-sub">{label}</div>
+      {sub && <div className="max-w-[300px] text-[12.5px] leading-normal text-lms-faint">{sub}</div>}
       {action}
     </div>
   );
 }
 
-// ── Segmented ────────────────────────────────────────────────────────────────
 export function Segmented({
   p,
   options,
@@ -635,16 +485,7 @@ export function Segmented({
   onChange: (value: any) => void;
 }) {
   return (
-    <div
-      style={{
-        display: 'inline-flex',
-        gap: 3,
-        padding: 3,
-        borderRadius: 10,
-        background: p.sink,
-        border: `1px solid ${p.line}`,
-      }}
-    >
+    <div className="inline-flex gap-[3px] rounded-[10px] border border-lms-line bg-lms-sink p-[3px]">
       {options.map((o) => {
         const opt = o as { value?: any; label?: ReactNode; icon?: string };
         const v = typeof o === 'object' ? opt.value : o;
@@ -655,22 +496,9 @@ export function Segmented({
           <button
             key={v}
             onClick={() => onChange(v)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              height: 30,
-              padding: ic && !lab ? '0 9px' : '0 13px',
-              borderRadius: 7,
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: FONTS.sans,
-              fontSize: 12.5,
-              fontWeight: on ? 600 : 500,
-              background: on ? p.surface : 'transparent',
-              color: on ? p.ink : p.sub,
-              boxShadow: on ? `0 1px 2px ${hexA('#0f1726', 0.12)}` : 'none',
-            }}
+            className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[7px] border-0 font-sans text-[12.5px] ${
+              ic && !lab ? 'px-[9px]' : 'px-[13px]'
+            } ${on ? 'bg-lms-surface font-semibold text-lms-ink shadow-[0_1px_2px_rgba(15,23,38,0.12)]' : 'bg-transparent font-medium text-lms-sub'}`}
           >
             {ic && <Icon name={ic} size={15} stroke={on ? p.accent : p.faint} />}
             {lab as ReactNode}
@@ -681,7 +509,6 @@ export function Segmented({
   );
 }
 
-// ── Stat ─────────────────────────────────────────────────────────────────────
 export function Stat({
   p,
   label,
@@ -700,27 +527,16 @@ export function Stat({
   spark?: number[];
 }) {
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 12.5, color: p.sub, marginBottom: 10, fontWeight: 500 }}>{label}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-        <span
-          style={{
-            fontFamily: FONTS.display,
-            fontSize: 34,
-            fontWeight: 700,
-            color: p.ink,
-            lineHeight: 1,
-            letterSpacing: -1,
-          }}
-        >
-          {value}
-        </span>
-        {unit && <span style={{ fontSize: 13.5, color: p.sub, fontWeight: 600 }}>{unit}</span>}
+    <div className="min-w-0 flex-1">
+      <div className="mb-2.5 text-[12.5px] font-medium text-lms-sub">{label}</div>
+      <div className="flex items-baseline gap-[5px]">
+        <span className="font-lms-heading text-[34px] leading-none font-bold tracking-[-1px] text-lms-ink">{value}</span>
+        {unit && <span className="text-[13.5px] font-semibold text-lms-sub">{unit}</span>}
       </div>
       {(delta || spark) && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+        <div className="mt-3 flex items-center justify-between">
           {delta && (
-            <span style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: up ? p.ok : p.faint }}>
+            <span className={`font-mono text-[11.5px] ${up ? 'text-lms-ok' : 'text-lms-faint'}`}>
               {up ? '↑' : '↓'} {delta}
             </span>
           )}
@@ -731,6 +547,5 @@ export function Stat({
   );
 }
 
-// ── fmt ──────────────────────────────────────────────────────────────────────
 export const fmt = (n: number | string): string =>
   typeof n === 'number' ? n.toLocaleString('vi-VN') : n;

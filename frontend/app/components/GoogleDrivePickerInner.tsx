@@ -1,7 +1,4 @@
 'use client';
-// Google Drive Picker — lets an admin pull files straight from their Google Drive
-// into the library. Adapted from the reference edusoft-lms GoogleDrivePicker.tsx,
-// rewritten to use the design's own Btn (not antd) + localStorage token + env keys.
 import React from 'react';
 import useDrivePicker from 'react-google-drive-picker';
 import { Btn } from '@/app/components/ui';

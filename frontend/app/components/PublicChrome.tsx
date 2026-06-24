@@ -1,32 +1,25 @@
 'use client';
-// PublicChrome — the public website chrome (glass header · main · footer) used by
-// the (site) route group layout. Reads theme + auth from context and derives the
-// active nav item from the URL; navigation uses the Next router via the central
-// routes map. Ported from the prop-based PublicSite.
 import React from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FONTS } from '@/app/theme/fonts';
-import { hexA } from '@/app/theme/palette';
 import { Icon, IconBtn } from '@/app/components/ui';
 import { NAV_BY_ROLE } from '@/app/configs/nav.config';
 import { ROUTES, routeToHref, resolvePath } from '@/app/configs/routes.config';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
+import { DB, useLMS } from '@/app/store/store';
 
-function PublicFooter({ p, t, push }: { p: any; t: any; push: (href: string) => void }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
+function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => void; topics: Array<{ label: string; to?: string }> }) {
   const col = (title: string, links: Array<{ label: string; to?: string }>) => (
     <div>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: p.ink, marginBottom: 12, letterSpacing: 0.2 }}>{title}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div className="mb-3 text-[12.5px] font-bold tracking-[0.2px] text-lms-ink">{title}</div>
+      <div className="flex flex-col gap-[9px]">
         {links.map((l, i) => (
           <span
             key={i}
             onClick={l.to ? () => push(routeToHref(l.to!)) : undefined}
-            className="lms-foot-link"
-            style={{ fontSize: 13, color: p.sub, cursor: l.to ? 'pointer' : 'default' }}
+            className={`lms-foot-link text-[13px] text-lms-sub ${l.to ? 'cursor-pointer' : 'cursor-default'}`}
           >
             {l.label}
           </span>
@@ -35,26 +28,21 @@ function PublicFooter({ p, t, push }: { p: any; t: any; push: (href: string) => 
     </div>
   );
   return (
-    <footer style={{ borderTop: `1px solid ${p.lineSoft}`, background: p.surface, marginTop: 8 }}>
-      <div
-        style={{ maxWidth: 1480, margin: '0 auto', padding: '44px 30px 28px', display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 32 }}
-        className="lms-foot-grid"
-      >
+    <footer className="mt-2 border-t border-lms-line-soft bg-lms-surface">
+      <div className="lms-foot-grid mx-auto grid max-w-[1480px] grid-cols-[1.6fr_1fr_1fr_1fr] gap-8 px-[30px] pt-11 pb-7">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 14 }}>
-            <div
-              style={{ width: 34, height: 34, borderRadius: 10, background: p.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: serif, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 }}
-            >
+          <div className="mb-3.5 flex items-center gap-[11px]">
+            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">
               V
             </div>
-            <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: p.ink }}>Vườn Văn</div>
+            <div className="font-lms-heading text-lg font-bold text-lms-ink">Vườn Văn</div>
           </div>
-          <p style={{ fontSize: 13, color: p.sub, lineHeight: 1.6, maxWidth: 300, margin: 0 }}>
+          <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
             Học liệu Ngữ văn Tiểu học miễn phí — tài liệu, đề thi, bài giảng và bài tập cho các em học sinh, phụ huynh và thầy cô.
           </p>
-          <div style={{ display: 'flex', gap: 9, marginTop: 16 }}>
+          <div className="mt-4 flex gap-[9px]">
             {['globe', 'message', 'send'].map((ic) => (
-              <div key={ic} className="lms-row" style={{ width: 34, height: 34, borderRadius: 9, border: `1px solid ${p.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <div key={ic} className="lms-row flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-[9px] border border-lms-line">
                 <Icon name={ic} size={15} stroke={p.sub} />
               </div>
             ))}
@@ -67,18 +55,13 @@ function PublicFooter({ p, t, push }: { p: any; t: any; push: (href: string) => 
           { label: 'Tự đánh giá', to: 's-selfcheck' },
           { label: 'Bài viết', to: 'blog' },
         ])}
-        {col('Chủ đề', [
-          { label: 'Giáo án', to: 's-docs' },
-          { label: 'Tập đọc', to: 's-docs' },
-          { label: 'Thơ', to: 's-docs' },
-          { label: 'Đề thi', to: 's-docs' },
-        ])}
+        {topics.length > 0 && col('Chủ đề', topics)}
         {col('Hỗ trợ', [{ label: 'Giới thiệu' }, { label: 'Hướng dẫn sử dụng' }, { label: 'Liên hệ' }, { label: 'Điều khoản' }])}
       </div>
-      <div style={{ borderTop: `1px solid ${p.lineSoft}` }}>
-        <div style={{ maxWidth: 1480, margin: '0 auto', padding: '16px 30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: p.faint }}>© 2026 Vườn Văn · Học liệu Ngữ văn Tiểu học</span>
-          <span style={{ fontSize: 12, color: p.faint, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <div className="border-t border-lms-line-soft">
+        <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-[30px] py-4">
+          <span className="text-xs text-lms-faint">© 2026 Vườn Văn · Học liệu Ngữ văn Tiểu học</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-lms-faint">
             <Icon name="globe" size={13} stroke={p.faint} /> Truy cập tự do · Không cần đăng nhập
           </span>
         </div>
@@ -88,13 +71,19 @@ function PublicFooter({ p, t, push }: { p: any; t: any; push: (href: string) => 
 }
 
 export function PublicChrome({ children }: { children: ReactNode }) {
-  const { p, t, dark, setDark } = useLmsTheme();
+  const { p, dark, setDark } = useLmsTheme();
   const auth = useLmsAuth();
   const router = useRouter();
   const pathname = usePathname();
   const push = React.useCallback((href: string) => router.push(href), [router]);
+  useLMS(); // re-render when live data (e.g. real folder names) loads
 
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  // Footer "Chủ đề" comes from the real library folders, not a hardcoded list.
+  const topics = (DB.DOC_FOLDERS as string[])
+    .filter((f) => f && f !== 'Tất cả')
+    .slice(0, 5)
+    .map((label) => ({ label, to: 's-docs' as const }));
+
   const items = (NAV_BY_ROLE.user[0] && NAV_BY_ROLE.user[0].items) || [];
   const activeKey = resolvePath(pathname).navKey;
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -110,25 +99,9 @@ export function PublicChrome({ children }: { children: ReactNode }) {
       <Link
         key={it.key}
         href={routeToHref(it.key)}
-        className="lms-btn"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          height: block ? 44 : 36,
-          width: block ? '100%' : 'auto',
-          justifyContent: block ? 'flex-start' : 'center',
-          padding: '0 14px',
-          borderRadius: 9,
-          cursor: 'pointer',
-          border: 'none',
-          textDecoration: 'none',
-          background: on ? p.accentSoft : 'transparent',
-          color: on ? p.accent : p.sub,
-          fontFamily: FONTS.sans,
-          fontSize: 14,
-          fontWeight: on ? 600 : 500,
-        }}
+        className={`lms-btn flex cursor-pointer items-center gap-2 rounded-[9px] border-0 no-underline px-3.5 font-sans text-sm ${
+          block ? 'h-11 w-full justify-start' : 'h-9 justify-center'
+        } ${on ? 'bg-lms-accent-soft font-semibold text-lms-accent' : 'bg-transparent font-medium text-lms-sub'}`}
       >
         {block && <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} />}
         {it.label}
@@ -137,34 +110,31 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', background: p.bg, color: p.ink, fontFamily: FONTS.sans, overflow: 'hidden' }}>
-      <header
-        className="lms-glass"
-        style={{ flexShrink: 0, borderBottom: `1px solid ${p.lineSoft}`, background: hexA(p.surface, 0.82), backdropFilter: 'saturate(1.4) blur(12px)', WebkitBackdropFilter: 'saturate(1.4) blur(12px)', zIndex: 30 }}
-      >
-        <div style={{ maxWidth: 1480, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', gap: 18, padding: '0 24px' }}>
-          <div onClick={() => push(ROUTES.home)} style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer', flexShrink: 0 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: p.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: serif, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 }}>
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-lms-bg font-sans text-lms-ink">
+      <header className="z-30 shrink-0 border-b border-lms-line-soft bg-[var(--lms-surface-glass)] backdrop-blur-md backdrop-saturate-[1.4]">
+        <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
+          <div onClick={() => push(ROUTES.home)} className="flex shrink-0 cursor-pointer items-center gap-[11px]">
+            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">
               V
             </div>
             <div>
-              <div style={{ fontFamily: serif, fontSize: 17, fontWeight: 700, color: p.ink, lineHeight: 1 }}>Vườn Văn</div>
-              <div style={{ fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 1, color: p.faint, marginTop: 2 }}>NGỮ VĂN TIỂU HỌC</div>
+              <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">Vườn Văn</div>
+              <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NGỮ VĂN TIỂU HỌC</div>
             </div>
           </div>
-          <nav className="lms-hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 14 }}>
+          <nav className="lms-hide-sm ml-3.5 flex items-center gap-1">
             {items.map((it) => navLink(it, false))}
           </nav>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <IconBtn name="search" p={p} onClick={() => push(ROUTES.library)} title="Tìm kiếm" />
           <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Sáng/tối" />
           {auth && auth.loggedIn ? (
-            <div className="lms-hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div className="lms-hide-sm flex items-center gap-[9px]">
               <div
                 title={auth.name}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9, border: `1px solid ${p.line}`, background: p.surface }}
+                className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
               >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: p.accentSoft, color: p.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: serif, fontWeight: 700, fontSize: 12 }}>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-lms-accent-soft font-lms-heading text-xs font-bold text-lms-accent">
                   {auth.initials}
                 </div>
               </div>
@@ -176,37 +146,33 @@ export function PublicChrome({ children }: { children: ReactNode }) {
                 e.stopPropagation();
                 auth && auth.open();
               }}
-              className="lms-btn lms-hide-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', borderRadius: 9, cursor: 'pointer', border: 'none', background: p.accent, color: '#fff', fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, boxShadow: `0 2px 0 ${p.glow}` }}
+              className="lms-btn lms-hide-sm inline-flex h-9 cursor-pointer items-center gap-[7px] rounded-[9px] border-0 bg-lms-accent px-4 font-sans text-[13px] font-semibold text-white shadow-[0_2px_0_var(--lms-glow)]"
             >
               <Icon name="logout" size={15} stroke="#fff" /> Đăng nhập
             </button>
           )}
           <button
             onClick={() => push(ROUTES.dashboard)}
-            className="lms-btn lms-hide-sm"
+            className="lms-btn lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface text-lms-sub"
             title="Khu vực quản trị"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9, cursor: 'pointer', border: `1px solid ${p.line}`, background: p.surface, color: p.sub }}
           >
             <Icon name="settings" size={16} stroke={p.sub} />
           </button>
           <button
-            className="lms-hamburger lms-btn"
+            className="lms-hamburger lms-btn hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Menu"
-            style={{ display: 'none', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 9, cursor: 'pointer', border: `1px solid ${p.line}`, background: p.surface, flexShrink: 0 }}
           >
             <Icon name={menuOpen ? 'x' : 'list'} size={18} stroke={p.sub} />
           </button>
         </div>
         {menuOpen && (
-          <div style={{ borderTop: `1px solid ${p.lineSoft}`, padding: '10px 16px 14px', display: 'flex', flexDirection: 'column', gap: 4, background: p.surface }}>
+          <div className="flex flex-col gap-1 border-t border-lms-line-soft bg-lms-surface px-4 pt-2.5 pb-3.5">
             {items.map((it) => navLink(it, true))}
-            <div style={{ height: 1, background: p.lineSoft, margin: '6px 0' }} />
+            <div className="my-1.5 h-px bg-lms-line-soft" />
             <button
               onClick={() => push(ROUTES.dashboard)}
-              className="lms-btn"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px', borderRadius: 9, border: 'none', background: 'transparent', color: p.sub, cursor: 'pointer', fontFamily: FONTS.sans, fontSize: 14, fontWeight: 500 }}
+              className="lms-btn flex h-11 cursor-pointer items-center gap-2 rounded-[9px] border-0 bg-transparent px-3.5 font-sans text-sm font-medium text-lms-sub"
             >
               <Icon name="settings" size={17} stroke={p.faint} /> Khu vực quản trị
             </button>
@@ -214,16 +180,14 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               (auth.loggedIn ? (
                 <button
                   onClick={() => auth.logout()}
-                  className="lms-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px', borderRadius: 9, border: 'none', background: 'transparent', color: p.sub, cursor: 'pointer', fontFamily: FONTS.sans, fontSize: 14, fontWeight: 500 }}
+                  className="lms-btn flex h-11 cursor-pointer items-center gap-2 rounded-[9px] border-0 bg-transparent px-3.5 font-sans text-sm font-medium text-lms-sub"
                 >
                   <Icon name="logout" size={17} stroke={p.faint} /> Đăng xuất ({auth.name.split(' ').slice(-1)[0]})
                 </button>
               ) : (
                 <button
                   onClick={() => auth.open()}
-                  className="lms-btn"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, padding: '0 14px', borderRadius: 9, border: 'none', background: p.accent, color: '#fff', cursor: 'pointer', fontFamily: FONTS.sans, fontSize: 14, fontWeight: 600 }}
+                  className="lms-btn flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[9px] border-0 bg-lms-accent px-3.5 font-sans text-sm font-semibold text-white"
                 >
                   <Icon name="logout" size={17} stroke="#fff" /> Đăng nhập
                 </button>
@@ -231,9 +195,9 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           </div>
         )}
       </header>
-      <div className="lms-scroll" ref={mainRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <main style={{ flex: 1 }}>{children}</main>
-        <PublicFooter p={p} t={t} push={push} />
+      <div className="lms-scroll flex flex-1 flex-col overflow-y-auto" ref={mainRef}>
+        <main className="flex-1">{children}</main>
+        <PublicFooter p={p} push={push} topics={topics} />
       </div>
     </div>
   );

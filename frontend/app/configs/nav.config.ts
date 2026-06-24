@@ -1,5 +1,3 @@
-// nav.ts — role-aware navigation config + route metadata. Ported from shell.jsx.
-
 export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ key: string; icon: string; label: string; badge?: number }> }>> = {
   user: [
     { group: 'KHÁM PHÁ', items: [

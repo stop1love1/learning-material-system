@@ -1,4 +1,3 @@
-// ui/index.ts — barrel for the design-system primitives.
 export {
   Icon,
   Tag,

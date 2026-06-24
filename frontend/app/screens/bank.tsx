@@ -1,38 +1,38 @@
 'use client';
-// bank.tsx — Question bank (master/detail) + question editor.
-// Also exports QuestionView, used by student "do assignment" and review screens.
 import React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Icon, Tag, Pill, Btn, IconBtn, Field, Select } from '@/app/components/ui';
-import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
-import { lblStyle } from '@/app/helpers/shared';
+import { lblClass, cardClass } from '@/app/helpers/shared';
 import { questionsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
-
-function bCard(p, pad = 20) { return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad }; }
 
 export function typeMeta(id) { return DB.QTYPES.find((x) => x.id === id) || DB.QTYPES[0]; }
 export function levelMeta(id) { return DB.LEVELS.find((x) => x.id === id) || DB.LEVELS[0]; }
 
-// ── QuestionView: render a question. mode = 'preview' | 'do' ──────────────────
-// Smooth fill-in-the-blank input
+function optClass(selected, correct, mode) {
+  const previewCorrect = correct && mode === 'preview';
+  return `mb-2 flex items-center gap-3 rounded-xl border px-3.5 py-3 ${mode === 'do' ? 'cursor-pointer' : 'cursor-default'} ${
+    previewCorrect ? 'border-lms-ok bg-lms-ok/8' : selected ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'
+  }`;
+}
+
 export function FillInput({ p, value, onChange }) {
   const [focus, setFocus] = React.useState(false);
   const filled = (value || '').trim().length > 0;
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div className="inline-flex flex-wrap items-center gap-3">
       <input value={value || ''} onChange={(e) => onChange({ text: e.target.value })}
         onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} placeholder="Điền đáp án…"
-        style={{ height: 48, minWidth: 240, padding: '0 18px', borderRadius: 12, fontFamily: FONTS.mono, fontSize: 16,
-          border: `1.5px solid ${focus ? p.accent : filled ? hexA(p.accent, 0.5) : p.line}`, background: p.surface, color: p.ink,
-          outline: 'none', boxShadow: focus ? `0 0 0 4px ${p.accentSoft}` : 'none', transition: 'border-color .18s, box-shadow .2s' }} />
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600,
-        color: filled ? p.ok : p.faint, opacity: 1, transition: 'color .2s' }}>
-        <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: filled ? p.ok : 'transparent', border: filled ? 'none' : `1.5px solid ${p.line}`, transform: filled ? 'scale(1)' : 'scale(.9)', transition: 'all .2s' }}>
+        className={`h-12 min-w-[240px] rounded-xl border-[1.5px] bg-lms-surface px-[18px] font-mono text-base text-lms-ink outline-none transition-[border-color,box-shadow] duration-200 ${
+          focus ? 'border-lms-accent shadow-[0_0_0_4px_var(--lms-accent-soft)]' : filled ? 'border-lms-accent/50' : 'border-lms-line'
+        }`} />
+      <span className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors duration-200 ${filled ? 'text-lms-ok' : 'text-lms-faint'}`}>
+        <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full transition-all duration-200 ${
+          filled ? 'scale-100 border-0 bg-lms-ok' : 'scale-90 border-[1.5px] border-lms-line bg-transparent'
+        }`}>
           {filled && <Icon name="check" size={11} stroke="#fff" sw={2.6} />}
         </span>
         {filled ? 'Đã điền' : 'Chưa điền'}
@@ -41,50 +41,51 @@ export function FillInput({ p, value, onChange }) {
   );
 }
 
-// Smooth drag-and-drop / tap matching board
 export function MatchBoard({ p, q, answer, onAnswer }) {
   const map = (answer && answer.map) || {};
   const rights = q.pairs.map((pr) => pr[1]);
   const used = Object.values(map);
   const pool = rights.filter((r) => !used.includes(r));
-  const [pick, setPick] = React.useState(null);     // tapped pool value
-  const [over, setOver] = React.useState(null);      // left index being hovered
+  const [pick, setPick] = React.useState(null);
+  const [over, setOver] = React.useState(null);
   const set = (li, val) => { const m = { ...map }; Object.keys(m).forEach((k) => { if (m[k] === val) delete m[k]; }); m[li] = val; onAnswer({ map: m }); setPick(null); };
   const clear = (li) => { const m = { ...map }; delete m[li]; onAnswer({ map: m }); };
-  const chip = (val: any, opts: any = {}) => (
-    <div draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', val); }} onClick={() => setPick(pick === val ? null : val)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 13px', borderRadius: 10, cursor: 'grab', userSelect: 'none',
-        background: pick === val ? p.accent : p.accentSoft, color: pick === val ? '#fff' : p.accent, fontWeight: 600, fontSize: 14,
-        border: `1px solid ${pick === val ? p.accent : 'transparent'}`, transition: 'transform .15s, background .15s', ...opts.style }}>
-      <Icon name="drag" size={14} stroke={pick === val ? '#fff' : p.accent} /> {val}
-      {opts.onX && <span onClick={(e) => { e.stopPropagation(); opts.onX(); }} style={{ display: 'inline-flex', marginLeft: 2 }}><Icon name="x" size={13} stroke={pick === val ? '#fff' : p.accent} /></span>}
-    </div>
-  );
+  const chip = (val: any, opts: any = {}) => {
+    const picked = pick === val;
+    return (
+      <div draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', val); }} onClick={() => setPick(pick === val ? null : val)}
+        className={`inline-flex cursor-grab items-center gap-[7px] rounded-[10px] px-[13px] py-2 text-sm font-semibold transition-[transform,background] duration-150 ${
+          picked ? 'border border-lms-accent bg-lms-accent text-white' : 'border border-transparent bg-lms-accent-soft text-lms-accent'
+        } ${opts.className || ''}`}>
+        <Icon name="drag" size={14} stroke={picked ? '#fff' : p.accent} /> {val}
+        {opts.onX && <span onClick={(e) => { e.stopPropagation(); opts.onX(); }} className="ml-0.5 inline-flex"><Icon name="x" size={13} stroke={picked ? '#fff' : p.accent} /></span>}
+      </div>
+    );
+  };
   return (
     <div>
       {pool.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 12, borderRadius: 12, background: p.sink, marginBottom: 14 }}>
-          <span style={{ fontSize: 12, color: p.faint, alignSelf: 'center', marginRight: 4 }}>Kéo (hoặc chạm) đáp án vào ô:</span>
+        <div className="mb-3.5 flex flex-wrap gap-2 rounded-xl bg-lms-sink p-3">
+          <span className="mr-1 self-center text-xs text-lms-faint">Kéo (hoặc chạm) đáp án vào ô:</span>
           {pool.map((val) => <React.Fragment key={val}>{chip(val)}</React.Fragment>)}
         </div>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
         {q.pairs.map((pr, i) => {
           const val = map[i];
           const isOver = over === i;
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: `1px solid ${p.line}`, background: p.surface,
-                display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: p.ink }}>{pr[0]}</div>
+            <div key={i} className="flex items-center gap-3">
+              <div className="flex flex-1 items-center gap-2.5 rounded-[10px] border border-lms-line bg-lms-surface px-3.5 py-3 text-[15px] text-lms-ink">{pr[0]}</div>
               <Icon name="arrowRight" size={16} stroke={p.faint} />
               <div onDragOver={(e) => { e.preventDefault(); setOver(i); }} onDragLeave={() => setOver(null)}
                 onDrop={(e) => { e.preventDefault(); const v = e.dataTransfer.getData('text/plain'); if (v) set(i, v); setOver(null); }}
                 onClick={() => { if (pick) set(i, pick); else if (val) clear(i); }}
-                style={{ flex: 1, minHeight: 46, padding: '7px 12px', borderRadius: 10, display: 'flex', alignItems: 'center',
-                  border: `1.5px dashed ${isOver ? p.accent : val ? 'transparent' : p.line}`,
-                  background: isOver ? p.accentSoft : val ? 'transparent' : p.raise, cursor: pick || val ? 'pointer' : 'default', transition: 'all .15s' }}>
-                {val ? chip(val, { onX: () => clear(i), style: { cursor: 'pointer' } })
-                  : <span style={{ fontSize: 13, color: isOver ? p.accent : p.faint }}>{isOver ? 'Thả vào đây' : 'Thả đáp án…'}</span>}
+                className={`flex min-h-[46px] flex-1 items-center rounded-[10px] px-3 py-[7px] transition-all duration-150 ${
+                  isOver ? 'border-[1.5px] border-dashed border-lms-accent bg-lms-accent-soft' : val ? 'border-[1.5px] border-dashed border-transparent bg-transparent' : 'border-[1.5px] border-dashed border-lms-line bg-lms-raise'
+                } ${pick || val ? 'cursor-pointer' : 'cursor-default'}`}>
+                {val ? chip(val, { onX: () => clear(i), className: 'cursor-pointer' })
+                  : <span className={`text-[13px] ${isOver ? 'text-lms-accent' : 'text-lms-faint'}`}>{isOver ? 'Thả vào đây' : 'Thả đáp án…'}</span>}
               </div>
             </div>
           );
@@ -97,12 +98,6 @@ export function MatchBoard({ p, q, answer, onAnswer }) {
 export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) {
   const a = answer || {};
   const isCorrect = (i) => (q.answer || []).includes(i);
-  const optStyle = (selected, correct) => ({
-    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12,
-    border: `1px solid ${correct && mode === 'preview' ? p.ok : selected ? p.accent : p.line}`,
-    background: correct && mode === 'preview' ? hexA(p.ok, 0.08) : selected ? p.accentSoft : p.surface,
-    cursor: mode === 'do' ? 'pointer' : 'default', marginBottom: 8,
-  });
 
   if (q.type === 'single' || q.type === 'multi') {
     const sel = a.choices || [];
@@ -115,15 +110,16 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
       <div>
         {q.options.map((o, i) => {
           const selected = sel.includes(i), correct = isCorrect(i);
-          const box = q.type === 'single' ? '50%' : 6;
+          const box = q.type === 'single' ? 'rounded-full' : 'rounded-md';
+          const previewCorrect = correct && mode === 'preview';
           return (
-            <div key={i} onClick={() => toggle(i)} style={optStyle(selected, correct)}>
-              <span style={{ width: 20, height: 20, borderRadius: box, flexShrink: 0, border: `1.8px solid ${(correct && mode === 'preview') ? p.ok : selected ? p.accent : p.faint}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: (selected || (correct && mode === 'preview')) ? (correct && mode === 'preview' ? p.ok : p.accent) : 'transparent' }}>
-                {(selected || (correct && mode === 'preview')) && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}
+            <div key={i} onClick={() => toggle(i)} className={optClass(selected, correct, mode)}>
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center border-[1.8px] ${box} ${
+                previewCorrect ? 'border-lms-ok bg-lms-ok' : selected ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'
+              }`}>
+                {(selected || previewCorrect) && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}
               </span>
-              <span style={{ fontSize: 14, color: p.ink, flex: 1 }}>{o}</span>
+              <span className="flex-1 text-sm text-lms-ink">{o}</span>
               {correct && mode === 'preview' && <Tag p={p} color={p.ok}>Đáp án</Tag>}
             </div>
           );
@@ -135,14 +131,14 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
   if (q.type === 'truefalse') {
     const sel = a.choices != null ? a.choices[0] : null;
     return (
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div className="flex gap-3">
         {['Đúng', 'Sai'].map((lab, i) => {
           const selected = sel === i, correct = isCorrect(i);
           return (
             <div key={i} onClick={() => mode === 'do' && onAnswer({ choices: [i] })}
-              style={{ flex: 1, ...optStyle(selected, correct), justifyContent: 'center', marginBottom: 0, padding: '16px' }}>
+              className={`${optClass(selected, correct, mode)} mb-0 flex-1 justify-center p-4`}>
               <Icon name={i === 0 ? 'check' : 'x'} size={18} stroke={correct && mode === 'preview' ? p.ok : selected ? p.accent : p.faint} sw={2.2} />
-              <span style={{ fontSize: 15, fontWeight: 600, color: p.ink }}>{lab}</span>
+              <span className="text-[15px] font-semibold text-lms-ink">{lab}</span>
             </div>
           );
         })}
@@ -156,9 +152,8 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
         {mode === 'do' ? (
           <FillInput p={p} value={a.text} onChange={onAnswer} />
         ) : (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 10,
-            border: `1px dashed ${p.ok}`, background: hexA(p.ok, 0.06) }}>
-            <span style={{ fontFamily: FONTS.mono, fontSize: 15, color: p.ink }}>{(q.answer || ['—'])[0]}</span>
+          <div className="inline-flex items-center gap-2.5 rounded-[10px] border border-dashed border-lms-ok bg-lms-ok/6 px-4 py-2.5">
+            <span className="font-mono text-[15px] text-lms-ink">{(q.answer || ['—'])[0]}</span>
             <Tag p={p} color={p.ok}>Đáp án</Tag>
           </div>
         )}
@@ -169,10 +164,9 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
   if (q.type === 'essay') {
     return mode === 'do' ? (
       <textarea value={a.text || ''} onChange={(e) => onAnswer({ text: e.target.value })} placeholder="Viết câu trả lời của bạn…"
-        style={{ width: '100%', minHeight: 160, padding: 14, borderRadius: 12, border: `1px solid ${p.line}`, background: p.surface,
-          color: p.ink, fontFamily: FONTS.sans, fontSize: 14, lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+        className="box-border min-h-40 w-full resize-y rounded-xl border border-lms-line bg-lms-surface p-3.5 font-sans text-sm leading-relaxed text-lms-ink outline-none" />
     ) : (
-      <div style={{ padding: 14, borderRadius: 12, border: `1px dashed ${p.line}`, background: p.raise, color: p.sub, fontSize: 13, fontStyle: 'italic' }}>
+      <div className="rounded-xl border border-dashed border-lms-line bg-lms-raise p-3.5 text-[13px] text-lms-sub italic">
         Câu tự luận — chấm bằng rubric hoặc cho điểm thủ công.
       </div>
     );
@@ -180,20 +174,17 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 
   if (q.type === 'match') {
     if (mode === 'do') return <MatchBoard p={p} q={q} answer={a} onAnswer={onAnswer} />;
-    const right = q.pairs.map((pr) => pr[1]);
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
         {q.pairs.map((pr, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ flex: 1, padding: '11px 14px', borderRadius: 10, border: `1px solid ${p.line}`, background: p.surface,
-              display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div key={i} className="flex items-center gap-3">
+            <div className="flex flex-1 items-center gap-2.5 rounded-[10px] border border-lms-line bg-lms-surface px-3.5 py-[11px]">
               <Icon name="drag" size={15} stroke={p.faint} />
-              <span style={{ fontSize: 15, color: p.ink }}>{pr[0]}</span>
+              <span className="text-[15px] text-lms-ink">{pr[0]}</span>
             </div>
             <Icon name="arrowRight" size={16} stroke={p.ok} />
-            <div style={{ flex: 1, padding: '11px 14px', borderRadius: 10,
-              border: `1px solid ${p.ok}`, background: hexA(p.ok, 0.07) }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 14, color: p.ink }}>{pr[1]}</span>
+            <div className="flex-1 rounded-[10px] border border-lms-ok bg-lms-ok/7 px-3.5 py-[11px]">
+              <span className="font-mono text-sm text-lms-ink">{pr[1]}</span>
             </div>
           </div>
         ))}
@@ -203,9 +194,7 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
   return null;
 }
 
-// ── Question bank (master / detail) ──────────────────────────────────────────
 export function TBank({ p, t, setRoute, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [type, setType] = React.useState('all');
   const [kw, setKw] = React.useState('');
   const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
@@ -215,12 +204,12 @@ export function TBank({ p, t, setRoute, go }) {
   const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
   if (!q) {
     return (
-      <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }} />
+      <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+        <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
+          <div className="flex-1" />
           <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
         </div>
-        <div style={{ padding: '60px 20px', textAlign: 'center', color: p.ink, opacity: 0.6 }}>
+        <div className="px-5 py-[60px] text-center text-lms-ink/60">
           Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.
         </div>
       </div>
@@ -228,15 +217,15 @@ export function TBank({ p, t, setRoute, go }) {
   }
   const tm = typeMeta(q.type), lm = levelMeta(q.level);
   return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" style={{ width: 280 }} />
-        <div style={{ flex: 1 }} />
+    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
+        <div className="flex-1" />
         <Btn p={p} variant="ghost" size="md" icon="filter">Bộ lọc</Btn>
         <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="mb-[18px] flex flex-wrap gap-2">
         <Pill p={p} active={type === 'all'} onClick={() => setType('all')}>Tất cả · {DB.QUESTIONS.length}</Pill>
         {DB.QTYPES.map((qt) => {
           const n = DB.QUESTIONS.filter((x) => x.type === qt.id).length;
@@ -244,23 +233,21 @@ export function TBank({ p, t, setRoute, go }) {
         })}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 22, alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="grid grid-cols-[1.25fr_1fr] items-start gap-[22px]">
+        <div className="flex flex-col gap-3">
           {list.map((item) => {
             const im = typeMeta(item.type), il = levelMeta(item.level), on = item.id === sel;
             return (
-              <div key={item.id} onClick={() => setSel(item.id)} className="lms-card"
-                style={{ ...bCard(p, 16), cursor: 'pointer', borderColor: on ? p.accent : p.line,
-                  boxShadow: on ? `0 0 0 1px ${p.accent}` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 12, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div key={item.id} onClick={() => setSel(item.id)} className={`lms-card ${cardClass(16)} cursor-pointer ${on ? 'border-lms-accent shadow-[0_0_0_1px_var(--lms-accent)]' : ''}`}>
+                <div className="mb-2.5 flex items-center gap-2">
+                  <span className="flex h-[30px] w-[30px] items-center justify-center rounded-xl bg-lms-accent-soft">
                     <Icon name={im.icon} size={15} stroke={p.accent} /></span>
                   <Tag p={p} color={p.sub}>{im.short}</Tag>
                   <Tag p={p} color={il.color}>{il.label}</Tag>
-                  <span style={{ marginLeft: 'auto', fontFamily: FONTS.mono, fontSize: 10.5, color: p.faint }}>{item.topic}</span>
+                  <span className="ml-auto font-mono text-[10.5px] text-lms-faint">{item.topic}</span>
                 </div>
-                <div style={{ fontSize: 14, color: p.ink, lineHeight: 1.5, fontWeight: 500 }}>{item.stem}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, fontSize: 11.5, color: p.faint }}>
+                <div className="text-sm font-medium leading-normal text-lms-ink">{item.stem}</div>
+                <div className="mt-3 flex items-center gap-3 text-[11.5px] text-lms-faint">
                   <span>Dùng {item.uses} lần</span><span>· {item.updated}</span><span>· {item.author}</span>
                 </div>
               </div>
@@ -268,22 +255,22 @@ export function TBank({ p, t, setRoute, go }) {
           })}
         </div>
 
-        <div style={{ position: 'sticky', top: 0 }}>
-          <div style={bCard(p, 22)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="sticky top-0">
+          <div className={cardClass(24)}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <Tag p={p} color={p.accent}>{tm.label}</Tag>
                 <Tag p={p} color={lm.color}>{lm.label}</Tag>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="flex gap-1.5">
                 <IconBtn name="pen" p={p} size={32} onClick={() => (go ? go('bank-edit', { question: q.id }) : setRoute('bank-edit'))} title="Sửa" />
                 <IconBtn name="copy" p={p} size={32} title="Nhân bản" />
               </div>
             </div>
-            <div style={{ fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, marginBottom: 8 }}>CHỦ ĐỀ · {q.topic.toUpperCase()}</div>
-            <div style={{ fontSize: 17, color: p.ink, lineHeight: 1.5, marginBottom: 20, fontWeight: 500 }}>{q.stem}</div>
+            <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ · {q.topic.toUpperCase()}</div>
+            <div className="mb-5 text-[17px] font-medium leading-normal text-lms-ink">{q.stem}</div>
             <QuestionView q={q} p={p} mode="preview" />
-            <div style={{ display: 'flex', gap: 16, marginTop: 22, paddingTop: 16, borderTop: `1px solid ${p.line}`, fontSize: 12, color: p.faint }}>
+            <div className="mt-[22px] flex gap-4 border-t border-lms-line pt-4 text-xs text-lms-faint">
               <span>Đã dùng {q.uses} lần</span><span>· Cập nhật {q.updated}</span>
             </div>
           </div>
@@ -293,9 +280,7 @@ export function TBank({ p, t, setRoute, go }) {
   );
 }
 
-// ── Question editor ──────────────────────────────────────────────────────────
 export function TBankEdit({ p, t, setRoute }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [type, setType] = React.useState('single');
   const [level, setLevel] = React.useState('medium');
   const [stem, setStem] = React.useState('');
@@ -335,140 +320,133 @@ export function TBankEdit({ p, t, setRoute }) {
   const showOptions = type === 'single' || type === 'multi';
 
   return (
-    <div style={{ padding: '22px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div onClick={() => setRoute('bank')} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
+    <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+      <div onClick={() => setRoute('bank')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Ngân hàng câu hỏi
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <section style={bCard(p, 22)}>
-            <label style={lblStyle(p)}>LOẠI CÂU HỎI</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 10 }}>
+      <div className="grid grid-cols-[1.4fr_1fr] items-start gap-6">
+        <div className="flex flex-col gap-5">
+          <section className={cardClass(24)}>
+            <label className={lblClass()}>LOẠI CÂU HỎI</label>
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
               {DB.QTYPES.map((qt) => {
                 const on = type === qt.id;
                 return (
-                  <div key={qt.id} onClick={() => { if (!editId) setType(qt.id); }} className="lms-row"
-                    style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px', borderRadius: 12, cursor: 'pointer',
-                      border: `1px solid ${on ? p.accent : p.line}`, background: on ? p.accentSoft : p.surface }}>
+                  <div key={qt.id} onClick={() => { if (!editId) setType(qt.id); }} className={`lms-row flex cursor-pointer items-center gap-[9px] rounded-xl border px-3 py-[11px] ${on ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
                     <Icon name={qt.icon} size={17} stroke={on ? p.accent : p.faint} />
-                    <span style={{ fontSize: 12.5, fontWeight: on ? 600 : 500, color: on ? p.accent : p.sub }}>{qt.short}</span>
+                    <span className={`text-[12.5px] ${on ? 'font-semibold text-lms-accent' : 'font-medium text-lms-sub'}`}>{qt.short}</span>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          <section style={bCard(p, 22)}>
-            <label style={lblStyle(p)}>NỘI DUNG CÂU HỎI</label>
+          <section className={cardClass(24)}>
+            <label className={lblClass()}>NỘI DUNG CÂU HỎI</label>
             <textarea value={stem} onChange={(e) => setStem(e.target.value)} placeholder="Nhập đề bài. Có thể chèn trích dẫn thơ, đoạn văn…"
-              style={{ width: '100%', minHeight: 90, marginTop: 10, padding: 13, borderRadius: 12, border: `1px solid ${p.line}`,
-                background: p.surface, color: p.ink, fontFamily: FONTS.sans, fontSize: 14, lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+              className="mt-2.5 box-border min-h-[90px] w-full resize-y rounded-xl border border-lms-line bg-lms-surface p-[13px] font-sans text-sm leading-relaxed text-lms-ink outline-none" />
 
             {showOptions && (
-              <div style={{ marginTop: 18 }}>
-                <label style={lblStyle(p)}>PHƯƠNG ÁN — bấm vòng tròn để chọn đáp án đúng</label>
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="mt-[18px]">
+                <label className={lblClass()}>PHƯƠNG ÁN — bấm vòng tròn để chọn đáp án đúng</label>
+                <div className="mt-2.5 flex flex-col gap-2">
                   {options.map((o, i) => {
                     const on = correct.includes(i);
                     return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span onClick={() => toggleCorrect(i)} style={{ width: 22, height: 22, flexShrink: 0, cursor: 'pointer',
-                          borderRadius: type === 'multi' ? 6 : '50%', border: `1.8px solid ${on ? p.ok : p.faint}`,
-                          background: on ? p.ok : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div key={i} className="flex items-center gap-2.5">
+                        <span onClick={() => toggleCorrect(i)} className={`flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center border-[1.8px] ${type === 'multi' ? 'rounded-md' : 'rounded-full'} ${on ? 'border-lms-ok bg-lms-ok' : 'border-lms-faint bg-transparent'}`}>
                           {on && <Icon name="check" size={13} stroke="#fff" sw={2.5} />}</span>
                         <input value={o} onChange={(e) => { const n = [...options]; n[i] = e.target.value; setOptions(n); }} placeholder={`Phương án ${i + 1}`}
-                          style={{ flex: 1, height: 40, padding: '0 13px', borderRadius: 10, border: `1px solid ${p.line}`, background: p.surface,
-                            color: p.ink, fontFamily: FONTS.sans, fontSize: 13.5, outline: 'none' }} />
+                          className="h-10 flex-1 rounded-[10px] border border-lms-line bg-lms-surface px-[13px] font-sans text-[13.5px] text-lms-ink outline-none" />
                         <IconBtn name="trash" p={p} size={36} onClick={() => setOptions(options.filter((_, j) => j !== i))} />
                       </div>
                     );
                   })}
                 </div>
-                <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 10, paddingLeft: 0 }} onClick={() => setOptions([...options, ''])}>Thêm phương án</Btn>
+                <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-2.5 pl-0" onClick={() => setOptions([...options, ''])}>Thêm phương án</Btn>
               </div>
             )}
 
             {type === 'truefalse' && (
-              <div style={{ marginTop: 18 }}>
-                <label style={lblStyle(p)}>ĐÁP ÁN ĐÚNG</label>
-                <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <div className="mt-[18px]">
+                <label className={lblClass()}>ĐÁP ÁN ĐÚNG</label>
+                <div className="mt-2.5 flex gap-2.5">
                   {['Đúng', 'Sai'].map((lab, i) => (
-                    <div key={i} onClick={() => toggleCorrect(i)} style={{ flex: 1, padding: 14, borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                      border: `1px solid ${correct[0] === i ? p.ok : p.line}`, background: correct[0] === i ? hexA(p.ok, 0.08) : p.surface,
-                      fontWeight: 600, color: correct[0] === i ? p.ok : p.sub }}>{lab}</div>
+                    <div key={i} onClick={() => toggleCorrect(i)} className={`flex-1 cursor-pointer rounded-xl border px-3.5 py-3.5 text-center font-semibold ${
+                      correct[0] === i ? 'border-lms-ok bg-lms-ok/8 text-lms-ok' : 'border-lms-line bg-lms-surface text-lms-sub'
+                    }`}>{lab}</div>
                   ))}
                 </div>
               </div>
             )}
 
             {type === 'fill' && (
-              <div style={{ marginTop: 18 }}>
-                <label style={lblStyle(p)}>ĐÁP ÁN (chấp nhận nhiều cách viết, cách nhau bằng dấu /)</label>
-                <Field p={p} value={fillAns} onChange={setFillAns} placeholder="vd: hùm / cọp" style={{ marginTop: 10, maxWidth: 360 }} />
+              <div className="mt-[18px]">
+                <label className={lblClass()}>ĐÁP ÁN (chấp nhận nhiều cách viết, cách nhau bằng dấu /)</label>
+                <Field p={p} value={fillAns} onChange={setFillAns} placeholder="vd: hùm / cọp" className="mt-2.5 max-w-[360px]" />
               </div>
             )}
 
             {type === 'essay' && (
-              <div style={{ marginTop: 18 }}>
-                <label style={lblStyle(p)}>CHẤM BẰNG</label>
-                <Select p={p} value={essayGrading} onChange={setEssayGrading} style={{ marginTop: 10, maxWidth: 360 }}
+              <div className="mt-[18px]">
+                <label className={lblClass()}>CHẤM BẰNG</label>
+                <Select p={p} value={essayGrading} onChange={setEssayGrading} className="mt-2.5 max-w-[360px]"
                   options={[{ value: 'rubric', label: 'Rubric Tập làm văn (tả – kể)' }, { value: 'manual', label: 'Cho điểm thủ công' }]} />
               </div>
             )}
 
             {type === 'match' && (
-              <div style={{ marginTop: 18 }}>
-                <label style={lblStyle(p)}>CẶP NỐI</label>
+              <div className="mt-[18px]">
+                <label className={lblClass()}>CẶP NỐI</label>
                 {pairs.map((pr, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                    <Field p={p} value={pr[0]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [v, x[1]] : x)))} placeholder="Vế trái" style={{ flex: 1 }} />
+                  <div key={i} className="mt-2.5 flex items-center gap-2.5">
+                    <Field p={p} value={pr[0]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [v, x[1]] : x)))} placeholder="Vế trái" className="flex-1" />
                     <Icon name="link" size={16} stroke={p.faint} />
-                    <Field p={p} value={pr[1]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [x[0], v] : x)))} placeholder="Vế phải" style={{ flex: 1 }} />
+                    <Field p={p} value={pr[1]} onChange={(v) => setPairs(pairs.map((x, j) => (j === i ? [x[0], v] : x)))} placeholder="Vế phải" className="flex-1" />
                   </div>
                 ))}
-                <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 10, paddingLeft: 0 }} onClick={() => setPairs([...pairs, ['', '']])}>Thêm cặp</Btn>
+                <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-2.5 pl-0" onClick={() => setPairs([...pairs, ['', '']])}>Thêm cặp</Btn>
               </div>
             )}
           </section>
 
-          <section style={bCard(p, 22)}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <section className={cardClass(24)}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label style={lblStyle(p)}>ĐỘ KHÓ</label>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <label className={lblClass()}>ĐỘ KHÓ</label>
+                <div className="mt-2.5 flex gap-2">
                   {DB.LEVELS.map((l) => (
-                    <div key={l.id} onClick={() => setLevel(l.id)} style={{ flex: 1, textAlign: 'center', padding: '9px', borderRadius: 9, cursor: 'pointer',
-                      border: `1px solid ${level === l.id ? l.color : p.line}`, background: level === l.id ? hexA(l.color, 0.1) : p.surface,
-                      color: level === l.id ? l.color : p.sub, fontSize: 12.5, fontWeight: 600 }}>{l.label}</div>
+                    <div key={l.id} onClick={() => setLevel(l.id)} className={`flex-1 cursor-pointer rounded-[9px] border px-0 py-[9px] text-center text-[12.5px] font-semibold ${
+                      level === l.id ? '' : 'border-lms-line bg-lms-surface text-lms-sub'
+                    }`}
+                      style={level === l.id ? { borderColor: l.color, background: hexA(l.color, 0.1), color: l.color } : undefined}>{l.label}</div>
                   ))}
                 </div>
               </div>
               <div>
-                <label style={lblStyle(p)}>CHỦ ĐỀ</label>
-                <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" style={{ marginTop: 10 }} />
+                <label className={lblClass()}>CHỦ ĐỀ</label>
+                <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" className="mt-2.5" />
               </div>
             </div>
           </section>
         </div>
-
-        {/* Live preview */}
-        <div style={{ position: 'sticky', top: 0 }}>
-          <div style={bCard(p, 22)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <div className="sticky top-0">
+          <div className={cardClass(24)}>
+            <div className="mb-4 flex items-center gap-2">
               <Icon name="eye" size={16} stroke={p.faint} />
-              <span style={{ fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint }}>XEM TRƯỚC</span>
+              <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">XEM TRƯỚC</span>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <div className="mb-3.5 flex gap-2">
               <Tag p={p} color={p.accent}>{tm.label}</Tag>
               <Tag p={p} color={levelMeta(level).color}>{levelMeta(level).label}</Tag>
             </div>
-            <div style={{ fontSize: 16, color: stem ? p.ink : p.faint, lineHeight: 1.5, marginBottom: 18, fontWeight: 500, fontStyle: stem ? 'normal' : 'italic' }}>
+            <div className={`mb-[18px] text-base font-medium leading-normal ${stem ? 'text-lms-ink not-italic' : 'text-lms-faint italic'}`}>
               {stem || 'Nội dung câu hỏi sẽ hiển thị ở đây…'}
             </div>
             <QuestionView q={{ type, options, answer: correct, pairs: [['Tre Việt Nam', 'Nguyễn Duy'], ['Truyện cổ nước mình', 'Lâm Thị Mỹ Dạ']], topic: '' }} p={p} mode="preview" />
           </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <div className="mt-4 flex gap-2.5">
             <Btn p={p} variant="ghost" full onClick={() => setRoute('bank')}>Huỷ</Btn>
             <Btn p={p} icon="check" full onClick={async () => {
               // Filter blank options BEFORE picking the correct index so it stays in range.
@@ -494,7 +472,7 @@ export function TBankEdit({ p, t, setRoute }) {
               try {
                 if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail });
                 else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail });
-                await hydrateFor('bank'); // re-runs loadQuestions → DB.QUESTIONS from backend
+                await hydrateFor('bank');
               } catch {
                 // logged-out / student / API down → optimistic mock add (chỉ khi tạo mới)
                 if (!editId) LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',

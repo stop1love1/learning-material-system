@@ -1,21 +1,15 @@
 'use client';
 import React from 'react';
 import { Icon, Tag, Pill, Btn, Field, Select, Progress } from '@/app/components/ui';
-import { FONTS } from '@/app/theme/fonts';
-import { hexA } from '@/app/theme/palette';
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { exercisesApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
-import { lblStyle, ToggleRow } from '@/app/helpers/shared';
+import { lblClass, cardClass, ToggleRow } from '@/app/helpers/shared';
 import { typeMeta } from '@/app/screens/bank';
 import { DOC_TYPE_META } from '@/app/screens/resources';
 
-function aCard(p, pad = 20) { return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad }; }
-
-// ── Assignment list ──────────────────────────────────────────────────────────
 export function TAssignments({ p, t, setRoute, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [status, setStatus] = React.useState('all');
   const filt = { all: () => true, open: (a) => a.status === 'open' || a.status === 'closing',
     grading: (a) => a.submitted > a.graded, done: (a) => a.status === 'done' };
@@ -25,41 +19,42 @@ export function TAssignments({ p, t, setRoute, go }) {
     done: DB.ASSIGNMENTS.filter(filt.done).length,
   };
   return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="mb-[22px] flex flex-wrap items-center gap-2">
         <Pill p={p} active={status === 'all'} onClick={() => setStatus('all')}>Tất cả · {DB.ASSIGNMENTS.length}</Pill>
         <Pill p={p} active={status === 'open'} onClick={() => setStatus('open')}>Đang mở · {counts.open}</Pill>
         <Pill p={p} active={status === 'grading'} onClick={() => setStatus('grading')}>Chờ chấm · {counts.grading}</Pill>
         <Pill p={p} active={status === 'done'} onClick={() => setStatus('done')}>Đã đóng · {counts.done}</Pill>
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('assign-new')}>Giao bài tập</Btn>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="flex flex-col gap-3">
         {list.map((a) => {
           const tone = a.status === 'closing' ? p.warn : a.status === 'done' ? p.ok : p.accent;
+          const toneBg = a.status === 'closing' ? 'bg-lms-warn/12' : a.status === 'done' ? 'bg-lms-ok/12' : 'bg-lms-accent/12';
+          const toneText = a.status === 'closing' ? 'text-lms-warn' : a.status === 'done' ? 'text-lms-ok' : 'text-lms-accent';
           const pct = a.total ? Math.round((a.submitted / a.total) * 100) : 0;
           return (
-            <div key={a.id} className="lms-card" onClick={() => go('grade-one', { assignment: a.id })}
-              style={{ ...aCard(p, 20), cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 18 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: hexA(tone, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div key={a.id} className={`lms-card ${cardClass(20)} flex cursor-pointer items-center gap-[18px]`} onClick={() => go('grade-one', { assignment: a.id })}>
+              <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${toneBg}`}>
                 <Icon name="assign" size={21} stroke={tone} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: p.ink }}>{a.title}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[15px] font-semibold text-lms-ink">{a.title}</span>
                   {a.rubric && <Tag p={p} color={p.accent}>Rubric</Tag>}
                 </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 12.5, color: p.sub, flexWrap: 'wrap' }}>
+                <div className="mt-[5px] flex flex-wrap gap-3 text-[12.5px] text-lms-sub">
                   <span>{a.type}</span><span>· {a.questions} câu · {a.points}đ</span>
-                  <span style={{ fontFamily: FONTS.mono, color: tone }}>· {a.dueIn}</span>
+                  <span className={`font-mono ${toneText}`}>· {a.dueIn}</span>
                 </div>
               </div>
-              <div style={{ width: 150 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: p.faint, marginBottom: 5 }}>
-                  <span>Đã nộp {a.submitted}/{a.total}</span><span style={{ fontFamily: FONTS.mono }}>{pct}%</span>
+              <div className="w-[150px]">
+                <div className="mb-[5px] flex justify-between text-[11px] text-lms-faint">
+                  <span>Đã nộp {a.submitted}/{a.total}</span><span className="font-mono">{pct}%</span>
                 </div>
                 <Progress p={p} value={pct} height={6} />
               </div>
-              <div style={{ minWidth: 110, textAlign: 'center' }}>
+              <div className="min-w-[110px] text-center">
                 {a.submitted > a.graded ? <Btn p={p} variant="soft" size="sm" icon="grade">Chấm {a.submitted - a.graded}</Btn>
                   : <Tag p={p} color={p.ok}>Đã chấm xong</Tag>}
               </div>
@@ -71,7 +66,6 @@ export function TAssignments({ p, t, setRoute, go }) {
   );
 }
 
-// ── Create / assign flow ─────────────────────────────────────────────────────
 const STEPS = [
   { id: 0, label: 'Thông tin', icon: 'assign' },
   { id: 1, label: 'Nội dung', icon: 'bank' },
@@ -79,7 +73,6 @@ const STEPS = [
 ];
 
 export function TAssignNew({ p, t, setRoute }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const wizard = (t.assignFlow || 'wizard') === 'wizard';
   const [step, setStep] = React.useState(0);
   const [title, setTitle] = React.useState('');
@@ -99,71 +92,63 @@ export function TAssignNew({ p, t, setRoute }) {
   const visible = (s) => wizard ? step === s : true;
 
   const StepInfo = (
-    <section style={{ ...aCard(p, 24), marginBottom: 20 }}>
-      <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 18px', color: p.ink }}>Thông tin bài tập</h3>
-      <label style={lblStyle(p)}>TIÊU ĐỀ</label>
-      <Field p={p} value={title} onChange={setTitle} placeholder="vd: Trắc nghiệm đọc hiểu — Dế Mèn bênh vực kẻ yếu" style={{ marginTop: 8, marginBottom: 18 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-        <div><label style={lblStyle(p)}>PHẠM VI</label>
-          <Select p={p} value={cls} onChange={setCls} style={{ marginTop: 8 }}
+    <section className={`${cardClass(24)} mb-5`}>
+      <h3 className="mb-[18px] m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Thông tin bài tập</h3>
+      <label className={lblClass()}>TIÊU ĐỀ</label>
+      <Field p={p} value={title} onChange={setTitle} placeholder="vd: Trắc nghiệm đọc hiểu — Dế Mèn bênh vực kẻ yếu" className="mt-2 mb-[18px]" />
+      <div className="mb-[18px] grid grid-cols-2 gap-4">
+        <div><label className={lblClass()}>PHẠM VI</label>
+          <Select p={p} value={cls} onChange={setCls} className="mt-2"
             options={[{ value: 'public', label: 'Công khai cho mọi người' }, { value: 'member', label: 'Chỉ người đã đăng nhập' }]} /></div>
-        <div><label style={lblStyle(p)}>HÌNH THỨC</label>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <div><label className={lblClass()}>HÌNH THỨC</label>
+          <div className="mt-2 flex gap-2">
             {[['quiz', 'Trắc nghiệm', 'bank'], ['essay', 'Tự luận', 'docs'], ['file', 'Nộp tệp', 'upload']].map(([k, lab, ic]) => (
-              <div key={k} onClick={() => setKind(k)} className="lms-row" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '11px', borderRadius: 12, cursor: 'pointer',
-                border: `1px solid ${kind === k ? p.accent : p.line}`, background: kind === k ? p.accentSoft : p.surface }}>
+              <div key={k} onClick={() => setKind(k)} className={`lms-row flex flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-[11px] ${kind === k ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
                 <Icon name={ic} size={18} stroke={kind === k ? p.accent : p.faint} />
-                <span style={{ fontSize: 12, fontWeight: kind === k ? 600 : 500, color: kind === k ? p.accent : p.sub }}>{lab}</span>
+                <span className={`text-xs ${kind === k ? 'font-semibold text-lms-accent' : 'font-medium text-lms-sub'}`}>{lab}</span>
               </div>
             ))}
           </div></div>
       </div>
-      <label style={lblStyle(p)}>HƯỚNG DẪN (tuỳ chọn)</label>
-      <textarea placeholder="Ghi chú cho học viên…" style={{ width: '100%', minHeight: 70, marginTop: 8, padding: 12, borderRadius: 12, border: `1px solid ${p.line}`,
-        background: p.surface, color: p.ink, fontFamily: FONTS.sans, fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+      <label className={lblClass()}>HƯỚNG DẪN (tuỳ chọn)</label>
+      <textarea placeholder="Ghi chú cho học viên…" className="mt-2 box-border w-full min-h-[70px] resize-y rounded-xl border border-lms-line bg-lms-surface p-3 text-sm text-lms-ink outline-none" />
     </section>
   );
 
   const StepContent = (
-    <section style={{ ...aCard(p, 24), marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: 0, color: p.ink }}>
+    <section className={`${cardClass(24)} mb-5`}>
+      <div className="mb-[18px] flex items-center justify-between">
+        <h3 className="m-0 font-lms-heading text-[19px] font-medium text-lms-ink">
           {kind === 'quiz' ? 'Chọn câu hỏi từ ngân hàng' : 'Đính kèm tài liệu'}</h3>
         {kind === 'quiz' && <Tag p={p} color={p.accent}>{picked.length} câu đã chọn</Tag>}
       </div>
       {kind === 'quiz' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {DB.QUESTIONS.map((q) => {
             const on = picked.includes(q.id), tm = typeMeta(q.type);
             return (
-              <div key={q.id} onClick={() => togglePick(q.id)} className="lms-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-                  border: `1px solid ${on ? p.accent : p.line}`, background: on ? p.accentSoft : p.surface }}>
-                <span style={{ width: 20, height: 20, borderRadius: 8, flexShrink: 0, border: `1.8px solid ${on ? p.accent : p.faint}`,
-                  background: on ? p.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div key={q.id} onClick={() => togglePick(q.id)} className={`lms-row flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-[11px] ${on ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-[1.8px] ${on ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'}`}>
                   {on && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}</span>
                 <Icon name={tm.icon} size={16} stroke={p.faint} />
-                <span style={{ flex: 1, fontSize: 13.5, color: p.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{q.stem}</span>
+                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] text-lms-ink">{q.stem}</span>
                 <Tag p={p} color={p.sub}>{tm.short}</Tag>
               </div>
             );
           })}
-          <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 6, paddingLeft: 0 }} onClick={() => setRoute('bank-edit')}>Soạn câu hỏi mới</Btn>
+          <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-1.5 pl-0!" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi mới</Btn>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {DB.DOCS.slice(0, 5).map((d) => {
             const on = docs.includes(d.id), m = DOC_TYPE_META[d.type];
             return (
-              <div key={d.id} onClick={() => toggleDoc(d.id)} className="lms-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-                  border: `1px solid ${on ? p.accent : p.line}`, background: on ? p.accentSoft : p.surface }}>
-                <span style={{ width: 20, height: 20, borderRadius: 8, flexShrink: 0, border: `1.8px solid ${on ? p.accent : p.faint}`,
-                  background: on ? p.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div key={d.id} onClick={() => toggleDoc(d.id)} className={`lms-row flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-[11px] ${on ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-[1.8px] ${on ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'}`}>
                   {on && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}</span>
                 <Icon name={m.icon} size={16} stroke={p.faint} />
-                <span style={{ flex: 1, fontSize: 13.5, color: p.ink }}>{d.name}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{d.size}</span>
+                <span className="flex-1 text-[13.5px] text-lms-ink">{d.name}</span>
+                <span className="font-mono text-[11px] text-lms-faint">{d.size}</span>
               </div>
             );
           })}
@@ -173,21 +158,21 @@ export function TAssignNew({ p, t, setRoute }) {
   );
 
   const StepSettings = (
-    <section style={{ ...aCard(p, 24), marginBottom: 20 }}>
-      <h3 style={{ fontFamily: serif, fontSize: 19, fontWeight: 500, margin: '0 0 18px', color: p.ink }}>Cài đặt & giao bài</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
-        <div><label style={lblStyle(p)}>HẠN NỘP</label><Field p={p} value={due} onChange={setDue} icon="calendar" style={{ marginTop: 8 }} /></div>
-        <div><label style={lblStyle(p)}>ĐIỂM TỐI ĐA</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 40, marginTop: 8, padding: '0 13px', borderRadius: 10, border: `1px solid ${p.line}`, background: p.surface }}>
+    <section className={`${cardClass(24)} mb-5`}>
+      <h3 className="mb-[18px] m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Cài đặt & giao bài</h3>
+      <div className="mb-[18px] grid grid-cols-2 gap-4">
+        <div><label className={lblClass()}>HẠN NỘP</label><Field p={p} value={due} onChange={setDue} icon="calendar" className="mt-2" /></div>
+        <div><label className={lblClass()}>ĐIỂM TỐI ĐA</label>
+          <div className="mt-2 flex h-10 items-center gap-2.5 rounded-[10px] border border-lms-line bg-lms-surface px-[13px]">
             <input type="number" value={points} onChange={(e) => setPoints(Number(e.target.value))}
-              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: p.ink, fontFamily: FONTS.mono, fontSize: 14 }} />
-            <span style={{ fontSize: 12.5, color: p.faint }}>điểm</span>
+              className="flex-1 border-none bg-transparent font-mono text-sm text-lms-ink outline-none" />
+            <span className="text-[12.5px] text-lms-faint">điểm</span>
           </div></div>
       </div>
-      <label style={lblStyle(p)}>CHẤM BẰNG RUBRIC</label>
-      <Select p={p} value={rubric} onChange={setRubric} style={{ marginTop: 8, marginBottom: 18 }}
+      <label className={lblClass()}>CHẤM BẰNG RUBRIC</label>
+      <Select p={p} value={rubric} onChange={setRubric} className="mt-2 mb-[18px]"
         options={[{ value: 'none', label: 'Không dùng rubric — chấm điểm số' }, ...DB.RUBRICS.map((r) => ({ value: r.id, label: r.name }))]} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
         {[['Cho phép nộp muộn', false], ['Xáo trộn thứ tự câu hỏi', true], ['Hiện điểm ngay sau khi nộp', false], ['Thông báo cho học viên', true]].map(([lab, def], i) => (
           <ToggleRow key={i} p={p} label={lab} def={def} />
         ))}
@@ -196,26 +181,24 @@ export function TAssignNew({ p, t, setRoute }) {
   );
 
   return (
-    <div style={{ padding: '22px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div onClick={() => setRoute('assignments')} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+      <div onClick={() => setRoute('assignments')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Bài tập
       </div>
 
       {wizard && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24 }}>
+        <div className="mb-6 flex items-center gap-0">
           {STEPS.map((s, i) => {
             const done = step > s.id, on = step === s.id;
             return (
               <React.Fragment key={s.id}>
-                <div onClick={() => setStep(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: on ? p.accent : done ? p.accentSoft : p.sink, color: on ? '#fff' : done ? p.accent : p.faint,
-                    border: `1px solid ${on || done ? p.accent : p.line}` }}>
-                    {done ? <Icon name="check" size={16} stroke={p.accent} sw={2.4} /> : <span style={{ fontFamily: FONTS.mono, fontSize: 14, fontWeight: 600 }}>{i + 1}</span>}
+                <div onClick={() => setStep(s.id)} className="flex cursor-pointer items-center gap-2.5">
+                  <div className={`flex h-[34px] w-[34px] items-center justify-center rounded-full border ${on ? 'border-lms-accent bg-lms-accent text-white' : done ? 'border-lms-accent bg-lms-accent-soft text-lms-accent' : 'border-lms-line bg-lms-sink text-lms-faint'}`}>
+                    {done ? <Icon name="check" size={16} stroke={p.accent} sw={2.4} /> : <span className="font-mono text-sm font-semibold">{i + 1}</span>}
                   </div>
-                  <span style={{ fontSize: 13.5, fontWeight: on ? 600 : 500, color: on ? p.ink : p.sub }}>{s.label}</span>
+                  <span className={`text-[13.5px] ${on ? 'font-semibold text-lms-ink' : 'font-medium text-lms-sub'}`}>{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div style={{ flex: 1, height: 1, background: done ? p.accent : p.line, margin: '0 16px' }} />}
+                {i < STEPS.length - 1 && <div className={`mx-4 h-px flex-1 ${done ? 'bg-lms-accent' : 'bg-lms-line'}`} />}
               </React.Fragment>
             );
           })}
@@ -226,7 +209,7 @@ export function TAssignNew({ p, t, setRoute }) {
       {visible(1) && StepContent}
       {visible(2) && StepSettings}
 
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+      <div className="mt-2 flex justify-end gap-3">
         {wizard && step > 0 && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setStep(step - 1)}>Quay lại</Btn>}
         {wizard && step < 2
           ? <Btn p={p} iconRight="arrowRight" onClick={() => setStep(step + 1)}>Tiếp tục</Btn>
@@ -237,7 +220,6 @@ export function TAssignNew({ p, t, setRoute }) {
               try {
                 const ex: any = await exercisesApi.create(body);
                 const exId = ex?._id ?? ex?.id;
-                // Best-effort attach picked questions (ids may be mock seeds that 404).
                 if (exId && kind === 'quiz') {
                   for (const questionId of picked) {
                     try { await exercisesApi.addQuestion(exId, { questionId }); } catch { /* skip unknown/mock ids */ }

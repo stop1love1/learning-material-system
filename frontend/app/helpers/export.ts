@@ -1,5 +1,4 @@
 'use client';
-// Tiện ích xuất dữ liệu phía client: CSV (mở được bằng Excel) + JSON (sao lưu).
 
 function csvCell(v: any): string {
   const s = v == null ? '' : String(v);

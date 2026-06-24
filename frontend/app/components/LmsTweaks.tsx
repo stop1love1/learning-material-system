@@ -1,7 +1,4 @@
 'use client';
-// LmsTweaks — the live appearance panel content, wired to the global theme
-// context. Rendered once (globally) by LmsProviders so its gear FAB is available
-// on every route. Extracted from the old App.tsx.
 import React from 'react';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import {
@@ -26,24 +23,16 @@ export function LmsTweaks() {
   return (
     <TweaksPanel>
       <TweakSection label="Màu & Typography" />
-      <div style={{ padding: '2px 2px 10px' }}>
-        <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Màu nhấn</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="px-0.5 pb-2.5">
+        <div className="mb-2 text-xs text-lms-faint">Màu nhấn</div>
+        <div className="flex gap-2">
           {Object.entries(ACCENT_SWATCH).map(([k, hex]) => (
             <button
               key={k}
               onClick={() => setTweak('accent', k)}
               title={k}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 12,
-                cursor: 'pointer',
-                background: hex,
-                border: t.accent === k ? `2px solid #111` : '2px solid transparent',
-                outline: t.accent === k ? '2px solid #fff' : 'none',
-                outlineOffset: -4,
-              }}
+              className={`h-[30px] w-[30px] cursor-pointer rounded-xl ${t.accent === k ? 'border-2 border-neutral-900 outline-2 outline-offset-[-4px] outline-white' : 'border-2 border-transparent'}`}
+              style={{ background: hex }}
             />
           ))}
         </div>

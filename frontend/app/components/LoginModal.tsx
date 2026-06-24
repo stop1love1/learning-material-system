@@ -1,16 +1,12 @@
 'use client';
-// LoginModal.tsx — login / register modal with Google + email tabs. Ported from
-// shell.jsx (GoogleMark, LoginModal); the Motion fade-in is dropped.
 import React from 'react';
 import type { Auth, Palette, Tweaks } from '@/app/types';
-import { FONTS } from '@/app/theme/fonts';
-import { hexA } from '@/app/theme/palette';
 import { Icon, IconBtn, Field, Btn } from '@/app/components/ui';
-import { lblStyle } from '@/app/helpers/shared';
+import { lblClass } from '@/app/helpers/shared';
 
 function GoogleMark({ size = 18 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
       <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z" />
       <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z" />
       <path fill="#FBBC05" d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z" />
@@ -20,7 +16,6 @@ function GoogleMark({ size = 18 }: { size?: number }) {
 }
 
 export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; auth: Auth; onClose: () => void }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [tab, setTab] = React.useState('login');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -50,20 +45,9 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
     return (
       <button
         onClick={() => setTab(id)}
-        style={{
-          flex: 1,
-          height: 38,
-          borderRadius: 9,
-          border: 'none',
-          cursor: 'pointer',
-          fontFamily: FONTS.sans,
-          fontSize: 13.5,
-          fontWeight: on ? 700 : 500,
-          background: on ? p.surface : 'transparent',
-          color: on ? p.ink : p.sub,
-          boxShadow: on ? `0 1px 3px ${hexA('#0f1726', 0.12)}` : 'none',
-          transition: 'all .15s',
-        }}
+        className={`h-[38px] flex-1 cursor-pointer rounded-[9px] border-0 font-sans text-[13.5px] transition-all duration-150 ${
+          on ? 'bg-lms-surface font-bold text-lms-ink shadow-[0_1px_3px_rgba(15,23,38,0.12)]' : 'bg-transparent font-medium text-lms-sub'
+        }`}
       >
         {label}
       </button>
@@ -72,23 +56,7 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   const ggField = (
     <button
       onClick={submit}
-      className="lms-btn"
-      style={{
-        width: '100%',
-        height: 48,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 11,
-        borderRadius: 11,
-        border: `1px solid ${p.line}`,
-        background: p.surface,
-        color: p.ink,
-        cursor: 'pointer',
-        fontFamily: FONTS.sans,
-        fontSize: 14.5,
-        fontWeight: 600,
-      }}
+      className="lms-btn flex h-12 w-full cursor-pointer items-center justify-center gap-[11px] rounded-[11px] border border-lms-line bg-lms-surface font-sans text-[14.5px] font-semibold text-lms-ink"
     >
       <GoogleMark size={19} /> {reg ? 'Đăng ký' : 'Đăng nhập'} với Google
     </button>
@@ -98,18 +66,7 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        background: 'rgba(10,12,16,.5)',
-        backdropFilter: 'blur(3px)',
-        WebkitBackdropFilter: 'blur(3px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(10,12,16,0.5)] p-5 backdrop-blur-[3px]"
     >
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -120,96 +77,73 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
             submit();
           }
         }}
-        style={{
-          width: 'min(420px, 100%)',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          background: p.surface,
-          border: `1px solid ${p.line}`,
-          borderRadius: 18,
-          padding: 28,
-          boxShadow: '0 24px 70px rgba(0,0,0,.3)',
-        }}
+        className="max-h-[92vh] w-full max-w-[420px] overflow-y-auto rounded-[18px] border border-lms-line bg-lms-surface p-7 shadow-[0_24px_70px_rgba(0,0,0,0.3)]"
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 11,
-                background: p.accent,
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: serif,
-                fontSize: 19,
-                fontWeight: 700,
-              }}
-            >
+        <div className="mb-[18px] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-lms-accent font-lms-heading text-[19px] font-bold text-white">
               V
             </div>
-            <div style={{ fontFamily: serif, fontSize: 16, fontWeight: 700, color: p.ink }}>Vườn Văn</div>
+            <div className="font-lms-heading text-base font-bold text-lms-ink">Vườn Văn</div>
           </div>
           <IconBtn name="x" p={p} size={32} onClick={onClose} />
         </div>
 
-        <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 800, margin: '0 0 4px', color: p.ink, letterSpacing: -0.4 }}>
+        <h2 className="m-0 mb-1 font-lms-heading text-[22px] font-extrabold tracking-[-0.4px] text-lms-ink">
           {reg ? 'Tạo tài khoản' : 'Chào mừng trở lại'}
         </h2>
-        <p style={{ fontSize: 13, color: p.sub, margin: '0 0 18px', lineHeight: 1.5 }}>
+        <p className="m-0 mb-[18px] text-[13px] leading-normal text-lms-sub">
           {reg ? 'Đăng ký miễn phí để làm bài tập và lưu tiến độ học.' : 'Đăng nhập để làm bài tập và xem phiếu học tập.'}
         </p>
 
-        <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 11, background: p.sink, border: `1px solid ${p.line}`, marginBottom: 20 }}>
+        <div className="mb-5 flex gap-1 rounded-[11px] border border-lms-line bg-lms-sink p-1">
           {tabBtn('login', 'Đăng nhập')}
           {tabBtn('register', 'Đăng ký')}
         </div>
 
         {ggField}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-          <div style={{ flex: 1, height: 1, background: p.line }} />
-          <span style={{ fontSize: 11.5, color: p.faint }}>hoặc dùng email</span>
-          <div style={{ flex: 1, height: 1, background: p.line }} />
+        <div className="my-4 flex items-center gap-2.5">
+          <div className="h-px flex-1 bg-lms-line" />
+          <span className="text-[11.5px] text-lms-faint">hoặc dùng email</span>
+          <div className="h-px flex-1 bg-lms-line" />
         </div>
 
         {reg && (
           <>
-            <label style={lblStyle(p)}>HỌ VÀ TÊN</label>
-            <Field p={p} value={name} onChange={setName} placeholder="Nguyễn Văn A" icon="users" style={{ marginTop: 8, marginBottom: 14 }} />
+            <label className={lblClass()}>HỌ VÀ TÊN</label>
+            <Field p={p} value={name} onChange={setName} placeholder="Nguyễn Văn A" icon="users" className="mt-2 mb-3.5" />
           </>
         )}
-        <label style={lblStyle(p)}>EMAIL</label>
-        <Field p={p} value={email} onChange={setEmail} placeholder="ban@email.com" icon="message" style={{ marginTop: 8, marginBottom: 14 }} />
-        <label style={lblStyle(p)}>MẬT KHẨU</label>
-        <Field p={p} value={pw} onChange={setPw} placeholder="••••••••" type="password" icon="target" style={{ marginTop: 8, marginBottom: reg ? 14 : 8 }} />
+        <label className={lblClass()}>EMAIL</label>
+        <Field p={p} value={email} onChange={setEmail} placeholder="ban@email.com" icon="message" className="mt-2 mb-3.5" />
+        <label className={lblClass()}>MẬT KHẨU</label>
+        <Field p={p} value={pw} onChange={setPw} placeholder="••••••••" type="password" icon="target" className={`mt-2 ${reg ? 'mb-3.5' : 'mb-2'}`} />
         {reg && (
           <>
-            <label style={lblStyle(p)}>NHẬP LẠI MẬT KHẨU</label>
-            <Field p={p} value={pw2} onChange={setPw2} placeholder="••••••••" type="password" icon="target" style={{ marginTop: 8, marginBottom: 8 }} />
+            <label className={lblClass()}>NHẬP LẠI MẬT KHẨU</label>
+            <Field p={p} value={pw2} onChange={setPw2} placeholder="••••••••" type="password" icon="target" className="mt-2 mb-2" />
           </>
         )}
         {!reg && (
-          <div style={{ textAlign: 'right', marginBottom: 16 }}>
-            <span style={{ fontSize: 12.5, color: p.accent, cursor: 'pointer', fontWeight: 600 }}>Quên mật khẩu?</span>
+          <div className="mb-4 text-right">
+            <span className="cursor-pointer text-[12.5px] font-semibold text-lms-accent">Quên mật khẩu?</span>
           </div>
         )}
 
         {err && (
-          <div style={{ color: p.danger, fontSize: 12.5, marginBottom: 10, textAlign: 'center' }}>{err}</div>
+          <div className="mb-2.5 text-center text-[12.5px] text-lms-danger">{err}</div>
         )}
-        <Btn p={p} full size="lg" icon={reg ? 'check' : 'logout'} onClick={submit} style={{ marginTop: reg ? 8 : 0 }}>
+        <Btn p={p} full size="lg" icon={reg ? 'check' : 'logout'} onClick={submit} className={reg ? 'mt-2' : ''}>
           {busy ? 'Đang xử lý…' : reg ? 'Tạo tài khoản' : 'Đăng nhập'}
         </Btn>
 
-        <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: '18px 0 0' }}>
+        <p className="m-0 mt-[18px] text-center text-[13px] text-lms-sub">
           {reg ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
-          <span onClick={() => setTab(reg ? 'login' : 'register')} style={{ color: p.accent, cursor: 'pointer', fontWeight: 700 }}>
+          <span onClick={() => setTab(reg ? 'login' : 'register')} className="cursor-pointer font-bold text-lms-accent">
             {reg ? 'Đăng nhập' : 'Đăng ký miễn phí'}
           </span>
         </p>
-        <p style={{ fontSize: 11, color: p.faint, textAlign: 'center', margin: '14px 0 0' }}>Đăng nhập qua API · cần backend đang chạy</p>
+        <p className="m-0 mt-3.5 text-center text-[11px] text-lms-faint">Đăng nhập qua API · cần backend đang chạy</p>
       </div>
     </div>
   );

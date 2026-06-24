@@ -1,26 +1,11 @@
 'use client';
 import React from 'react';
-import { Icon, Tag, Avatar, Btn, Field, Select, Progress, Segmented, Stat } from '@/app/components/ui';
-import { FONTS } from '@/app/theme/fonts';
-import { hexA } from '@/app/theme/palette';
-import { DB } from '@/app/data/db';
-import { tStripe, ACCENTS_REF } from '@/app/helpers/shared';
+import { Icon, Tag, Avatar, Btn, Stat } from '@/app/components/ui';
+import { DB } from '@/app/store/store';
+import { cardClass } from '@/app/helpers/shared';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 
-function tCard(p, pad = 22) {
-  return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad };
-}
-
-function statusTone(p, s) {
-  return { top: p.ok, good: p.info, risk: p.danger }[s] || p.sub;
-}
-function statusLabel(s) {
-  return { top: 'Xuất sắc', good: 'Ổn định', risk: 'Cần hỗ trợ' }[s] || s;
-}
-
-// ── Teacher Overview ─────────────────────────────────────────────────────────
 export function TOverview({ p, t, setRoute, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const auth = useLmsAuth();
   const ung = (aid) => DB.SUBMISSIONS.filter((s) => s.assignmentId === aid && s.status !== 'graded').length;
   const needGrading = DB.ASSIGNMENTS.filter((a) => ung(a.id) > 0);
@@ -31,59 +16,57 @@ export function TOverview({ p, t, setRoute, go }) {
     { icon: 'assign', label: 'Giao bài tập', sub: 'Phát cho lớp', route: 'assign-new' },
   ];
   return (
-    <div style={{ padding: '30px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 26, flexWrap: 'wrap' }}>
+    <div className="mx-auto max-w-[1480px] px-[30px] pt-[30px] pb-10">
+      <div className="mb-[26px] flex flex-wrap items-end justify-between gap-5">
         <div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 11.5, letterSpacing: 1, color: p.faint, marginBottom: 10 }}>THỨ HAI · 22 THÁNG 6, 2026</div>
-          <h2 style={{ fontFamily: serif, fontSize: 38, fontWeight: 500, color: p.ink, margin: 0, letterSpacing: -0.6, lineHeight: 1.05 }}>
-            Chào buổi sáng, <span style={{ color: p.accent }}>{auth.name || 'bạn'}.</span>
+          <div className="mb-2.5 font-mono text-[11.5px] tracking-wide text-lms-faint">THỨ HAI · 22 THÁNG 6, 2026</div>
+          <h2 className="m-0 font-lms-heading text-[38px] font-medium leading-[1.05] tracking-[-0.6px] text-lms-ink">
+            Chào buổi sáng, <span className="text-lms-accent">{auth.name || 'bạn'}.</span>
           </h2>
-          <p style={{ fontSize: 14.5, color: p.sub, margin: '12px 0 0', maxWidth: 520, lineHeight: 1.5 }}>
-            Hôm nay có <strong style={{ color: p.ink }}>3 buổi dạy</strong> và <strong style={{ color: p.ink }}>19 bài tập</strong> đang chờ chấm. Cùng bắt đầu một ngày hiệu quả nhé!
+          <p className="mt-3 mb-0 max-w-[520px] text-[14.5px] leading-normal text-lms-sub">
+            Hôm nay có <strong className="text-lms-ink">3 buổi dạy</strong> và <strong className="text-lms-ink">19 bài tập</strong> đang chờ chấm. Cùng bắt đầu một ngày hiệu quả nhé!
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="flex gap-2.5">
           <Btn p={p} icon="plus" onClick={() => setRoute('assign-new')}>Giao bài tập</Btn>
           <Btn p={p} variant="ghost" icon="book" onClick={() => setRoute('docs')}>Kho tài liệu</Btn>
         </div>
       </div>
 
-      <div className="lms-statstrip" style={{ display: 'flex', ...tCard(p, 0), padding: '22px 0', marginBottom: 24 }}>
+      <div className={`lms-statstrip mb-6 flex py-[22px] ${cardClass(20)} !p-0`}>
         {[
           { l: 'Học viên đang dạy', v: '95', d: '4 lớp', sp: [8, 10, 9, 12, 11, 14, 13, 16] },
           { l: 'Bài tập đang mở', v: '4', d: '2 sắp đến hạn', sp: [5, 6, 6, 7, 9, 8, 10, 11] },
           { l: 'Bài chờ chấm', v: '19', d: 'Cần xử lý', sp: [12, 9, 14, 11, 16, 13, 18, 19] },
           { l: 'Tỷ lệ nộp bài', v: '86', u: '%', d: '↑ 3,2%', up: true, sp: [7, 8, 8, 9, 9, 10, 11, 12] },
         ].map((s, i) => (
-          <div key={i} style={{ flex: 1, padding: '0 26px', borderLeft: i ? `1px solid ${p.line}` : 'none' }}>
+          <div key={i} className={`flex-1 px-[26px] ${i ? 'border-l border-lms-line' : ''}`}>
             <Stat p={p} label={s.l} value={s.v} unit={s.u} delta={s.d} up={s.up} spark={s.sp} />
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 22, alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <section style={tCard(p)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: 0, color: p.ink }}>Bài cần chấm</h3>
-              <span onClick={() => setRoute('grade')} style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: p.accent, cursor: 'pointer' }}>Xem tất cả →</span>
+      <div className="grid grid-cols-[1.5fr_1fr] items-start gap-[22px]">
+        <div className="flex flex-col gap-[22px]">
+          <section className={cardClass(20)}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 font-lms-heading text-xl font-medium text-lms-ink">Bài cần chấm</h3>
+              <span onClick={() => setRoute('grade')} className="cursor-pointer font-mono text-[11.5px] text-lms-accent">Xem tất cả →</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {needGrading.length === 0 && <div style={{ fontSize: 13, color: p.faint, padding: '10px 0' }}>Tuyệt vời — không còn bài nào chờ chấm.</div>}
+            <div className="flex flex-col">
+              {needGrading.length === 0 && <div className="py-2.5 text-[13px] text-lms-faint">Tuyệt vời — không còn bài nào chờ chấm.</div>}
               {needGrading.map((a, i) => (
-                <div key={a.id} onClick={() => go('grade-one', { assignment: a.id })} className="lms-row"
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 0', cursor: 'pointer',
-                    borderTop: i ? `1px solid ${p.line}` : 'none' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={a.id} onClick={() => go('grade-one', { assignment: a.id })} className={`lms-row flex cursor-pointer items-center gap-3.5 py-[13px] ${i ? 'border-t border-lms-line' : ''}`}>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-lms-accent-soft">
                     <Icon name="grade" size={19} stroke={p.accent} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: p.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
-                    <div style={{ fontSize: 12, color: p.faint, marginTop: 2 }}>{a.class} · {a.type}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-lms-ink">{a.title}</div>
+                    <div className="mt-0.5 text-xs text-lms-faint">{a.class} · {a.type}</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: FONTS.display, fontSize: 22, fontWeight: 600, color: p.accent, lineHeight: 1 }}>{ung(a.id)}</div>
-                    <div style={{ fontSize: 10.5, color: p.faint, fontFamily: FONTS.mono, marginTop: 3 }}>chờ chấm</div>
+                  <div className="text-right">
+                    <div className="font-lms-heading text-[22px] font-semibold leading-none text-lms-accent">{ung(a.id)}</div>
+                    <div className="mt-[3px] font-mono text-[10.5px] text-lms-faint">chờ chấm</div>
                   </div>
                   <Icon name="chevronRight" size={18} stroke={p.faint} />
                 </div>
@@ -91,54 +74,56 @@ export function TOverview({ p, t, setRoute, go }) {
             </div>
           </section>
 
-          <section style={tCard(p)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: 0, color: p.ink }}>Lịch hôm nay</h3>
-              <Tag p={p} color={p.sub}>3 BUỔI</Tag>
+          <section className={cardClass(20)}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 font-lms-heading text-xl font-medium text-lms-ink">Lịch hôm nay</h3>
+              <Tag p={p} color={p.sub}>{DB.SCHEDULE.length} BUỔI</Tag>
             </div>
+            {DB.SCHEDULE.length === 0 && (
+              <div className="py-6 text-center text-[13px] text-lms-faint">Hôm nay chưa có buổi học nào.</div>
+            )}
             {DB.SCHEDULE.map((s, i) => (
-              <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 0', borderTop: i ? `1px solid ${p.line}` : 'none' }}>
-                <div style={{ width: 50, flexShrink: 0, textAlign: 'right' }}>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 14, color: p.ink, fontWeight: 500 }}>{s.time}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: p.faint, marginTop: 2 }}>{s.dur}</div>
+              <div key={i} className={`flex gap-3.5 py-3 ${i ? 'border-t border-lms-line' : ''}`}>
+                <div className="w-[50px] shrink-0 text-right">
+                  <div className="font-mono text-sm font-medium text-lms-ink">{s.time}</div>
+                  <div className="mt-0.5 font-mono text-[10px] text-lms-faint">{s.dur}</div>
                 </div>
-                <div style={{ width: 1, background: p.line, position: 'relative' }}>
-                  <span style={{ position: 'absolute', top: 4, left: -2.5, width: 6, height: 6, borderRadius: 3, background: i === 0 ? p.accent : p.faint }} />
+                <div className="relative w-px bg-lms-line">
+                  <span className={`absolute top-1 -left-[2.5px] h-1.5 w-1.5 rounded-[3px] ${i === 0 ? 'bg-lms-accent' : 'bg-lms-faint'}`} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{s.title}</div>
-                  <div style={{ fontSize: 12, color: p.sub, marginTop: 2 }}>{s.room} · {s.cls}</div>
+                  <div className="text-[13.5px] font-semibold text-lms-ink">{s.title}</div>
+                  <div className="mt-0.5 text-xs text-lms-sub">{s.room} · {s.cls}</div>
                 </div>
               </div>
             ))}
           </section>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <section style={tCard(p)}>
-            <h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: '0 0 16px', color: p.ink }}>Hoạt động</h3>
+        <div className="flex flex-col gap-[22px]">
+          <section className={cardClass(20)}>
+            <h3 className="mb-4 mt-0 font-lms-heading text-xl font-medium text-lms-ink">Hoạt động</h3>
             {DB.NOTICES.map((n, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderTop: i ? `1px solid ${p.line}` : 'none' }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: p.sink, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div key={i} className={`flex gap-3 py-3 ${i ? 'border-t border-lms-line' : ''}`}>
+                <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-lms-sink">
                   <Icon name={n.icon} size={16} stroke={p.sub} />
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: p.ink, lineHeight: 1.4 }}>{n.title}</div>
-                  <div style={{ fontSize: 11, color: p.faint, marginTop: 3, fontFamily: FONTS.mono }}>{n.time} · {n.tag}</div>
+                <div className="min-w-0">
+                  <div className="text-[13px] leading-snug text-lms-ink">{n.title}</div>
+                  <div className="mt-[3px] font-mono text-[11px] text-lms-faint">{n.time} · {n.tag}</div>
                 </div>
               </div>
             ))}
           </section>
 
-          <section style={tCard(p)}>
-            <h3 style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: '0 0 16px', color: p.ink }}>Lối tắt</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <section className={cardClass(20)}>
+            <h3 className="mb-4 mt-0 font-lms-heading text-xl font-medium text-lms-ink">Lối tắt</h3>
+            <div className="grid grid-cols-2 gap-2.5">
               {shortcuts.map((s) => (
-                <div key={s.label} onClick={() => setRoute(s.route)} className="lms-row"
-                  style={{ padding: 14, borderRadius: 12, border: `1px solid ${p.line}`, cursor: 'pointer', background: p.raise }}>
+                <div key={s.label} onClick={() => setRoute(s.route)} className="lms-row cursor-pointer rounded-xl border border-lms-line bg-lms-raise p-3.5">
                   <Icon name={s.icon} size={19} stroke={p.accent} />
-                  <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, marginTop: 10 }}>{s.label}</div>
-                  <div style={{ fontSize: 11, color: p.faint, marginTop: 2 }}>{s.sub}</div>
+                  <div className="mt-2.5 text-[13px] font-semibold text-lms-ink">{s.label}</div>
+                  <div className="mt-0.5 text-[11px] text-lms-faint">{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -149,27 +134,26 @@ export function TOverview({ p, t, setRoute, go }) {
   );
 }
 
-// shared bits used by class detail + assignments screen
 export function AssignmentRow({ a, p, go }) {
   const tone = a.status === 'closing' ? p.warn : a.status === 'done' ? p.ok : p.accent;
+  const toneBg = a.status === 'closing' ? 'bg-lms-warn/12' : a.status === 'done' ? 'bg-lms-ok/12' : 'bg-lms-accent-soft';
+  const toneText = a.status === 'closing' ? 'text-lms-warn' : a.status === 'done' ? 'text-lms-ok' : 'text-lms-accent';
   return (
-    <div className="lms-card" onClick={() => go('grade-one', { assignment: a.id })}
-      style={{ background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: '16px 20px', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: 16 }}>
-      <div style={{ width: 42, height: 42, borderRadius: 12, background: hexA(tone, 0.12), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className={`lms-card flex cursor-pointer items-center gap-4 bg-lms-surface border border-lms-line rounded-xl px-5 py-4`} onClick={() => go('grade-one', { assignment: a.id })}>
+      <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${toneBg}`}>
         <Icon name="assign" size={20} stroke={tone} /></div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 600, color: p.ink }}>{a.title}</div>
-        <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12, color: p.sub, flexWrap: 'wrap' }}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[14.5px] font-semibold text-lms-ink">{a.title}</div>
+        <div className="mt-1 flex flex-wrap gap-3 text-xs text-lms-sub">
           <span>{a.type}</span><span>· {a.questions} câu</span><span>· {a.points} điểm</span>
-          <span style={{ fontFamily: FONTS.mono, color: tone }}>· {a.dueIn}</span>
+          <span className={`font-mono ${toneText}`}>· {a.dueIn}</span>
         </div>
       </div>
-      <div style={{ textAlign: 'center', minWidth: 90 }}>
-        <div style={{ fontFamily: FONTS.mono, fontSize: 13, color: p.ink }}>{a.submitted}/{a.total}</div>
-        <div style={{ fontSize: 10.5, color: p.faint }}>đã nộp</div>
+      <div className="min-w-[90px] text-center">
+        <div className="font-mono text-[13px] text-lms-ink">{a.submitted}/{a.total}</div>
+        <div className="text-[10.5px] text-lms-faint">đã nộp</div>
       </div>
-      <div style={{ textAlign: 'center', minWidth: 90 }}>
+      <div className="min-w-[90px] text-center">
         {a.submitted > a.graded ? <Tag p={p} color={p.accent}>{a.submitted - a.graded} chờ chấm</Tag> : <Tag p={p} color={p.ok}>Đã chấm</Tag>}
       </div>
       <Icon name="chevronRight" size={18} stroke={p.faint} />
@@ -181,13 +165,13 @@ const DOC_ICONS = { pdf: 'docs', slide: 'image', audio: 'play', video: 'video', 
 export function DocCardMini({ d, p }) {
   const ic = DOC_ICONS[d.type] || 'docs';
   return (
-    <div className="lms-card" style={{ background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: 16, cursor: 'pointer' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className={`lms-card cursor-pointer ${cardClass(16)}`}>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-lms-accent-soft">
           <Icon name={ic} size={19} stroke={p.accent} /></div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, lineHeight: 1.3 }}>{d.name}</div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint, marginTop: 3 }}>{d.type.toUpperCase()} · {d.size}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold leading-snug text-lms-ink">{d.name}</div>
+          <div className="mt-[3px] font-mono text-[11px] text-lms-faint">{d.type.toUpperCase()} · {d.size}</div>
         </div>
       </div>
     </div>

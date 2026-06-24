@@ -1,7 +1,4 @@
 'use client';
-// AuthProvider — global auth state backed by the LMS backend API. Stores the JWT
-// in localStorage, restores the session via /auth/me on load, and renders the
-// LoginModal. Reads palette/tweaks from ThemeProvider, so must be nested inside it.
 import React from 'react';
 import type { Auth } from '@/app/types';
 import { LoginModal } from '@/app/components/LoginModal';
@@ -32,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
-  // Restore session from a stored token.
   React.useEffect(() => {
     if (!getToken()) { setReady(true); return; }
     authApi

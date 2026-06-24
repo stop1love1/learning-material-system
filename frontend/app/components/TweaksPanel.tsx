@@ -1,8 +1,4 @@
 'use client';
-// TweaksPanel.tsx — floating live-appearance panel + form controls. Ported from
-// tweaks-panel.jsx. The prototype's design-canvas host protocol (postMessage /
-// __activate_edit_mode) is removed; the panel is now opened by its own gear FAB
-// and is fully self-contained.
 import React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -99,7 +95,6 @@ const TWEAKS_STYLE = `
   .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
 `;
 
-// ── TweaksPanel ─────────────────────────────────────────────────────────────
 export function TweaksPanel({ title = 'Tweaks', children }: { title?: string; children?: ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const dragRef = React.useRef<HTMLDivElement>(null);
@@ -181,7 +176,6 @@ export function TweaksPanel({ title = 'Tweaks', children }: { title?: string; ch
   );
 }
 
-// ── Layout helpers ──────────────────────────────────────────────────────────
 export function TweakSection({ label, children }: { label: ReactNode; children?: ReactNode }) {
   return (
     <>
@@ -203,7 +197,6 @@ export function TweakRow({ label, value, children, inline = false }: { label: Re
   );
 }
 
-// ── Controls ────────────────────────────────────────────────────────────────
 export function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }: any) {
   return (
     <TweakRow label={label} value={`${value}${unit}`}>

@@ -1,12 +1,11 @@
 'use client';
-// Client-only wrapper for the CKEditor rich-text component (CKEditor touches
-// window/document, so it must not run during SSR).
+// CKEditor touches window/document — must not run during SSR.
 import dynamic from 'next/dynamic';
 
 const RichEditor = dynamic(() => import('./RichText'), {
   ssr: false,
   loading: () => (
-    <div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 13, border: '1px solid rgba(0,0,0,.12)', borderRadius: 8 }}>
+    <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-black/12 text-[13px] text-neutral-400">
       Đang tải trình soạn thảo…
     </div>
   ),

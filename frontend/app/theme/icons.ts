@@ -1,7 +1,3 @@
-// icons.ts — 24×24 stroke icon path data. The prototype optionally rendered
-// Lucide via a CDN global; this port drops that external dependency and renders
-// these self-contained paths directly (see ui/primitives.tsx → Icon).
-
 export type IconName =
   | 'overview' | 'class' | 'assign' | 'grade' | 'bank' | 'docs' | 'rubric'
   | 'results' | 'students' | 'users' | 'notify' | 'settings' | 'search'

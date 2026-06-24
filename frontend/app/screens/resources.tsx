@@ -1,16 +1,14 @@
 'use client';
 import React from 'react';
 import { Icon, Tag, Btn, IconBtn, Field, Select, Segmented, Progress, Ring } from '@/app/components/ui';
-import { FONTS } from '@/app/theme/fonts';
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { LMS, useLMS } from '@/app/store/store';
-import { lblStyle } from '@/app/helpers/shared';
+import { lblClass, cardClass } from '@/app/helpers/shared';
 import { filesApi, foldersApi, rubricsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
 import GoogleDrivePicker from '@/app/components/GoogleDrivePicker';
 
-// Map a Google Drive mimeType to our FileType.
 const mimeToType = (mt) => {
   mt = mt || '';
   if (mt.includes('pdf')) return 'pdf';
@@ -22,9 +20,6 @@ const mimeToType = (mt) => {
   return 'link';
 };
 
-// screens-resources.tsx — Document repository + Rubric list & builder.
-
-function rCard(p, pad = 20) { return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad }; }
 
 export const DOC_TYPE_META = {
   pdf: { icon: 'docs', label: 'PDF' }, slide: { icon: 'image', label: 'Slide' },
@@ -33,20 +28,15 @@ export const DOC_TYPE_META = {
   link: { icon: 'docs', label: 'Liên kết' },
 };
 
-// Strip HTML tags + decode common entities → plain text (for card previews).
 export const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
-// ── Document repository ──────────────────────────────────────────────────────
 export function TDocs({ p, t }) {
-  useLMS(); // re-render on download/upload mock mutations
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
+  useLMS();
   const [folder, setFolder] = React.useState('Tất cả');
   const [view, setView] = React.useState('grid');
   const [kw, setKw] = React.useState('');
   const docs = (folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder))
     .filter((d) => { const k = kw.trim().toLowerCase(); return !k || (d.name || '').toLowerCase().includes(k); });
-
-  // ── "Thêm tài liệu" form (with CKEditor description) ──
   const FTYPES = [
     { value: 'pdf', label: 'PDF' }, { value: 'doc', label: 'Tài liệu (Word/Docs)' },
     { value: 'image', label: 'Ảnh' }, { value: 'video', label: 'Video' },
@@ -78,7 +68,6 @@ export function TDocs({ p, t }) {
     } finally { setSaving(false); }
   };
 
-  // Import files picked from Google Drive into the current folder (external links).
   const importDriveDocs = async (picked: any[]) => {
     const folderName = folder !== 'Tất cả' ? folder : (folderNames[0] || 'Tư liệu');
     let folderId: any = null;
@@ -98,27 +87,26 @@ export function TDocs({ p, t }) {
   };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
 
-  // "Thêm tài liệu" form, rendered as a centered modal overlay (see end of return).
   const addDocModal = composing && (
     <div onClick={() => { setComposing(false); setForm(blankForm); }}
-      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,38,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      className="fixed inset-0 z-60 flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5">
       <div onClick={(e) => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 620, maxHeight: '88vh', overflowY: 'auto', background: p.surface, borderRadius: 16, border: `1px solid ${p.line}`, padding: 24, boxShadow: '0 24px 70px rgba(0,0,0,.22)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h2 style={{ fontFamily: serif, fontSize: 20, fontWeight: 700, margin: 0, color: p.ink }}>Thêm tài liệu</h2>
-          <button onClick={() => { setComposing(false); setForm(blankForm); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, color: p.sub, lineHeight: 1 }}>✕</button>
+        className="w-full max-w-[620px] max-h-[88vh] overflow-y-auto bg-lms-surface rounded-2xl border border-lms-line p-6 shadow-[0_24px_70px_rgba(0,0,0,.22)]">
+        <div className="flex items-center justify-between mb-[18px]">
+          <h2 className="m-0 font-lms-heading text-xl font-bold text-lms-ink">Thêm tài liệu</h2>
+          <button onClick={() => { setComposing(false); setForm(blankForm); }} className="cursor-pointer border-0 bg-transparent text-lg leading-none text-lms-sub">✕</button>
         </div>
-        <label style={lblStyle(p)}>TÊN TÀI LIỆU</label>
-        <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" style={{ marginTop: 8, marginBottom: 16 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-          <div><label style={lblStyle(p)}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} style={{ marginTop: 8 }} /></div>
-          <div><label style={lblStyle(p)}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} style={{ marginTop: 8 }} /></div>
+        <label className={lblClass()}>TÊN TÀI LIỆU</label>
+        <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" className="mt-2 mb-4" />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div><label className={lblClass()}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} className="mt-2" /></div>
+          <div><label className={lblClass()}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} className="mt-2" /></div>
         </div>
-        <label style={lblStyle(p)}>LIÊN KẾT (URL)</label>
-        <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" style={{ marginTop: 8, marginBottom: 16 }} />
-        <label style={lblStyle(p)}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
-        <div style={{ marginTop: 8 }}><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+        <label className={lblClass()}>LIÊN KẾT (URL)</label>
+        <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" className="mt-2 mb-4" />
+        <label className={lblClass()}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
+        <div className="mt-2"><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
+        <div className="flex justify-end gap-2.5 mt-[18px]">
           <Btn p={p} variant="ghost" onClick={() => { setComposing(false); setForm(blankForm); }}>Huỷ</Btn>
           <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
         </div>
@@ -127,20 +115,18 @@ export function TDocs({ p, t }) {
   );
 
   return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto', display: 'grid', gridTemplateColumns: '210px 1fr', gap: 26 }}>
+    <div className="mx-auto grid max-w-[1480px] grid-cols-[210px_1fr] gap-[26px] px-[30px] pt-6 pb-10">
       <aside>
         <Btn p={p} icon="plus" full onClick={() => setComposing(true)}>Thêm tài liệu</Btn>
-        <div style={{ marginTop: 18, fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, padding: '0 6px 8px' }}>THƯ MỤC</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">THƯ MỤC</div>
+        <div className="flex flex-col gap-px">
           {DB.DOC_FOLDERS.map((f) => {
             const on = f === folder, n = f === 'Tất cả' ? DB.DOCS.length : DB.DOCS.filter((d) => d.folder === f).length;
             return (
-              <div key={f} onClick={() => setFolder(f)} className="lms-nav-item"
-                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px', borderRadius: 9, cursor: 'pointer',
-                  background: on ? p.activeBg : 'transparent', color: on ? p.ink : p.sub, fontWeight: on ? 600 : 450, fontSize: 13 }}>
+              <div key={f} onClick={() => setFolder(f)} className={`lms-nav-item flex cursor-pointer items-center gap-[9px] rounded-[9px] px-[11px] py-2 text-[13px] ${on ? 'bg-lms-active-bg font-semibold text-lms-ink' : 'bg-transparent font-[450] text-lms-sub'}`}>
                 <Icon name={f === 'Tất cả' ? 'cloud' : 'folder'} size={16} stroke={on ? p.accent : p.faint} />
-                <span style={{ flex: 1 }}>{f}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{n}</span>
+                <span className="flex-1">{f}</span>
+                <span className="font-mono text-[11px] text-lms-faint">{n}</span>
               </div>
             );
           })}
@@ -148,31 +134,31 @@ export function TDocs({ p, t }) {
       </aside>
 
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" style={{ width: 260 }} />
+        <div className="mb-[18px] flex items-center gap-2.5">
+          <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" className="w-[260px]" />
           <GoogleDrivePicker p={p} onPicked={importDriveDocs} label="Google Drive" />
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <Segmented p={p} value={view} onChange={setView} options={[{ value: 'grid', icon: 'grid' }, { value: 'list', icon: 'list' }]} />
         </div>
 
         {view === 'grid' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px,1fr))', gap: 16 }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
             {docs.map((d) => {
               const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
-                <div key={d.id} className="lms-card" style={{ ...rCard(p, 0), overflow: 'hidden', cursor: 'pointer' }}>
-                  <div style={{ height: 96, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                <div key={d.id} className={`lms-card ${cardClass(20).replace('p-5', 'p-0')} cursor-pointer overflow-hidden`}>
+                  <div className="relative flex h-24 items-center justify-center overflow-hidden bg-lms-accent-soft">
                     <Icon name={m.icon} size={32} stroke={p.accent} sw={1.4} />
-                    {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    <span style={{ position: 'absolute', top: 10, left: 10, zIndex: 2, borderRadius: 7, background: d.thumb ? 'rgba(255,255,255,.92)' : 'transparent', backdropFilter: d.thumb ? 'blur(4px)' : undefined, boxShadow: d.thumb ? '0 1px 3px rgba(0,0,0,.12)' : undefined }}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
+                    {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.classList.add('hidden'); }} className="absolute inset-0 h-full w-full object-cover" />}
+                    <span className={`absolute top-2.5 left-2.5 z-2 rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-[0_1px_3px_rgba(0,0,0,.12)] backdrop-blur-sm' : 'bg-transparent'}`}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
                   </div>
-                  <div style={{ padding: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 34 }}>{d.name}</div>
-                    {d.desc && <div style={{ fontSize: 11, color: p.sub, lineHeight: 1.4, marginTop: 5, maxHeight: 31, overflow: 'hidden' }}>{stripHtml(d.desc).slice(0, 100)}</div>}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11, color: p.faint, fontFamily: FONTS.mono }}>
+                  <div className="p-3.5">
+                    <div className="min-h-[34px] text-[13px] font-semibold leading-snug text-lms-ink">{d.name}</div>
+                    {d.desc && <div className="mt-[5px] max-h-[31px] overflow-hidden text-[11px] leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 100)}</div>}
+                    <div className="mt-2.5 flex items-center gap-3 font-mono text-[11px] text-lms-faint">
                       <span>👁 {d.views ?? 0}</span><span>↓ {d.downloads}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <div className="mt-3 flex gap-2">
                       <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d.id)}>Tải về</Btn>
                       <IconBtn name="more" p={p} size={34} />
                     </div>
@@ -182,20 +168,19 @@ export function TDocs({ p, t }) {
             })}
           </div>
         ) : (
-          <div style={rCard(p, 0)}>
+          <div className={cardClass(20).replace('p-5', 'p-0')}>
             {docs.map((d, i) => {
               const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
-                <div key={d.id} className="lms-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 18px', cursor: 'pointer',
-                  borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={d.id} className={`lms-row flex cursor-pointer items-center gap-3.5 px-[18px] py-[13px] ${i ? 'border-t border-lms-line-soft' : ''}`}>
+                  <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-lms-accent-soft">
                     <Icon name={m.icon} size={18} stroke={p.accent} /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{d.name}</div>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint, marginTop: 2 }}>{m.label} · {d.folder}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-lms-ink">{d.name}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-lms-faint">{m.label} · {d.folder}</div>
                   </div>
-                  <div style={{ fontSize: 12, color: p.sub, width: 110 }}>{d.updated}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 12, color: p.faint, width: 110, whiteSpace: 'nowrap' }}>👁 {d.views ?? 0} · ↓ {d.downloads}</div>
+                  <div className="w-[110px] text-xs text-lms-sub">{d.updated}</div>
+                  <div className="w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>
                   <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
                   <IconBtn name="more" p={p} size={34} />
                 </div>
@@ -209,42 +194,38 @@ export function TDocs({ p, t }) {
   );
 }
 
-// ── Rubric matrix (shared: edit + grade modes) ───────────────────────────────
 export function RubricMatrix({ rubric, p, mode = 'view', selected, onSelect }: any) {
   const scale = rubric.scale;
   return (
-    <div className="lms-scrollx" style={{ border: `1px solid ${p.line}`, borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: `1.4fr repeat(${scale.length}, 1fr)`, background: p.raise, borderBottom: `1px solid ${p.line}` }}>
-        <div style={{ padding: '11px 14px', fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint }}>TIÊU CHÍ</div>
+    <div className="lms-scrollx overflow-hidden rounded-xl border border-lms-line">
+      <div className="grid border-b border-lms-line bg-lms-raise" style={{ gridTemplateColumns: `1.4fr repeat(${scale.length}, 1fr)` }}>
+        <div className="px-3.5 py-[11px] font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">TIÊU CHÍ</div>
         {scale.map((s, i) => (
-          <div key={i} style={{ padding: '11px 12px', borderLeft: `1px solid ${p.line}`, textAlign: 'center' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: p.ink }}>{s.label}</div>
-            <div style={{ fontFamily: FONTS.mono, fontSize: 10.5, color: p.faint, marginTop: 2 }}>{s.pct}%</div>
+          <div key={i} className="border-l border-lms-line px-3 py-[11px] text-center">
+            <div className="text-[12.5px] font-semibold text-lms-ink">{s.label}</div>
+            <div className="mt-0.5 font-mono text-[10.5px] text-lms-faint">{s.pct}%</div>
           </div>
         ))}
       </div>
       {rubric.criteria.map((c, ci) => (
-        <div key={ci} style={{ display: 'grid', gridTemplateColumns: `1.4fr repeat(${scale.length}, 1fr)`, borderTop: ci ? `1px solid ${p.lineSoft}` : 'none' }}>
-          <div style={{ padding: '13px 14px' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{c.name}</div>
-            {c.desc && <div style={{ fontSize: 11.5, color: p.faint, marginTop: 3, lineHeight: 1.4 }}>{c.desc}</div>}
-            <Tag p={p} color={p.accent} style={{ marginTop: 8 }}>{c.weight}%</Tag>
+        <div key={ci} className={`grid ${ci ? 'border-t border-lms-line-soft' : ''}`} style={{ gridTemplateColumns: `1.4fr repeat(${scale.length}, 1fr)` }}>
+          <div className="px-3.5 py-[13px]">
+            <div className="text-[13.5px] font-semibold text-lms-ink">{c.name}</div>
+            {c.desc && <div className="mt-[3px] text-[11.5px] leading-snug text-lms-faint">{c.desc}</div>}
+            <Tag p={p} color={p.accent} className="mt-2">{c.weight}%</Tag>
           </div>
           {scale.map((s, si) => {
             const on = selected && selected[ci] === si;
             return (
               <div key={si} onClick={() => mode === 'grade' && onSelect && onSelect(ci, si)}
-                style={{ padding: '13px 10px', borderLeft: `1px solid ${p.lineSoft}`, cursor: mode === 'grade' ? 'pointer' : 'default',
-                  background: on ? p.accentSoft : 'transparent', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', justifyContent: 'center',
-                  transition: 'background .12s' }}>
+                className={`flex flex-col items-center justify-center gap-1.5 border-l border-lms-line-soft px-2.5 py-[13px] transition-colors duration-120 ${mode === 'grade' ? 'cursor-pointer' : 'cursor-default'} ${on ? 'bg-lms-accent-soft' : 'bg-transparent'}`}>
                 {mode === 'grade' && (
-                  <span style={{ width: 18, height: 18, borderRadius: '50%', border: `1.8px solid ${on ? p.accent : p.faint}`,
-                    background: on ? p.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border-[1.8px] ${on ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'}`}>
                     {on && <Icon name="check" size={11} stroke="#fff" sw={2.5} />}</span>
                 )}
-                <span style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 600, color: on ? p.accent : p.sub }}>
+                <span className={`font-lms-heading text-base font-semibold ${on ? 'text-lms-accent' : 'text-lms-sub'}`}>
                   {((c.weight * s.pct) / 1000).toFixed(1)}</span>
-                {mode === 'edit' && <span style={{ fontSize: 10.5, color: p.faint, textAlign: 'center' }}>điểm</span>}
+                {mode === 'edit' && <span className="text-center text-[10.5px] text-lms-faint">điểm</span>}
               </div>
             );
           })}
@@ -254,37 +235,35 @@ export function RubricMatrix({ rubric, p, mode = 'view', selected, onSelect }: a
   );
 }
 
-// ── Rubric list ──────────────────────────────────────────────────────────────
 export function TRubrics({ p, t, setRoute, go }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const [kw, setKw] = React.useState('');
   const k = kw.trim().toLowerCase();
   return (
-    <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" style={{ width: 260 }} />
-        <div style={{ flex: 1 }} />
+    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="mb-[22px] flex items-center gap-2.5">
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="w-[260px]" />
+        <div className="flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('rubric-edit')}>Tạo rubric</Btn>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px,1fr))', gap: 20 }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(380px,1fr))] gap-5">
         {DB.RUBRICS.filter((r) => !k || (r.name || '').toLowerCase().includes(k)).map((r) => (
-          <div key={r.id} onClick={() => go('rubric-edit', { rubric: r.id })} className="lms-card" style={{ ...rCard(p, 22), cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div key={r.id} onClick={() => go('rubric-edit', { rubric: r.id })} className={`lms-card ${cardClass(24)} cursor-pointer`}>
+            <div className="mb-3.5 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-lms-accent-soft">
                   <Icon name="rubric" size={20} stroke={p.accent} /></div>
                 <div>
-                  <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: 0, color: p.ink, lineHeight: 1.2 }}>{r.name}</h3>
-                  <div style={{ fontSize: 11.5, color: p.faint, marginTop: 3, fontFamily: FONTS.mono }}>{r.criteria.length} tiêu chí · {r.scale.length} mức · dùng {r.used} lần</div>
+                  <h3 className="m-0 font-lms-heading text-lg font-semibold leading-tight text-lms-ink">{r.name}</h3>
+                  <div className="mt-[3px] font-mono text-[11.5px] text-lms-faint">{r.criteria.length} tiêu chí · {r.scale.length} mức · dùng {r.used} lần</div>
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div className="flex flex-col gap-[7px]">
               {r.criteria.map((c, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, fontSize: 12.5, color: p.sub }}>{c.name}</div>
-                  <div style={{ width: 70 }}><Progress p={p} value={c.weight} height={5} /></div>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint, width: 32, textAlign: 'right' }}>{c.weight}%</span>
+                <div key={i} className="flex items-center gap-2.5">
+                  <div className="flex-1 text-[12.5px] text-lms-sub">{c.name}</div>
+                  <div className="w-[70px]"><Progress p={p} value={c.weight} height={5} /></div>
+                  <span className="w-8 text-right font-mono text-[11px] text-lms-faint">{c.weight}%</span>
                 </div>
               ))}
             </div>
@@ -295,9 +274,7 @@ export function TRubrics({ p, t, setRoute, go }) {
   );
 }
 
-// ── Rubric builder ───────────────────────────────────────────────────────────
 export function TRubricEdit({ p, t, ctx, setRoute }) {
-  const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const EMPTY_RUBRIC = { id: '', name: 'Rubric mới', used: 0, levels: 0, criteria: [], scale: [] };
   const base = (ctx.rubric ? DB.RUBRICS.find((r) => r.id === ctx.rubric) : DB.RUBRICS[0]) || EMPTY_RUBRIC;
   const [rubric, setRubric] = React.useState(() => JSON.parse(JSON.stringify(base)));
@@ -308,15 +285,14 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
   const delCrit = (i) => setRubric({ ...rubric, criteria: rubric.criteria.filter((_, j) => j !== i) });
 
   return (
-    <div style={{ padding: '22px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
-      <div onClick={() => setRoute('rubrics')} className="lms-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: p.sub, fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
+    <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+      <div onClick={() => setRoute('rubrics')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Rubrics
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 22 }}>
+      <div className="mb-[22px] flex items-center gap-4">
         <input value={rubric.name} onChange={(e) => setRubric({ ...rubric, name: e.target.value })}
-          style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: serif, fontSize: 28, fontWeight: 600,
-            color: p.ink, letterSpacing: -0.4 }} />
+          className="flex-1 border-0 bg-transparent font-lms-heading text-[28px] font-semibold tracking-[-0.4px] text-lms-ink outline-none" />
         <Btn p={p} variant="ghost" onClick={() => setRoute('rubrics')}>Huỷ</Btn>
         <Btn p={p} icon="check" onClick={async () => {
           // Map the design shape (criteria/scale) → backend DTO (criterions/levels).
@@ -337,47 +313,47 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
         }}>Lưu rubric</Btn>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 22 }}>
-        <div style={{ ...rCard(p, 16), flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="mb-[22px] flex gap-3">
+        <div className={`${cardClass(16)} flex flex-1 items-center gap-3`}>
           <Ring value={totalW} size={48} thickness={6} p={p} color={totalW === 100 ? p.ok : p.warn} />
-          <div><div style={{ fontSize: 13, fontWeight: 600, color: p.ink }}>Tổng trọng số {totalW}%</div>
-            <div style={{ fontSize: 11.5, color: totalW === 100 ? p.ok : p.warn }}>{totalW === 100 ? 'Hợp lệ' : 'Nên bằng 100%'}</div></div>
+          <div><div className="text-[13px] font-semibold text-lms-ink">Tổng trọng số {totalW}%</div>
+            <div className={`text-[11.5px] ${totalW === 100 ? 'text-lms-ok' : 'text-lms-warn'}`}>{totalW === 100 ? 'Hợp lệ' : 'Nên bằng 100%'}</div></div>
         </div>
-        <div style={{ ...rCard(p, 16), flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={`${cardClass(16)} flex flex-1 items-center gap-3`}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lms-accent-soft">
             <Icon name="rubric" size={22} stroke={p.accent} /></div>
-          <div><div style={{ fontSize: 13, fontWeight: 600, color: p.ink }}>{rubric.criteria.length} tiêu chí · {rubric.scale.length} mức</div>
-            <div style={{ fontSize: 11.5, color: p.faint }}>Thang điểm 10</div></div>
+          <div><div className="text-[13px] font-semibold text-lms-ink">{rubric.criteria.length} tiêu chí · {rubric.scale.length} mức</div>
+            <div className="text-[11.5px] text-lms-faint">Thang điểm 10</div></div>
         </div>
       </div>
 
-      <section style={{ ...rCard(p, 22), marginBottom: 22 }}>
-        <label style={lblStyle(p)}>TIÊU CHÍ ĐÁNH GIÁ</label>
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <section className={`${cardClass(24)} mb-[22px]`}>
+        <label className={lblClass()}>TIÊU CHÍ ĐÁNH GIÁ</label>
+        <div className="mt-3 flex flex-col gap-2.5">
           {rubric.criteria.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, border: `1px solid ${p.line}`, background: p.raise }}>
+            <div key={i} className="flex items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise p-3">
               <Icon name="drag" size={16} stroke={p.faint} />
-              <div style={{ flex: 1 }}>
+              <div className="flex-1">
                 <input value={c.name} onChange={(e) => patchCrit(i, 'name', e.target.value)}
-                  style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', color: p.ink, fontFamily: FONTS.sans, fontSize: 14, fontWeight: 600 }} />
+                  className="w-full border-0 bg-transparent font-sans text-sm font-semibold text-lms-ink outline-none" />
                 <input value={c.desc} onChange={(e) => patchCrit(i, 'desc', e.target.value)} placeholder="Mô tả tiêu chí (tuỳ chọn)…"
-                  style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', color: p.sub, fontFamily: FONTS.sans, fontSize: 12, marginTop: 3 }} />
+                  className="mt-[3px] w-full border-0 bg-transparent font-sans text-xs text-lms-sub outline-none" />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 12, border: `1px solid ${p.line}`, background: p.surface }}>
+              <div className="flex items-center gap-1.5 rounded-xl border border-lms-line bg-lms-surface px-2.5 py-1.5">
                 <input type="number" value={c.weight} onChange={(e) => patchCrit(i, 'weight', Number(e.target.value))}
-                  style={{ width: 40, border: 'none', outline: 'none', background: 'transparent', color: p.ink, fontFamily: FONTS.mono, fontSize: 14, textAlign: 'right' }} />
-                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: p.faint }}>%</span>
+                  className="w-10 border-0 bg-transparent text-right font-mono text-sm text-lms-ink outline-none" />
+                <span className="font-mono text-[13px] text-lms-faint">%</span>
               </div>
               <IconBtn name="trash" p={p} size={36} onClick={() => delCrit(i)} />
             </div>
           ))}
         </div>
-        <Btn p={p} variant="quiet" size="sm" icon="plus" style={{ marginTop: 12, paddingLeft: 0 }} onClick={addCrit}>Thêm tiêu chí</Btn>
+        <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-3 pl-0" onClick={addCrit}>Thêm tiêu chí</Btn>
       </section>
 
-      <section style={rCard(p, 22)}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <label style={lblStyle(p)}>MA TRẬN ĐIỂM (xem trước)</label>
+      <section className={cardClass(24)}>
+        <div className="mb-3.5 flex items-center justify-between">
+          <label className={lblClass()}>MA TRẬN ĐIỂM (xem trước)</label>
           <Tag p={p} color={p.sub}>{rubric.scale.length} mức đánh giá</Tag>
         </div>
         <RubricMatrix rubric={rubric} p={p} mode="edit" />

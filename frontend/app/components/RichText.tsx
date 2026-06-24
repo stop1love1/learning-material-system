@@ -1,6 +1,4 @@
 'use client';
-// CKEditor 5 (classic) rich-text editor — used to author HTML for article content
-// and document descriptions. Loaded client-only via RichEditor (next/dynamic).
 import React from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import {

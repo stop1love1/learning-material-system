@@ -1,15 +1,16 @@
 'use client';
-// helpers.tsx — cross-screen shared helpers, centralized from the prototype where
-// they were duplicated/global: lblStyle (form-label style), ToggleRow (settings
-// toggle), and tStripe/ACCENTS_REF (class accent-stripe colors).
 import React from 'react';
-import type { CSSProperties } from 'react';
 import type { Palette } from '@/app/types';
-import { FONTS } from '@/app/theme/fonts';
 
-/** Uppercase mono label style used by forms (login, compose, editors). */
-export function lblStyle(p: Palette): CSSProperties {
-  return { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint, display: 'block' };
+/** Uppercase mono label class used by forms (login, compose, editors). */
+export function lblClass(): string {
+  return 'block font-mono text-[10.5px] tracking-[0.5px] text-lms-faint';
+}
+
+/** Surface card utility classes (replaces inline sCard helper). */
+export function cardClass(pad: 16 | 20 | 24 | 30 = 20): string {
+  const pads: Record<number, string> = { 16: 'p-4', 20: 'p-5', 24: 'p-6', 30: 'p-[30px]' };
+  return `bg-lms-surface border border-lms-line rounded-xl ${pads[pad] || 'p-5'}`;
 }
 
 /** Class accent-stripe hue map + resolver (used by teacher/admin/student cards). */
@@ -29,33 +30,13 @@ export function tStripe(p: Palette, hue: string): string {
 export function ToggleRow({ p, label, def }: { p: Palette; label: React.ReactNode; def?: any }) {
   const [on, setOn] = React.useState(!!def);
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '11px 14px',
-        borderRadius: 12,
-        border: `1px solid ${p.line}`,
-        background: p.raise,
-      }}
-    >
-      <span style={{ fontSize: 13.5, color: p.ink }}>{label}</span>
+    <div className="flex items-center justify-between rounded-xl border border-lms-line bg-lms-raise px-3.5 py-[11px]">
+      <span className="text-[13.5px] text-lms-ink">{label}</span>
       <div
         onClick={() => setOn(!on)}
-        style={{
-          width: 42,
-          height: 24,
-          borderRadius: 12,
-          cursor: 'pointer',
-          padding: 2,
-          background: on ? p.accent : p.sink,
-          transition: 'background .15s',
-          display: 'flex',
-          justifyContent: on ? 'flex-end' : 'flex-start',
-        }}
+        className={`flex h-6 w-[42px] cursor-pointer rounded-xl p-0.5 transition-colors ${on ? 'bg-lms-accent justify-end' : 'bg-lms-sink justify-start'}`}
       >
-        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+        <div className="h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)]" />
       </div>
     </div>
   );

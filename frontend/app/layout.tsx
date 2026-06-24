@@ -5,7 +5,6 @@ import { ConfigProvider } from "antd";
 import { LmsProviders } from "@/app/contexts/LmsProviders";
 import "./globals.css";
 
-// Self-hosted fonts → CSS variables referenced by app/lms/theme/fonts.ts.
 const baloo = Baloo_2({ subsets: ["latin", "vietnamese"], variable: "--font-baloo", display: "swap" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
 const sora = Sora({ subsets: ["latin"], variable: "--font-sora", display: "swap" });

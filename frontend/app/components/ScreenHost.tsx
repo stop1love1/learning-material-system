@@ -1,9 +1,4 @@
 'use client';
-// ScreenHost — the adapter between Next's file-based routing and the ported
-// prototype screens (which expect p/t/ctx/setRoute/go/auth props). Each route's
-// server page.tsx renders <ScreenHost Screen={SomeScreen} routeKey="..." ctx={{…}} />.
-// ScreenHost pulls theme + auth from context and translates the screen's internal
-// setRoute()/go() calls into router.push() via the central routes map.
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
@@ -25,9 +20,7 @@ export default function ScreenHost({
   const { t, p, setTweak, resetTheme, defaults } = useLmsTheme();
   const auth = useLmsAuth();
 
-  // Re-render this screen whenever the store changes (incl. after hydration).
   useLMS();
-  // Pull live backend data for this route into DB on mount (best-effort).
   React.useEffect(() => {
     hydrateFor(routeKey);
   }, [routeKey, auth.loggedIn]);
