@@ -6,6 +6,28 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { tStripe, ToggleRow, lblStyle } from '@/app/helpers/shared';
+import { usersApi, settingsApi } from '@/app/lib/api';
+import { hydrateFor } from '@/app/lib/sync/hydrate';
+
+// Lightweight inline modal (design's inline-style system; no antd).
+function AdminModal({ p, title, onClose, children }) {
+  const serif = FONTS.display;
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: hexA('#0f1726', 0.5),
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, background: p.surface,
+        border: `1px solid ${p.line}`, borderRadius: 14, boxShadow: `0 24px 60px ${hexA('#0f1726', 0.28)}`, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${p.lineSoft}` }}>
+          <div style={{ fontFamily: serif, fontSize: 17, fontWeight: 600, color: p.ink }}>{title}</div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}>
+            <Icon name="x" size={18} stroke={p.faint} />
+          </button>
+        </div>
+        <div style={{ padding: 20 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
 
 function adCard(p, pad = 22) { return { background: p.surface, border: `1px solid ${p.line}`, borderRadius: 12, padding: pad }; }
 
@@ -110,13 +132,79 @@ export function AClasses({ p, t }) {
   );
 }
 
+// Backend role enum ↔ Vietnamese label used by the admin two-bucket model.
+const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Người dùng', student: 'Người dùng' };
+const fmtJoined = (d) => {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('vi-VN'); } catch { return '—'; }
+};
+
 export function AUsers({ p, t }) {
   const [role, setRole] = React.useState('all');
-  const list = role === 'all' ? DB.ADMIN_USERS : DB.ADMIN_USERS.filter((u) => u.role === role);
+  // Live users from the API (keeps _id + raw role/status for edit/delete).
+  // Falls back to DB.ADMIN_USERS mock when the API is down / not admin.
+  const [users, setUsers] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+  // modal: null | { mode:'create'|'edit', user? }
+  const [modal, setModal] = React.useState(null);
+
+  const refetch = React.useCallback(async () => {
+    try {
+      const res = await usersApi.list({ pageSize: 200 });
+      const records = res?.records ?? [];
+      setUsers(records.map((u) => ({
+        id: u._id || u.id,
+        name: u.name,
+        email: u.email,
+        rawRole: u.role || 'student',
+        role: ROLE_LABEL[u.role] || 'Người dùng',
+        joined: fmtJoined(u.createdAt),
+        status: u.status || 'active',
+      })));
+    } catch {
+      setUsers(null); // keep mock fallback
+    }
+  }, []);
+
+  React.useEffect(() => { refetch(); }, [refetch]);
+
+  // Live list if loaded, otherwise the mock DB shape (which lacks ids).
+  const all = users ?? DB.ADMIN_USERS.map((u) => ({ ...u, id: undefined, rawRole: u.role === 'Quản trị viên' ? 'admin' : 'student' }));
+  const list = role === 'all' ? all : all.filter((u) => u.role === role);
   const roleColor = (r) => ({ 'Người dùng': p.accent, 'Quản trị viên': p.warn }[r] || p.sub);
-  const nUser = DB.ADMIN_USERS.filter((u) => u.role === 'Người dùng').length;
-  const nAdmin = DB.ADMIN_USERS.filter((u) => u.role === 'Quản trị viên').length;
-  const counts = [['Người dùng', 'users', p.accent, fmt(DB.ADMIN_STATS.users)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
+  const nAdmin = all.filter((u) => u.role === 'Quản trị viên').length;
+  const total = users ? all.length : DB.ADMIN_STATS.users;
+  const counts = [['Người dùng', 'users', p.accent, fmt(total)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
+
+  const handleDelete = async (u) => {
+    if (!u?.id) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Xoá người dùng "${u.name}"?`)) return;
+    setBusy(true);
+    try { await usersApi.remove(u.id); } catch {}
+    setBusy(false);
+    await refetch();
+    try { await hydrateFor('a-users'); } catch {}
+  };
+
+  const handleSave = async (form, mode, editId) => {
+    setBusy(true);
+    try {
+      if (mode === 'edit' && editId) {
+        const body: any = { name: form.name, email: form.email, role: form.role, status: form.status };
+        if (form.password) body.password = form.password;
+        await usersApi.update(editId, body);
+      } else {
+        await usersApi.create({ name: form.name, email: form.email, password: form.password, role: form.role, status: form.status });
+      }
+      setModal(null);
+      await refetch();
+      try { await hydrateFor('a-users'); } catch {}
+    } catch (e) {
+      if (typeof window !== 'undefined') window.alert('Không thể lưu người dùng. Vui lòng kiểm tra dữ liệu hoặc quyền truy cập.');
+    }
+    setBusy(false);
+  };
+
   return (
     <div style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 20 }}>
@@ -130,20 +218,20 @@ export function AUsers({ p, t }) {
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Pill p={p} active={role === 'all'} onClick={() => setRole('all')}>Tất cả · {DB.ADMIN_USERS.length}</Pill>
+        <Pill p={p} active={role === 'all'} onClick={() => setRole('all')}>Tất cả · {all.length}</Pill>
         <Pill p={p} active={role === 'Người dùng'} onClick={() => setRole('Người dùng')}>Người dùng</Pill>
         <Pill p={p} active={role === 'Quản trị viên'} onClick={() => setRole('Quản trị viên')}>Quản trị</Pill>
         <div style={{ flex: 1 }} />
         <Btn p={p} variant="ghost" icon="download">Xuất danh sách</Btn>
-        <Btn p={p} icon="plus">Thêm người dùng</Btn>
+        <Btn p={p} icon="plus" onClick={() => setModal({ mode: 'create' })}>Thêm người dùng</Btn>
       </div>
       <div className="lms-scrollx" style={adCard(p, 0)}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.3fr 1.2fr 1fr', padding: '12px 22px', borderBottom: `1px solid ${p.line}`,
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.3fr 1.2fr 1fr 86px', padding: '12px 22px', borderBottom: `1px solid ${p.line}`,
           fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 0.5, color: p.faint }}>
-          <span>NGƯỜI DÙNG</span><span>VAI TRÒ</span><span>THAM GIA</span><span style={{ textAlign: 'right' }}>TRẠNG THÁI</span>
+          <span>NGƯỜI DÙNG</span><span>VAI TRÒ</span><span>THAM GIA</span><span>TRẠNG THÁI</span><span style={{ textAlign: 'right' }}>THAO TÁC</span>
         </div>
         {list.map((u, i) => (
-          <div key={i} className="lms-row" style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.3fr 1.2fr 1fr', alignItems: 'center', padding: '13px 22px', borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
+          <div key={u.id || i} className="lms-row" style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.3fr 1.2fr 1fr 86px', alignItems: 'center', padding: '13px 22px', borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Avatar name={u.name} p={p} size={36} color={roleColor(u.role)} />
               <div><div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink }}>{u.name}</div>
@@ -151,16 +239,69 @@ export function AUsers({ p, t }) {
             </div>
             <div><Tag p={p} color={roleColor(u.role)}>{u.role}</Tag></div>
             <div style={{ fontSize: 13, color: p.sub }}>{u.joined}</div>
-            <div style={{ textAlign: 'right' }}>
+            <div>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: u.status === 'active' ? p.ok : p.faint }}>
                 <span style={{ width: 7, height: 7, borderRadius: 4, background: u.status === 'active' ? p.ok : p.faint }} />
                 {u.status === 'active' ? 'Hoạt động' : 'Tạm ngưng'}
               </span>
             </div>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              <button title="Sửa" disabled={!u.id} onClick={() => u.id && setModal({ mode: 'edit', user: u })}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, cursor: u.id ? 'pointer' : 'not-allowed',
+                  border: `1px solid ${p.line}`, background: p.surface, opacity: u.id ? 1 : 0.4 }}>
+                <Icon name="pen" size={15} stroke={p.sub} />
+              </button>
+              <button title="Xoá" disabled={!u.id || busy} onClick={() => handleDelete(u)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, cursor: u.id ? 'pointer' : 'not-allowed',
+                  border: `1px solid ${hexA(p.danger, 0.35)}`, background: p.surface, opacity: u.id ? 1 : 0.4 }}>
+                <Icon name="trash" size={15} stroke={p.danger} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
+
+      {modal && (
+        <UserFormModal p={p} mode={modal.mode} user={modal.user} busy={busy}
+          onClose={() => setModal(null)} onSave={handleSave} />
+      )}
     </div>
+  );
+}
+
+// Create / edit user form rendered inside AdminModal.
+function UserFormModal({ p, mode, user, busy, onClose, onSave }) {
+  const [name, setName] = React.useState(user?.name || '');
+  const [email, setEmail] = React.useState(user?.email || '');
+  const [password, setPassword] = React.useState('');
+  const [roleVal, setRoleVal] = React.useState(user?.rawRole || 'student');
+  const [statusVal, setStatusVal] = React.useState(user?.status || 'active');
+  const isEdit = mode === 'edit';
+  const canSave = name.trim().length >= 2 && /.+@.+\..+/.test(email) && (isEdit || password.length >= 6);
+  return (
+    <AdminModal p={p} title={isEdit ? 'Sửa người dùng' : 'Thêm người dùng'} onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div><label style={lblStyle(p)}>HỌ TÊN</label><Field p={p} value={name} onChange={setName} placeholder="Nguyễn Văn A" style={{ marginTop: 8 }} /></div>
+        <div><label style={lblStyle(p)}>EMAIL</label><Field p={p} value={email} onChange={setEmail} placeholder="a@email.com" mono style={{ marginTop: 8 }} /></div>
+        <div><label style={lblStyle(p)}>MẬT KHẨU{isEdit ? ' (để trống nếu giữ nguyên)' : ''}</label>
+          <Field p={p} value={password} onChange={setPassword} type="password" placeholder={isEdit ? '••••••' : 'Tối thiểu 6 ký tự'} style={{ marginTop: 8 }} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div><label style={lblStyle(p)}>VAI TRÒ</label>
+            <Select p={p} value={roleVal} onChange={setRoleVal} style={{ marginTop: 8 }}
+              options={[{ value: 'student', label: 'Học viên' }, { value: 'teacher', label: 'Giáo viên' }, { value: 'admin', label: 'Quản trị viên' }]} /></div>
+          <div><label style={lblStyle(p)}>TRẠNG THÁI</label>
+            <Select p={p} value={statusVal} onChange={setStatusVal} style={{ marginTop: 8 }}
+              options={[{ value: 'active', label: 'Hoạt động' }, { value: 'inactive', label: 'Tạm ngưng' }]} /></div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+          <Btn p={p} variant="ghost" onClick={onClose}>Huỷ</Btn>
+          <Btn p={p} icon="check"
+            onClick={() => { if (canSave && !busy) onSave({ name: name.trim(), email: email.trim(), password, role: roleVal, status: statusVal }, mode, user?.id); }}>
+            {isEdit ? 'Lưu' : 'Tạo người dùng'}
+          </Btn>
+        </div>
+      </div>
+    </AdminModal>
   );
 }
 
@@ -312,6 +453,49 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const setT = setTweak || (() => {});
   const [sec, setSec] = React.useState('appearance');
   const card = (pad) => adCard(p, pad);
+
+  // Live system settings (org + misc) loaded from settingsApi.get; appearance
+  // stays driven by the theme tweaks (setTweak) for the instant live preview.
+  const ORG_DEFAULTS = { name: 'Vườn Văn', domain: 'vuonvan.edu.vn', timezone: 'hcm' };
+  // backend stores IANA tz; map to/from the design's single 'hcm' option.
+  const tzToOpt = (tz) => (tz === 'Asia/Ho_Chi_Minh' || !tz ? 'hcm' : tz);
+  const optToTz = (o) => (o === 'hcm' ? 'Asia/Ho_Chi_Minh' : o);
+  const [org, setOrg] = React.useState(ORG_DEFAULTS);
+  const [misc, setMisc] = React.useState({ allowGoogleLogin: true });
+  const [saving, setSaving] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const s = await settingsApi.get();
+        if (!alive || !s) return;
+        if (s.org) setOrg({
+          name: s.org.name ?? ORG_DEFAULTS.name,
+          domain: s.org.domain ?? '',
+          timezone: tzToOpt(s.org.timezone),
+        });
+        if (s.misc) setMisc({ allowGoogleLogin: s.misc.allowGoogleLogin !== false });
+      } catch { /* API down / not authed → keep defaults */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const saveSettings = React.useCallback(async () => {
+    setSaving(true);
+    try {
+      await settingsApi.update({
+        org: { name: org.name, domain: org.domain, timezone: optToTz(org.timezone) },
+        misc: { allowGoogleLogin: misc.allowGoogleLogin },
+      });
+      setSaved(true);
+      if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
+    } catch {
+      if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
+    }
+    setSaving(false);
+  }, [org, misc]);
   const SECTIONS = [
     { id: 'appearance', icon: 'image', label: 'Giao diện' },
     { id: 'org', icon: 'settings', label: 'Tổ chức' },
@@ -453,9 +637,22 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
               <Btn p={p} variant="ghost" icon="upload">Đổi logo</Btn>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div><label style={lblStyle(p)}>TÊN TRUNG TÂM</label><Field p={p} value="Vườn Văn" onChange={() => {}} style={{ marginTop: 8 }} /></div>
-              <div><label style={lblStyle(p)}>TÊN MIỀN</label><Field p={p} value="vuonvan.edu.vn" onChange={() => {}} mono style={{ marginTop: 8 }} /></div>
-              <div><label style={lblStyle(p)}>MÚI GIỜ</label><Select p={p} value="hcm" onChange={() => {}} style={{ marginTop: 8 }} options={[{ value: 'hcm', label: '(GMT+7) Hồ Chí Minh' }]} /></div>
+              <div><label style={lblStyle(p)}>TÊN TRUNG TÂM</label><Field p={p} value={org.name} onChange={(v) => setOrg((o) => ({ ...o, name: v }))} style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>TÊN MIỀN</label><Field p={p} value={org.domain} onChange={(v) => setOrg((o) => ({ ...o, domain: v }))} mono style={{ marginTop: 8 }} /></div>
+              <div><label style={lblStyle(p)}>MÚI GIỜ</label><Select p={p} value={org.timezone} onChange={(v) => setOrg((o) => ({ ...o, timezone: v }))} style={{ marginTop: 8 }} options={[{ value: 'hcm', label: '(GMT+7) Hồ Chí Minh' }]} /></div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 16, padding: '12px 14px', borderRadius: 12, border: `1px solid ${p.line}`, background: p.raise }}>
+              <span style={{ fontSize: 13.5, color: p.ink }}>Cho phép đăng nhập bằng Google (SSO)</span>
+              <Segmented p={p} value={!!misc.allowGoogleLogin} onChange={(v) => setMisc((m) => ({ ...m, allowGoogleLogin: v }))}
+                options={[{ value: true, label: 'Bật' }, { value: false, label: 'Tắt' }]} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 20, paddingTop: 16, borderTop: `1px solid ${p.lineSoft}` }}>
+              {saved && (
+                <span style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: p.ok, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="checkCircle" size={15} stroke={p.ok} /> Đã lưu
+                </span>
+              )}
+              <Btn p={p} icon="check" onClick={() => { if (!saving) saveSettings(); }}>Lưu thay đổi</Btn>
             </div>
           </section>
         )}
@@ -543,10 +740,15 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec !== 'appearance' && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+        {sec !== 'appearance' && sec !== 'org' && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+            {saved && (
+              <span style={{ fontFamily: FONTS.mono, fontSize: 11.5, color: p.ok, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="checkCircle" size={15} stroke={p.ok} /> Đã lưu
+              </span>
+            )}
             <Btn p={p} variant="ghost">Khôi phục mặc định</Btn>
-            <Btn p={p} icon="check">Lưu thay đổi</Btn>
+            <Btn p={p} icon="check" onClick={() => { if (!saving) saveSettings(); }}>Lưu thay đổi</Btn>
           </div>
         )}
       </div>

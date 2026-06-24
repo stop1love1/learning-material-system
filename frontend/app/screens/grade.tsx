@@ -5,6 +5,8 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
+import { attemptsApi } from '@/app/lib/api';
+import { loadSubmissions } from '@/app/lib/sync/load-submissions';
 import { RubricMatrix } from '@/app/screens/resources';
 
 // screens-grade.jsx — Grading queue + the grading workspace (rubric + numeric).
@@ -95,6 +97,25 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
 
   const reset = (i) => { setIdx(i); setSel({}); setScore(''); setFb(''); };
   const gradedCount = subs.filter((s) => s.status === 'graded').length;
+
+  // Persist a grade: best-effort hit the teacher grade endpoint, then refresh the
+  // queue from the API; always update the local store so the UI reflects it even
+  // when the backend is down / not authorised (mock fallback).
+  const persistGrade = async (s, finalScore, feedback) => {
+    if (s && s.attemptId) {
+      try {
+        await attemptsApi.grade(s.attemptId, {
+          answers: [],
+          totalScore: Number(finalScore) || 0,
+          feedback: feedback || '',
+        });
+        await loadSubmissions();
+      } catch {
+        // API down / not teacher → fall back to the in-memory store below.
+      }
+    }
+    if (LMS && s) LMS.gradeSubmission(s.id, finalScore, feedback);
+  };
 
   if (subs.length === 0) {
     return (
@@ -253,7 +274,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
             <Btn p={p} variant="ghost" full>Lưu nháp</Btn>
-            <Btn p={p} variant="accent" full icon="check" onClick={() => { LMS && LMS.gradeSubmission(sub.id, score || rubricScore || 0, fb); reset((idx + 1) % subs.length); }}>Lưu & bài tiếp</Btn>
+            <Btn p={p} variant="accent" full icon="check" onClick={() => { persistGrade(sub, score || rubricScore || 0, fb); reset((idx + 1) % subs.length); }}>Lưu & bài tiếp</Btn>
           </div>
         </div>
           </div>

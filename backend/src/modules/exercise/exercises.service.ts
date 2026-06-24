@@ -60,7 +60,13 @@ export class ExercisesService {
 
     const links = await this.exerciseQuestionModel.find({ exerciseId }).sort({ order: 1 }).lean();
     const questionIds = links.map((l) => l.questionId);
-    const questions = await this.questionModel.find({ _id: { $in: questionIds } }).lean();
+    // Populate the polymorphic per-type detail (options/correct answer/etc.) via
+    // `questionDetail` (refPath `questionModel`) so the student UI can render and
+    // the result can be computed.
+    const questions = await this.questionModel
+      .find({ _id: { $in: questionIds } })
+      .populate('questionDetail')
+      .lean();
     const questionMap = new Map(questions.map((q: any) => [q._id.toString(), q]));
 
     const items = links.map((link) => ({

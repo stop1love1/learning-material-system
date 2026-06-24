@@ -5,7 +5,7 @@ import { FONTS } from '@/app/theme/fonts';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/data/db';
 import { LMS } from '@/app/store/store';
-import { filesApi } from '@/app/lib/api';
+import { filesApi, exercisesApi, attemptsApi, selfAssessmentsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { lblStyle, tStripe } from '@/app/helpers/shared';
 import { DOC_TYPE_META, RubricMatrix } from '@/app/screens/resources';
@@ -327,7 +327,7 @@ function STaskRow({ task, p, go }) {
         <Icon name={task.status === 'graded' ? 'checkCircle' : 'assign'} size={20} stroke={tone} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14.5, fontWeight: 600, color: p.ink }}>{task.title}</div>
-        <div style={{ fontSize: 12, color: p.sub, marginTop: 4 }}>{task.class} · {task.type} · hạn {task.due}</div>
+        <div style={{ fontSize: 12, color: p.sub, marginTop: 4 }}>{[task.class || task.subject, task.type, task.due && `hạn ${task.due}`].filter(Boolean).join(' · ')}</div>
       </div>
       {task.score != null
         ? <div style={{ textAlign: 'center' }}><div style={{ fontFamily: FONTS.display, fontSize: 22, fontWeight: 600, color: p.ok }}>{task.score}</div><div style={{ fontSize: 10, color: p.faint }}>/{task.points}</div></div>
@@ -355,10 +355,99 @@ export function STasks({ p, t, go }) {
   );
 }
 
+// Map a populated API question (base row + per-type `questionDetail`) into the
+// shape QuestionView/levelMeta expect: { id, type, level, stem, options, answer, pairs }.
+// Mirrors the conventions in lib/sync/load-questions.ts. Returns null when the
+// base question is missing so callers can filter it out.
+function mapApiQuestion(link: any): any {
+  const q = link?.question;
+  if (!q) return null;
+  const detail = q.questionDetail || {};
+  let options: string[] = [];
+  let answer: any[] = [];
+  let pairs: [string, string][] = [];
+  try {
+    if (q.type === 'single') {
+      options = detail.options ?? [];
+      answer = detail.correctOptionIndex != null ? [detail.correctOptionIndex] : [];
+    } else if (q.type === 'multi') {
+      options = detail.options ?? [];
+      answer = detail.correctOptionIndices ?? [];
+    } else if (q.type === 'truefalse') {
+      answer = detail.isCorrect ? [0] : [1];
+    } else if (q.type === 'fill') {
+      answer = detail.answers ?? [];
+    } else if (q.type === 'match') {
+      pairs = (detail.pairs ?? []).map((pr: any) => [pr.left, pr.right] as [string, string]);
+    }
+  } catch { /* leave defaults — never crash the player on an odd detail shape */ }
+  return {
+    id: q._id,
+    questionId: q._id,
+    type: q.type,
+    level: q.level,
+    stem: q.content ?? q.title ?? '',
+    options,
+    answer,
+    pairs,
+  };
+}
+
+// Turn the QuestionView "do"-mode answer ({ choices } | { text }) into the
+// attempts submit payload entry, scoring choice/fill types client-side against
+// the mapped `answer` (essay/match left for teacher grading).
+function buildSubmitAnswer(q: any, raw: any): any {
+  const out: any = { questionId: q.questionId || q.id };
+  if (q.type === 'single' || q.type === 'multi' || q.type === 'truefalse') {
+    const choices = (raw && raw.choices) || [];
+    out.answer = choices;
+    const correct = q.answer || [];
+    out.isCorrect = choices.length === correct.length && correct.every((c: any) => choices.includes(c));
+  } else if (q.type === 'fill') {
+    const text = (raw && raw.text) || '';
+    out.answer = text;
+    const ok = (q.answer || []).map((s: any) => String(s).trim().toLowerCase());
+    out.isCorrect = ok.length > 0 && ok.includes(String(text).trim().toLowerCase());
+  } else {
+    // essay / match / other → submit the raw answer, leave grading to the teacher.
+    out.answer = raw && raw.text != null ? raw.text : raw;
+  }
+  return out;
+}
+
 // ── Student: do an assignment ────────────────────────────────────────────────
 export function STask({ p, t, ctx, setRoute, auth }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const task = DB.STUDENT_TASKS.find((x) => x.id === ctx.task) || DB.STUDENT_TASKS[0];
+
+  // ── All hooks first (Rules of Hooks): never declared behind an early return. ──
+  const [liveQs, setLiveQs] = React.useState(null);
+  const [exType, setExType] = React.useState(null); // backend type: 'quiz'|'essay'|'file'
+  const [cur, setCur] = React.useState(0);
+  const [answers, setAnswers] = React.useState({});
+  const [submitting, setSubmitting] = React.useState(false);
+  const [result, setResult] = React.useState(null); // { score, total, percent, graded }
+  const [ws, setWs] = React.useState(null);
+
+  // Live questions: GET /exercises/:id and map the polymorphic details. Best-effort —
+  // on 404/down/logged-out we fall back to the mock bank so the player still renders.
+  React.useEffect(() => {
+    if (!task) return;
+    let alive = true;
+    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null);
+    (async () => {
+      try {
+        const ex = await exercisesApi.get(task.id);
+        if (!alive || !ex) return;
+        const mapped = (ex.questions || []).map(mapApiQuestion).filter(Boolean);
+        setExType(ex.type ?? null);
+        if (mapped.length) setLiveQs(mapped);
+      } catch { /* keep null → mock fallback below */ }
+    })();
+    return () => { alive = false; };
+  }, [task?.id]);
+
+  // Conditional returns are safe below — all hooks have already run.
   if (auth && !auth.loggedIn) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 30, textAlign: 'center' }}>
@@ -376,17 +465,119 @@ export function STask({ p, t, ctx, setRoute, auth }) {
       </div>
     );
   }
-  const essay = task.type === 'Tự luận';
-  const qs = essay ? [DB.QUESTIONS.find((q) => q.id === 'q5')] : DB.QUESTIONS.filter((q) => ['q1', 'q2', 'q3', 'q6'].includes(q.id));
-  const [cur, setCur] = React.useState(0);
-  const [answers, setAnswers] = React.useState({});
-  const q = qs[cur];
+  if (!task) return null;
+
+  // Mock fallback questions (used when the live fetch yields nothing).
+  const mockEssay = task.type === 'Tự luận';
+  const mockQs = mockEssay
+    ? [DB.QUESTIONS.find((q) => q.id === 'q5')]
+    : DB.QUESTIONS.filter((q) => ['q1', 'q2', 'q3', 'q6'].includes(q.id));
+
+  const essay = exType ? exType === 'essay' : mockEssay;
+  const qs = (liveQs && liveQs.length ? liveQs : mockQs).filter(Boolean);
+  const cur2 = Math.min(cur, Math.max(0, qs.length - 1));
+  const q = qs[cur2];
   const answered = Object.keys(answers).length;
+
+  // start → submit → result against the attempt API. Best-effort: any failure
+  // (logged-out, offline, no questions) falls back to the mock submit + exit.
+  async function submitNow() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      if (!liveQs || !liveQs.length) throw new Error('no-live-questions');
+      const attempt = await attemptsApi.start(task.id);
+      const attemptId = attempt?._id;
+      if (!attemptId) throw new Error('no-attempt');
+      const payload = liveQs.map((qq) => buildSubmitAnswer(qq, answers[qq.id]));
+      await attemptsApi.submit(attemptId, payload);
+      let res: any = null;
+      try { res = await attemptsApi.result(attemptId); } catch { /* result optional */ }
+      const sub = res?.submission;
+      const correct = liveQs.reduce((n, qq) => {
+        const a = buildSubmitAnswer(qq, answers[qq.id]);
+        return n + (a.isCorrect ? 1 : 0);
+      }, 0);
+      const score = typeof sub?.totalScore === 'number'
+        ? sub.totalScore
+        : typeof sub?.totalGrades === 'number'
+        ? sub.totalGrades
+        : null;
+      setResult({
+        score,
+        correct,
+        total: liveQs.length,
+        percent: typeof sub?.percent === 'number' ? sub.percent : null,
+        graded: !!sub?.isGraded,
+        waiting: sub?.waitingGrades ?? sub?.numberOfEssays ?? 0,
+      });
+      try { await hydrateFor('s-task'); } catch { /* refresh DB best-effort */ }
+    } catch {
+      // Offline / logged-out / no live questions → mock submit, then exit.
+      const txt = essay ? ((answers[q?.id] && answers[q.id].text) || '') : '';
+      LMS && LMS.submitAssignment(task.id, {
+        text: essay ? (txt || 'Bài tự luận đã nộp.') : 'Học viên đã hoàn thành bài trắc nghiệm.',
+        wordcount: txt ? txt.length : 0,
+      });
+      setRoute('s-tasks');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Result screen (shown after a successful live submit).
+  if (result) {
+    const pct = result.percent != null
+      ? result.percent
+      : (result.total ? Math.round((result.correct / result.total) * 100) : 0);
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 30, textAlign: 'center' }}>
+        <div style={{ width: 72, height: 72, borderRadius: 20, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+          <Icon name={result.graded ? 'checkCircle' : 'send'} size={32} stroke={p.accent} />
+        </div>
+        <h2 style={{ fontFamily: serif, fontSize: 28, fontWeight: 800, margin: 0, color: p.ink, letterSpacing: -0.5 }}>Đã nộp bài!</h2>
+        <p style={{ fontSize: 14.5, color: p.sub, margin: '10px 0 22px', maxWidth: 420, lineHeight: 1.6 }}>
+          {result.graded
+            ? 'Bài của bạn đã được chấm.'
+            : result.waiting
+            ? 'Bài đã nộp. Phần tự luận đang chờ giáo viên chấm.'
+            : 'Bài của bạn đã được ghi nhận.'}
+        </p>
+        <div style={{ display: 'flex', gap: 22, marginBottom: 26 }}>
+          <div style={{ ...sCard(p, 18), minWidth: 120 }}>
+            <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 800, color: result.score != null && result.score >= (task.points || 10) * 0.8 ? p.ok : p.ink }}>
+              {result.score != null ? result.score : `${result.correct}/${result.total}`}
+            </div>
+            <div style={{ fontSize: 12, color: p.faint, marginTop: 4 }}>{result.score != null ? `điểm / ${task.points}` : 'câu đúng'}</div>
+          </div>
+          <div style={{ ...sCard(p, 18), minWidth: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Ring value={pct} size={56} thickness={6} p={p} color={p.accent} label={`${pct}%`} />
+            <div style={{ fontSize: 12, color: p.faint }}>tỉ lệ đúng</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn p={p} size="lg" icon="arrowLeft" onClick={() => setRoute('s-tasks')}>Về danh sách bài</Btn>
+        </div>
+      </div>
+    );
+  }
   const worksheets = [
     { id: 'ws1', name: 'Phiếu học tập — Đọc hiểu “Dế Mèn bênh vực kẻ yếu”' },
     { id: 'ws2', name: 'Phiếu luyện viết đoạn văn tả con vật' },
   ];
-  const [ws, setWs] = React.useState(null);
+
+  if (!q) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 30, textAlign: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 18, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+          <Icon name="assign" size={28} stroke={p.accent} />
+        </div>
+        <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 800, margin: 0, color: p.ink }}>Bài tập chưa có câu hỏi</h2>
+        <p style={{ fontSize: 14, color: p.sub, margin: '10px 0 22px', maxWidth: 400, lineHeight: 1.6 }}>Bài này hiện chưa có câu hỏi nào để làm. Hãy quay lại sau nhé.</p>
+        <Btn p={p} icon="arrowLeft" onClick={() => setRoute('s-tasks')}>Về danh sách bài</Btn>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -437,15 +628,15 @@ export function STask({ p, t, ctx, setRoute, auth }) {
             <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
               {qs.map((_, i) => (
                 <button key={i} onClick={() => setCur(i)} style={{ width: 38, height: 38, borderRadius: 10, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600,
-                  border: `1px solid ${i === cur ? p.accent : answers[qs[i].id] ? p.ok : p.line}`,
-                  background: i === cur ? p.accentSoft : answers[qs[i].id] ? hexA(p.ok, 0.08) : p.surface,
-                  color: i === cur ? p.accent : answers[qs[i].id] ? p.ok : p.sub }}>{i + 1}</button>
+                  border: `1px solid ${i === cur2 ? p.accent : answers[qs[i].id] ? p.ok : p.line}`,
+                  background: i === cur2 ? p.accentSoft : answers[qs[i].id] ? hexA(p.ok, 0.08) : p.surface,
+                  color: i === cur2 ? p.accent : answers[qs[i].id] ? p.ok : p.sub }}>{i + 1}</button>
               ))}
             </div>
           )}
           <div style={{ ...sCard(p, 28) }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <Tag p={p} color={p.accent}>{essay ? 'Tự luận' : `Câu ${cur + 1}/${qs.length}`}</Tag>
+              <Tag p={p} color={p.accent}>{essay ? 'Tự luận' : `Câu ${cur2 + 1}/${qs.length}`}</Tag>
               <Tag p={p} color={levelMeta(q.level).color}>{levelMeta(q.level).label}</Tag>
             </div>
             <div style={{ fontSize: 18, fontWeight: 500, color: p.ink, lineHeight: 1.5, marginBottom: 22 }}>{q.stem}</div>
@@ -453,13 +644,13 @@ export function STask({ p, t, ctx, setRoute, auth }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
-            {!essay && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setCur(Math.max(0, cur - 1))}>Câu trước</Btn>}
+            {!essay && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setCur(Math.max(0, cur2 - 1))}>Câu trước</Btn>}
             <div style={{ flex: 1, fontSize: 12.5, color: p.faint, textAlign: 'center', fontFamily: FONTS.mono }}>
               {essay ? `${(answers[q.id] && answers[q.id].text || '').length} ký tự` : `Đã trả lời ${answered}/${qs.length}`}
             </div>
-            {!essay && cur < qs.length - 1
-              ? <Btn p={p} iconRight="arrowRight" onClick={() => setCur(cur + 1)}>Câu sau</Btn>
-              : <Btn p={p} variant="accent" icon="send" onClick={() => { const txt = essay ? ((answers[q.id] && answers[q.id].text) || '') : ''; LMS && LMS.submitAssignment(task.id, { text: essay ? (txt || 'Bài tự luận đã nộp.') : 'Học viên đã hoàn thành bài trắc nghiệm.', wordcount: txt ? txt.length : 0 }); setRoute('s-tasks'); }}>Nộp bài</Btn>}
+            {!essay && cur2 < qs.length - 1
+              ? <Btn p={p} iconRight="arrowRight" onClick={() => setCur(cur2 + 1)}>Câu sau</Btn>
+              : <Btn p={p} variant="accent" icon="send" onClick={submitNow}>{submitting ? 'Đang nộp…' : 'Nộp bài'}</Btn>}
           </div>
         </div>
       </div>
@@ -649,12 +840,29 @@ export function SSelfCheck({ p, t }) {
   const rubric = DB.RUBRICS.find((r) => r.id === work.rubric) || DB.RUBRICS[0];
   const [sel, setSel] = React.useState({});
   const [note, setNote] = React.useState('');
+  const [savingSelf, setSavingSelf] = React.useState(false);
+  const [savedSelf, setSavedSelf] = React.useState(false);
   const selfScore = React.useMemo(() => {
     let sum = 0, any = false;
     rubric.criteria.forEach((c, ci) => { if (sel[ci] != null) { any = true; sum += c.weight * rubric.scale[sel[ci]].pct / 100; } });
     return any ? Math.round((sum / 10) * 10) / 10 : null;
   }, [sel, rubric]);
-  React.useEffect(() => { setSel({}); setNote(''); }, [workId]);
+  React.useEffect(() => { setSel({}); setNote(''); setSavedSelf(false); }, [workId]);
+
+  async function saveSelf() {
+    if (savingSelf) return;
+    setSavingSelf(true);
+    try {
+      await selfAssessmentsApi.create({
+        rubricId: rubric.id,
+        source: 'text',
+        totalPercent: selfScore != null ? Math.round(selfScore * 10) : undefined,
+        note,
+        text: note,
+      });
+    } catch { /* best-effort: keep the local reflection even if the save fails */ }
+    finally { setSavingSelf(false); setSavedSelf(true); }
+  }
 
   return (
     <div className="lms-content-pad" style={{ padding: '24px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
@@ -697,7 +905,9 @@ export function SSelfCheck({ p, t }) {
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Mình cần cải thiện điều gì cho lần sau…"
               style={{ width: '100%', minHeight: 96, marginTop: 8, padding: 12, borderRadius: 8, border: `1px solid ${p.line}`, background: p.surface,
                 color: p.ink, fontFamily: FONTS.sans, fontSize: 13.5, lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
-            <Btn p={p} icon="check" full style={{ marginTop: 12 }}>Lưu tự đánh giá</Btn>
+            <Btn p={p} icon="check" full style={{ marginTop: 12 }} onClick={saveSelf}>
+              {savingSelf ? 'Đang lưu…' : savedSelf ? 'Đã lưu ✓' : 'Lưu tự đánh giá'}
+            </Btn>
           </div>
         </div>
       </div>

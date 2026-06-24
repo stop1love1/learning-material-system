@@ -66,6 +66,27 @@ export const exercisesApi = {
   result: (attemptId: string) => api.get(`/attempts/${attemptId}/result`),
 };
 
+// Attempt lifecycle + teacher grading (all require a bearer token).
+export const attemptsApi = {
+  start: (exerciseId: string) => api.post<any>('/attempts/start', { exerciseId }),
+  submit: (attemptId: string, answers: any[]) => api.post<any>(`/attempts/${attemptId}/submit`, { answers }),
+  result: (attemptId: string) => api.get<any>(`/attempts/${attemptId}/result`),
+  // Teacher: persist per-answer grades + optional overall score/percent/feedback.
+  grade: (attemptId: string, body: any) => api.patch<any>(`/attempts/${attemptId}/grade`, body),
+  // Teacher: submitted-attempts queue (pagination envelope). pendingOnly filters
+  // to attempts whose submission is missing or not yet graded.
+  list: (q: Record<string, unknown> = {}) => api.get<any>(`/attempts${qs(q)}`),
+  // Student: my own attempts (status + score per exercise).
+  mine: () => api.get<any[]>('/attempts/me'),
+};
+// Alias to match the "submissions" naming used by the grading screen/loader.
+export const submissionsApi = attemptsApi;
+
+export const selfAssessmentsApi = {
+  list: (q: Record<string, unknown> = {}) => api.get<any>(`/self-assessments${qs(q)}`),
+  create: (body: any) => api.post('/self-assessments', body),
+};
+
 export const articlesApi = {
   list: (q: Record<string, unknown> = {}) => api.get<any>(`/articles${qs(q)}`, { auth: false }),
   get: (id: string) => api.get<any>(`/articles/${id}`, { auth: false }),

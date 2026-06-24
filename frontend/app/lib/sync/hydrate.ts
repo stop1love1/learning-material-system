@@ -10,6 +10,7 @@ import { loadUsers } from './load-users';
 import { loadQuestions } from './load-questions';
 import { loadRubrics } from './load-rubrics';
 import { loadExercises } from './load-exercises';
+import { loadSubmissions } from './load-submissions';
 
 type Loader = () => Promise<void>;
 
@@ -33,8 +34,8 @@ const BY_ROUTE: Record<string, Loader[]> = {
   'rubric-edit': [loadRubrics],
   assignments: [loadExercises],
   'assign-new': [loadExercises],
-  grade: [loadExercises],
-  'grade-one': [loadExercises],
+  grade: [loadExercises, loadSubmissions],
+  'grade-one': [loadExercises, loadSubmissions],
   'a-blog': [loadArticles],
   'a-users': [loadUsers],
   'a-overview': [loadLibrary, loadArticles, loadExercises, loadUsers],

@@ -8,10 +8,12 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { convertStringToObjectId } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
 import { QuestionType } from '../../enums';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SubmitAttemptDto } from './dto/submit-attempt.dto';
+import { GradeAttemptDto } from './dto/grade-attempt.dto';
+import { ListAttemptsDto } from './dto/list-attempts.dto';
 
 @Injectable()
 export class AttemptsService {
@@ -166,5 +168,164 @@ export class AttemptsService {
     ]);
 
     return { attempt, submission, studentQuestions };
+  }
+
+  /**
+   * Giáo viên/quản trị chấm một lượt làm: ghi điểm + nhận xét cho từng câu,
+   * tổng hợp lại submission và đánh dấu đã chấm.
+   */
+  async grade(attemptId: string, dto: GradeAttemptDto, graderId: string) {
+    const id = convertStringToObjectId(attemptId);
+    const attempt = await this.attemptModel.findById(id).lean();
+    if (!attempt) throw new NotFoundException('Không tìm thấy lượt làm');
+
+    // (1) Ghi điểm/nhận xét cho từng câu trả lời học viên.
+    for (const ans of dto.answers) {
+      const questionId = convertStringToObjectId(ans.questionId);
+      const patch: Record<string, unknown> = {};
+      if (ans.grades !== undefined) patch.grades = ans.grades;
+      if (ans.isCorrect !== undefined) patch.isCorrect = ans.isCorrect;
+      if (ans.feedback !== undefined) patch.feedback = ans.feedback;
+      if (Object.keys(patch).length === 0) continue;
+      await this.studentQuestionModel.updateOne({ attemptId: id, questionId }, { $set: patch });
+    }
+
+    // (2) Tổng hợp lại submission từ các câu đã chấm.
+    const studentQuestions = await this.studentQuestionModel.find({ attemptId: id }).lean();
+    const links = await this.exerciseQuestionModel
+      .find({ exerciseId: attempt.exerciseId })
+      .select('questionId')
+      .lean();
+    const essayDocs = await this.questionModel
+      .find({ _id: { $in: links.map((l) => l.questionId) }, type: QuestionType.Essay })
+      .select('_id')
+      .lean();
+    const essayIds = new Set(essayDocs.map((q) => String(q._id)));
+
+    let correct = 0;
+    let wrong = 0;
+    let notComplete = 0;
+    let waitingGrades = 0;
+    let numberOfEssays = 0;
+    let multipleChoiceGrades = 0;
+    let essayGrades: number | null = null;
+
+    for (const sq of studentQuestions) {
+      if (sq.isCorrect === true) correct += 1;
+      else if (sq.isCorrect === false) wrong += 1;
+      else notComplete += 1;
+
+      const isEssay = essayIds.has(String(sq.questionId));
+      if (isEssay) {
+        numberOfEssays += 1;
+        if (sq.grades !== null && sq.grades !== undefined) essayGrades = (essayGrades ?? 0) + sq.grades;
+        else waitingGrades += 1;
+      } else if (sq.grades !== null && sq.grades !== undefined) {
+        multipleChoiceGrades += sq.grades;
+      } else if (sq.isCorrect === null || sq.isCorrect === undefined) {
+        waitingGrades += 1;
+      }
+    }
+
+    const set: Record<string, unknown> = {
+      correct,
+      wrong,
+      notComplete,
+      waitingGrades,
+      numberOfEssays,
+      multipleChoiceGrades,
+      essayGrades,
+      isGraded: true,
+      gradedBy: convertStringToObjectId(graderId),
+      gradedAt: new Date(),
+    };
+    if (dto.totalScore !== undefined) set.totalScore = dto.totalScore;
+    if (dto.percent !== undefined) set.percent = dto.percent;
+    if (dto.feedback !== undefined) set.feedback = dto.feedback;
+
+    const submission = await this.submissionModel.findOneAndUpdate(
+      { attemptId: id },
+      { $set: set },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    return submission ? submission.toObject() : null;
+  }
+
+  /**
+   * Danh sách lượt làm để giáo viên/quản trị chấm — kèm tên học viên, bài tập,
+   * trạng thái và điểm của submission.
+   */
+  async listForGrading(dto: ListAttemptsDto) {
+    const { page, pageSize } = getPagination(undefined, dto.page, dto.pageSize);
+    const query: Record<string, any> = {
+      ...(dto.exerciseId ? { exerciseId: convertStringToObjectId(dto.exerciseId) } : {}),
+      ...(dto.studentId ? { studentId: convertStringToObjectId(dto.studentId) } : {}),
+      // Chỉ những lượt đã nộp mới cần chấm.
+      submittedAt: { $ne: null },
+    };
+
+    // pendingOnly: loại các lượt đã có submission đã chấm — đưa vào query TRƯỚC khi
+    // phân trang để total + số bản ghi mỗi trang đều chính xác.
+    if (dto.pendingOnly === 'true') {
+      const gradedSubs = await this.submissionModel.find({ isGraded: true }).select('attemptId').lean();
+      const gradedIds = gradedSubs.map((s: any) => s.attemptId).filter(Boolean);
+      if (gradedIds.length) query._id = { $nin: gradedIds };
+    }
+
+    const [attempts, total] = await Promise.all([
+      this.attemptModel
+        .find(query)
+        .sort({ submittedAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .populate({ path: 'studentId', select: 'name email avatar' })
+        .populate({ path: 'exerciseId', select: 'title type points' })
+        .lean(),
+      this.attemptModel.countDocuments(query),
+    ]);
+
+    const attemptIds = attempts.map((a: any) => a._id);
+    const submissions = await this.submissionModel.find({ attemptId: { $in: attemptIds } }).lean();
+    const subMap = new Map(submissions.map((s: any) => [s.attemptId.toString(), s]));
+
+    const records = attempts.map((a: any) => {
+      const submission = subMap.get(a._id.toString()) ?? null;
+      return {
+        ...a,
+        submission,
+        status: submission ? (submission.isGraded ? 'graded' : 'submitted') : 'submitted',
+      };
+    });
+
+    return buildPagination(records, total, page, pageSize);
+  }
+
+  /** Các lượt làm của chính học viên hiện tại (trạng thái + điểm submission). */
+  async listMine(userId: string) {
+    const studentId = convertStringToObjectId(userId);
+    const attempts = await this.attemptModel.find({ studentId }).sort({ createdAt: -1 }).lean();
+    if (!attempts.length) return [];
+    const submissions = await this.submissionModel
+      .find({ attemptId: { $in: attempts.map((a: any) => a._id) } })
+      .lean();
+    const subMap = new Map(submissions.map((s: any) => [s.attemptId.toString(), s]));
+    return attempts.map((a: any) => {
+      const submission = subMap.get(a._id.toString()) ?? null;
+      const status = a.submittedAt
+        ? submission && submission.isGraded
+          ? 'graded'
+          : 'submitted'
+        : 'in-progress';
+      return {
+        _id: a._id,
+        exerciseId: a.exerciseId,
+        attemptNumber: a.attemptNumber,
+        submittedAt: a.submittedAt ?? null,
+        status,
+        totalScore: submission ? submission.totalScore ?? null : null,
+        percent: submission ? submission.percent ?? null : null,
+      };
+    });
   }
 }

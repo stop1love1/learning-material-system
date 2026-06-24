@@ -57,6 +57,35 @@ export class Submission {
   @ApiProperty({ type: Number })
   submissionCount: number;
 
+  /** Đã được giáo viên chấm xong chưa. */
+  @Prop({ type: Boolean, default: false, index: true })
+  @ApiProperty({ type: Boolean })
+  isGraded: boolean;
+
+  /** Tổng điểm sau khi giáo viên chấm (ghi đè nếu được cung cấp). */
+  @Prop({ type: Number, min: 0, default: null })
+  @ApiProperty({ type: Number, nullable: true })
+  totalScore: number | null;
+
+  /** Phần trăm 0–100. */
+  @Prop({ type: Number, min: 0, max: 100, default: null })
+  @ApiProperty({ type: Number, nullable: true })
+  percent: number | null;
+
+  /** Nhận xét chung của giáo viên. */
+  @Prop({ type: String, default: null })
+  @ApiProperty({ type: String, nullable: true })
+  feedback: string | null;
+
+  /** Người chấm. */
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null })
+  @ApiProperty({ type: String, nullable: true })
+  gradedBy: Types.ObjectId | null;
+
+  @Prop({ type: Date, default: null })
+  @ApiProperty({ type: Date, nullable: true })
+  gradedAt: Date | null;
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

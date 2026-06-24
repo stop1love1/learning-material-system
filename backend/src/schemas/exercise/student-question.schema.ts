@@ -43,6 +43,11 @@ export class StudentQuestion {
   @ApiProperty({ type: Number, nullable: true })
   grades: number | null;
 
+  /** Nhận xét của giáo viên cho câu này (khi chấm). */
+  @Prop({ type: String, default: null })
+  @ApiProperty({ type: String, nullable: true })
+  feedback: string | null;
+
   /** Thứ tự lựa chọn sau khi xáo trộn (nếu có). */
   @Prop({ type: [Number], default: [] })
   @ApiProperty({ type: [Number] })
