@@ -10,13 +10,12 @@ const KEY = 'lms-state-v3';
 const COLLS = ['ASSIGNMENTS', 'QUESTIONS', 'RUBRICS', 'SUBMISSIONS', 'STUDENT_TASKS', 'DOCS', 'ARTICLES', 'DOWNLOADS'];
 const hasWindow = typeof window !== 'undefined';
 
-// hydrate from a previous session
-if (hasWindow) {
-  try {
-    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved) COLLS.forEach((k) => { if (Array.isArray(saved[k])) DB[k] = saved[k]; });
-  } catch {}
-}
+// NOTE: we intentionally do NOT restore persisted collections at module load.
+// Restoring on the client diverged the hydration DB from the server-rendered
+// (pure-mock) DB and triggered React #418 hydration mismatches on every screen.
+// Live data now comes from the API loaders (post-mount); the mock fallback is
+// session-only. persist() below is kept write-only (never read back) for the
+// in-session offline-mock flow; it never feeds a render.
 
 let ver = 0;
 const subs = new Set<(v: number) => void>();

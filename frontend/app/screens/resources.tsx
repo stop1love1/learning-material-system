@@ -16,6 +16,7 @@ export const DOC_TYPE_META = {
   pdf: { icon: 'docs', label: 'PDF' }, slide: { icon: 'image', label: 'Slide' },
   audio: { icon: 'play', label: 'Audio' }, video: { icon: 'video', label: 'Video' },
   image: { icon: 'image', label: 'Ảnh' }, doc: { icon: 'docs', label: 'Tài liệu' },
+  link: { icon: 'docs', label: 'Liên kết' },
 };
 
 // ── Document repository ──────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ export function TDocs({ p, t }) {
               <div style={{ fontSize: 11.5, color: p.faint, textAlign: 'center' }}>hoặc bấm để chọn tệp</div>
             </div>
             {docs.map((d) => {
-              const m = DOC_TYPE_META[d.type];
+              const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
                 <div key={d.id} className="lms-card" style={{ ...rCard(p, 0), overflow: 'hidden', cursor: 'pointer' }}>
                   <div style={{ height: 96, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -106,7 +107,7 @@ export function TDocs({ p, t }) {
         ) : (
           <div style={rCard(p, 0)}>
             {docs.map((d, i) => {
-              const m = DOC_TYPE_META[d.type];
+              const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
                 <div key={d.id} className="lms-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 18px', cursor: 'pointer',
                   borderTop: i ? `1px solid ${p.lineSoft}` : 'none' }}>
@@ -217,9 +218,10 @@ export function TRubrics({ p, t, setRoute, go }) {
 // ── Rubric builder ───────────────────────────────────────────────────────────
 export function TRubricEdit({ p, t, ctx, setRoute }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
-  const base = ctx.rubric ? DB.RUBRICS.find((r) => r.id === ctx.rubric) : DB.RUBRICS[0];
-  const [rubric, setRubric] = React.useState(JSON.parse(JSON.stringify(base)));
-  const totalW = rubric.criteria.reduce((s, c) => s + c.weight, 0);
+  const EMPTY_RUBRIC = { id: '', name: 'Rubric mới', used: 0, levels: 0, criteria: [], scale: [] };
+  const base = (ctx.rubric ? DB.RUBRICS.find((r) => r.id === ctx.rubric) : DB.RUBRICS[0]) || EMPTY_RUBRIC;
+  const [rubric, setRubric] = React.useState(() => JSON.parse(JSON.stringify(base)));
+  const totalW = (rubric.criteria || []).reduce((s, c) => s + (c.weight || 0), 0);
 
   const patchCrit = (i, k, v) => { const n = { ...rubric, criteria: rubric.criteria.map((c, j) => j === i ? { ...c, [k]: v } : c) }; setRubric(n); };
   const addCrit = () => setRubric({ ...rubric, criteria: [...rubric.criteria, { name: 'Tiêu chí mới', weight: 0, desc: '' }] });
