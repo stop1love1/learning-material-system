@@ -4,6 +4,17 @@ import { DB } from '@/app/data/db';
 import { filesApi, foldersApi, getToken } from '@/app/lib/api';
 import { formatRelativeVi } from '@/app/helpers/format-date';
 
+// Extract a Google Drive file id from a /file/d/<id>/view or ?id=<id> URL.
+function driveId(url: string): string | null {
+  const m = (url || '').match(/\/d\/([A-Za-z0-9_-]{10,})/) || (url || '').match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : null;
+}
+// Drive thumbnail (PDF first page / image / video poster). lh3 is where Drive redirects.
+function driveThumb(url: string, size = 480): string | null {
+  const id = driveId(url);
+  return id ? `https://lh3.googleusercontent.com/d/${id}=w${size}` : null;
+}
+
 export async function loadLibrary(): Promise<void> {
   try {
     // Fetch folders FIRST so files can be grouped by their real folder name
@@ -38,6 +49,7 @@ export async function loadLibrary(): Promise<void> {
       downloads: f.downloadCount ?? 0,
       url: f.url ?? '',
       desc: f.description ?? '', // HTML description (per-file), rendered in the reader.
+      thumb: f.thumbnailUrl || driveThumb(f.url), // Drive thumbnail (falls back to icon on error).
     }));
 
     if (getToken()) {

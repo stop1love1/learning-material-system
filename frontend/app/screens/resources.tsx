@@ -150,9 +150,10 @@ export function TDocs({ p, t }) {
               const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
               return (
                 <div key={d.id} className="lms-card" style={{ ...rCard(p, 0), overflow: 'hidden', cursor: 'pointer' }}>
-                  <div style={{ height: 96, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ height: 96, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                     <Icon name={m.icon} size={32} stroke={p.accent} sw={1.4} />
-                    <span style={{ position: 'absolute', top: 10, left: 10 }}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
+                    {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    <span style={{ position: 'absolute', top: 10, left: 10, zIndex: 2, borderRadius: 7, background: d.thumb ? 'rgba(255,255,255,.92)' : 'transparent', backdropFilter: d.thumb ? 'blur(4px)' : undefined, boxShadow: d.thumb ? '0 1px 3px rgba(0,0,0,.12)' : undefined }}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
                   </div>
                   <div style={{ padding: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 34 }}>{d.name}</div>
