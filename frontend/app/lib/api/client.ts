@@ -1,6 +1,5 @@
 'use client';
-// Minimal typed fetch client for the LMS backend API.
-// Base URL từ NEXT_PUBLIC_API_URL (mặc định http://localhost:3001/api).
+import { setServerOnline } from './connection';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 const TOKEN_KEY = 'lms-token';
@@ -34,11 +33,20 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
   const token = getToken();
   if (auth && token) h.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, {
-    ...rest,
-    headers: h,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...rest,
+      headers: h,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // fetch only rejects on a network-level failure (server down / unreachable).
+    setServerOnline(false);
+    throw new ApiError('Network request failed', 0, null);
+  }
+  // Got an HTTP response (even an error status) → the server is reachable.
+  setServerOnline(true);
 
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
