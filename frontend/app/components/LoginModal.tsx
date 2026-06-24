@@ -114,6 +114,12 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
       <div
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !busy) {
+            e.preventDefault();
+            submit();
+          }
+        }}
         style={{
           width: 'min(420px, 100%)',
           maxHeight: '92vh',
