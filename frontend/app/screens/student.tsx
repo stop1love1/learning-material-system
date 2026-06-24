@@ -814,7 +814,6 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
           ? <div className="lms-rich" style={{ fontSize: 15.5, lineHeight: 1.9, color: p.ink }} dangerouslySetInnerHTML={{ __html: d.desc }} />
           : <p style={{ fontSize: 15.5, lineHeight: 1.9, color: p.sub, margin: 0 }}>Tài liệu được chia sẻ từ kho học liệu Ngữ văn. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
         <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-          {d.url && <Btn p={p} icon="book" onClick={() => window.open(d.url, '_blank')}>Mở trên Google Drive</Btn>}
           <Btn p={p} variant="soft" icon="assign" onClick={() => setRoute('s-tasks')}>Làm bài tập liên quan</Btn>
           <Btn p={p} variant="ghost" icon="rubric" onClick={() => setRoute('s-selfcheck')}>Tự đánh giá</Btn>
         </div>
