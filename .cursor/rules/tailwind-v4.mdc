@@ -1,0 +1,58 @@
+---
+description: Tailwind CSS v4 class syntax for the frontend (avoid IDE/linter warnings)
+globs: frontend/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Tailwind v4 — class syntax (frontend)
+
+This project uses **Tailwind v4** (`@import "tailwindcss"`). Prefer theme utilities and v4 syntax; avoid legacy arbitrary forms the linter flags.
+
+## Z-index — use theme scale, not `z-[n]`
+
+```tsx
+// ❌ z-[100], z-[2], z-[60]
+// ✅
+className="z-100"
+className="z-2"
+```
+
+## CSS variables — parentheses, not `var()`
+
+```tsx
+// ❌ bg-[var(--lms-surface-glass)]
+// ✅ bg-(--lms-surface-glass)
+
+// ❌ bg-[image:var(--lms-hero-gradient)]
+// ✅ bg-(image:--lms-hero-gradient)
+```
+
+## `!important` — suffix `!`, not prefix
+
+```tsx
+// ❌ !p-0, !p-[22px]
+// ✅ p-0!, p-[22px]!
+```
+
+## Negative offsets / positions
+
+```tsx
+// ❌ outline-offset-[-4px]  →  ✅ -outline-offset-4
+// ❌ -top-[5px], -right-[5px], -left-[2.5px]
+// ✅ top-[-5px], right-[-5px], left-[-2.5px]
+```
+
+## Grid — use `grid-cols-*`, not raw property arbitrary
+
+```tsx
+// ❌ [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]
+// ✅ grid-cols-[repeat(auto-fill,minmax(240px,1fr))]
+```
+
+## LMS tokens
+
+Use `lms-*` utilities (`bg-lms-surface`, `text-lms-ink`, `border-lms-line`) from `globals.css` `@theme` + `ThemeProvider` CSS vars — not hardcoded prototype colors.
+
+## After editing classes
+
+Run IDE diagnostics or `pnpm lint` on touched files; fix Tailwind suggestions before committing.
