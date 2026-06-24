@@ -1,7 +1,5 @@
 'use client';
-// Live loader: DB.ADMIN_STATS ← GET /stats/overview (admin/teacher; 401/403 swallowed).
-// Replaces the hardcoded dashboard numbers (users/docs/trend/enrollTrend/342…).
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { statsApi } from '@/app/lib/api';
 
 export async function loadStats(): Promise<void> {
@@ -25,6 +23,10 @@ export async function loadStats(): Promise<void> {
     s.topFiles = Array.isArray(o.topFiles) ? o.topFiles : [];
     s.live = true; // screens use this to prefer real numbers over mock deltas
   } catch {
-    return;
+    const s = DB.ADMIN_STATS;
+    s.users = 0; s.docs = 0; s.exercises = 0; s.articles = 0; s.questions = 0;
+    s.attempts = 0; s.submissions = 0; s.graded = 0; s.ungraded = 0;
+    s.trends = {}; s.enrollTrend = []; s.enrollDates = [];
+    s.activityTotal = 0; s.activityTrend = null; s.topFiles = []; s.live = false;
   }
 }

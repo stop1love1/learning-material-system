@@ -1,6 +1,5 @@
 'use client';
-// Live loader: DB.ADMIN_REPORTS ← GET /stats/reports (admin/teacher; errors swallowed).
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { statsApi } from '@/app/lib/api';
 
 export async function loadReports(): Promise<void> {
@@ -8,6 +7,6 @@ export async function loadReports(): Promise<void> {
     const r: any = await statsApi.reports();
     DB.ADMIN_REPORTS = r;
   } catch {
-    return;
+    DB.ADMIN_REPORTS = null;
   }
 }

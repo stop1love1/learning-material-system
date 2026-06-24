@@ -1,7 +1,6 @@
 'use client';
-// Live loader: DB.ADMIN_USERS ← GET /users (admin-only; 401/403 swallowed).
 
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { usersApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
@@ -19,8 +18,7 @@ export async function loadUsers(): Promise<void> {
     const res: any = await usersApi.list({ pageSize: 200 });
     const records: any[] = (res as any)?.records ?? [];
 
-    // Surface the real user total (pagination envelope) into the admin KPI so
-    // the "Người dùng" tile/card no longer show the mock 2480.
+    // Surface real user total from pagination envelope into admin KPI.
     const total = typeof (res as any)?.total === 'number' ? (res as any).total : records.length;
     DB.ADMIN_STATS.users = total;
 
@@ -32,7 +30,6 @@ export async function loadUsers(): Promise<void> {
       status: u.status,
     }));
   } catch {
-    // API down / not admin (401/403) → leave DB.ADMIN_USERS unchanged.
-    return;
+    DB.ADMIN_USERS = [];
   }
 }

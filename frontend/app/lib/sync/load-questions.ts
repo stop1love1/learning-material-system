@@ -1,10 +1,6 @@
 'use client';
-// Loads DB.QUESTIONS from the backend question bank (scoped to the current user).
-// GET /questions returns base rows only (no per-type detail), so we fetch each
-// question's detail (GET /questions/:id) to fill options/answer/pairs, resolve
-// topic ids → names via the topics map, and default the author to the current
-// user (the list is JWT-scoped to them). Best-effort; falls back to mock on error.
-import { DB } from '@/app/data/db';
+// GET /questions is base rows only — each GET /questions/:id fills options/answer/pairs.
+import { DB } from '@/app/store/store';
 import { authApi, questionsApi, topicsApi } from '@/app/lib/api';
 import { formatRelativeVi } from '@/app/helpers/format-date';
 
@@ -13,7 +9,6 @@ export async function loadQuestions(): Promise<void> {
     const res = (await questionsApi.list({ pageSize: 200 })) as any;
     const records: any[] = res?.records ?? [];
 
-    // Best-effort topic name map (id → title). Swallow failures.
     const topicMap: Record<string, string> = {};
     try {
       const topics = (await topicsApi.list()) as any[];
@@ -67,6 +62,6 @@ export async function loadQuestions(): Promise<void> {
       }),
     );
   } catch {
-    return;
+    DB.QUESTIONS = [];
   }
 }

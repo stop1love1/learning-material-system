@@ -1,19 +1,8 @@
 'use client';
-// Live loader: fills DB.SUBMISSIONS from the teacher attempts queue
-// (GET /attempts — @Roles[Teacher,Admin]). Best-effort: 401/403/API-down → mock.
-//
-// The grading screens (screens/grade.tsx) read DB.SUBMISSIONS with these fields:
-//   id, assignmentId (← exercise _id, matches DB.ASSIGNMENTS[].id after loadExercises),
-//   studentId, name (student display name), code (short id badge), at (submitted-at label),
-//   status ('graded' | 'ungraded'), score (when graded), wordcount, text (essay body).
-// The list endpoint only gives the queue + summary scores (no per-answer body), so
-// `text`/`wordcount` are left blank here; the per-question content comes from the
-// result endpoint when an individual attempt is opened.
-
-import { DB } from '@/app/data/db';
+// List endpoint has no per-answer body — text/wordcount filled when opening GET /attempts/:id/result.
+import { DB } from '@/app/store/store';
 import { attemptsApi } from '@/app/lib/api';
 
-// "24/06 · 19:42" style submitted-at label, matching the mock vocabulary.
 function atVi(iso?: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -25,7 +14,6 @@ function atVi(iso?: string | null): string {
   return `${dd}/${mm} · ${hh}:${mi}`;
 }
 
-// Short student code badge (e.g. "HS…2407") from the populated student id.
 function codeFrom(student: any): string {
   const id = student?._id;
   if (!id) return '';
@@ -37,12 +25,11 @@ export async function loadSubmissions(): Promise<void> {
   try {
     const res: any = await attemptsApi.list({ pageSize: 200 });
     const records: any[] = (res as any)?.records ?? [];
-    if (!Array.isArray(records) || records.length === 0) return;
 
-    (DB as any).SUBMISSIONS = records.map((a: Record<string, any>) => {
-      const ex = a.exerciseId; // populated { _id, title, type, points }
-      const student = a.studentId; // populated { _id, name, email, avatar } or null (guest)
-      const sub = a.submission; // Submission | null
+    (DB as any).SUBMISSIONS = (Array.isArray(records) ? records : []).map((a: Record<string, any>) => {
+      const ex = a.exerciseId;
+      const student = a.studentId;
+      const sub = a.submission;
       const graded = a.status === 'graded' || !!sub?.isGraded;
       const score =
         typeof sub?.totalScore === 'number'
@@ -67,7 +54,6 @@ export async function loadSubmissions(): Promise<void> {
       };
     });
   } catch {
-    // API down / not teacher (401/403) → leave DB.SUBMISSIONS as mock.
-    return;
+    (DB as any).SUBMISSIONS = [];
   }
 }

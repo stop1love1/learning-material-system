@@ -1,6 +1,5 @@
 'use client';
-// Live-data loader: fills DB.ARTICLES from the backend articles list endpoint.
-import { DB } from '@/app/data/db';
+import { DB } from '@/app/store/store';
 import { articlesApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
@@ -21,9 +20,9 @@ export async function loadArticles(): Promise<void> {
       views: a.viewCount ?? 0,
       cover: a.cover ?? 'clay',
       body: a.content ? [a.content] : [],
-      html: a.content ?? '', // content is stored as HTML; rendered via dangerouslySetInnerHTML.
+      html: a.content ?? '',
     }));
   } catch {
-    return;
+    DB.ARTICLES = [];
   }
 }

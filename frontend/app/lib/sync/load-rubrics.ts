@@ -1,8 +1,6 @@
 'use client';
-// Loads DB.RUBRICS from the backend rubric module (scoped to the current user).
-// GET /rubrics now embeds levels + criterions per row (server-side aggregation),
-// so we map the list payload directly — no per-id detail fetch (no N+1).
-import { DB } from '@/app/data/db';
+// GET /rubrics embeds levels + criterions per row — no per-id detail fetch (no N+1).
+import { DB } from '@/app/store/store';
 import { rubricsApi } from '@/app/lib/api';
 
 export async function loadRubrics(): Promise<void> {
@@ -30,6 +28,6 @@ export async function loadRubrics(): Promise<void> {
       };
     });
   } catch {
-    return;
+    DB.RUBRICS = [];
   }
 }

@@ -1,18 +1,47 @@
 'use client';
-// store.ts — tiny live data store so the LMS runs a full end-to-end flow.
-// Mutates the DB collections in place + persists to localStorage, and notifies
-// React via useLMS() so every screen re-renders on any change. Ported from
-// store.jsx (the prototype's window.LMS + window.useLMS).
 import React from 'react';
-import { DB } from '@/app/data/db';
+
+type Rec = Record<string, any>;
+
+const QTYPES: Rec[] = [
+  { id: 'single', label: 'Trắc nghiệm 1 đáp án', icon: 'checkCircle', short: '1 đáp án' },
+  { id: 'multi', label: 'Trắc nghiệm nhiều đáp án', icon: 'check', short: 'Nhiều đáp án' },
+  { id: 'truefalse', label: 'Đúng / Sai', icon: 'target', short: 'Đúng/Sai' },
+  { id: 'fill', label: 'Điền khuyết', icon: 'pen', short: 'Điền khuyết' },
+  { id: 'essay', label: 'Tự luận (tập làm văn)', icon: 'docs', short: 'Tự luận' },
+  { id: 'match', label: 'Nối / kéo thả', icon: 'link', short: 'Nối/kéo thả' },
+];
+const LEVELS: Rec[] = [
+  { id: 'easy', label: 'Nhận biết', color: '#4f8a44' },
+  { id: 'medium', label: 'Thông hiểu', color: '#b4842a' },
+  { id: 'hard', label: 'Vận dụng', color: '#b35338' },
+];
+
+export const DB: Record<string, any> = {
+  QTYPES,
+  LEVELS,
+  QUESTIONS: [] as Rec[],
+  DOCS: [] as Rec[],
+  DOC_FOLDERS: ['Tất cả'] as string[],
+  DOWNLOADS: [] as string[],
+  RUBRICS: [] as Rec[],
+  ASSIGNMENTS: [] as Rec[],
+  SUBMISSIONS: [] as Rec[],
+  NOTICES: [] as Rec[],
+  SCHEDULE: [] as Rec[],
+  STUDENT_TASKS: [] as Rec[],
+  ARTICLES: [] as Rec[],
+  ADMIN_STATS: {
+    users: 0, docs: 0, exercises: 0, articles: 0, questions: 0,
+    attempts: 0, submissions: 0, graded: 0, ungraded: 0,
+    enrollTrend: [] as number[], enrollDates: [] as string[],
+  } as Rec,
+  ADMIN_USERS: [] as Rec[],
+};
 
 const LEGACY_KEY = 'lms-state-v3';
 const hasWindow = typeof window !== 'undefined';
 
-// Live data comes entirely from the API loaders (app/lib/sync). The in-memory
-// mock DB is only a session-only offline fallback and is NEVER persisted.
-// 'lms-state-v3' used to be a write-only cache that was never read back — remove
-// any stale copy so nothing lingers in the user's localStorage.
 if (hasWindow) { try { localStorage.removeItem(LEGACY_KEY); } catch {} }
 
 let ver = 0;
@@ -34,7 +63,7 @@ export const LMS = {
   },
 
   addQuestion(q: Record<string, any>) {
-    DB.QUESTIONS.unshift({ id: uid('q'), uses: 0, updated: 'Vừa xong', author: 'Cô Mai Anh', topic: 'Mới tạo', ...q });
+    DB.QUESTIONS.unshift({ id: uid('q'), uses: 0, updated: 'Vừa xong', author: 'Cô Phương Thanh', topic: 'Mới tạo', ...q });
     bump();
   },
 
@@ -48,7 +77,6 @@ export const LMS = {
   addAssignment(a: Record<string, any>) {
     const id = uid('a');
     DB.ASSIGNMENTS.unshift({ id, submitted: 0, graded: 0, status: 'open', ...a });
-    // surface it to the student immediately
     DB.STUDENT_TASKS.unshift({ id, title: a.title, class: a.class, type: a.type, due: a.due,
       dueIn: a.dueIn || 'Mới giao', status: 'todo', points: a.points, questions: a.questions });
     bump();
@@ -83,7 +111,7 @@ export const LMS = {
   },
 
   addDoc(d: Record<string, any>) {
-    DB.DOCS.unshift({ id: uid('d'), type: 'doc', size: '1,0 MB', folder: 'Tư liệu', updated: 'Vừa xong', by: 'Cô Mai Anh', downloads: 0, ...d });
+    DB.DOCS.unshift({ id: uid('d'), type: 'doc', size: '1,0 MB', folder: 'Tư liệu', updated: 'Vừa xong', by: 'Cô Phương Thanh', downloads: 0, ...d });
     bump();
   },
 
@@ -102,7 +130,6 @@ export const LMS = {
   },
 };
 
-/** Subscribe a component to any LMS mutation — forces a re-render on bump(). */
 export function useLMS() {
   const set = React.useState(0)[1];
   React.useEffect(() => {

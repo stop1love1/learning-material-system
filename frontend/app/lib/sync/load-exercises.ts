@@ -1,19 +1,6 @@
 'use client';
-// Live loader: fills DB.ASSIGNMENTS and DB.STUDENT_TASKS from the exercises API.
-//
-// The exercise list (GET /exercises) gives the per-exercise meta + questionCount,
-// but NOT how many attempts were submitted/graded. Those counts come from the
-// attempts queue (GET /attempts — @Roles[Teacher,Admin]). We fetch that queue
-// best-effort and aggregate per-exercise submitted/graded/total; a student (or a
-// logged-out visitor) gets 401/403 there, so the counts simply stay 0 and every
-// task status stays 'todo' (matching the previous hardcoded behaviour).
-//
-// For STUDENT_TASKS we additionally try to flip each task's status from the
-// CURRENT user's own attempts (todo → done/graded) when those attempts are
-// visible in the queue (teacher viewing their own, or any future student-scoped
-// response). When no attempt is present the task stays 'todo'.
-
-import { DB } from '@/app/data/db';
+// GET /exercises has meta only — submitted/graded counts come from GET /attempts (401 for students → 0).
+import { DB } from '@/app/store/store';
 import { authApi, exercisesApi, attemptsApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
@@ -30,8 +17,7 @@ function typeVi(t: string): string {
   }
 }
 
-// Map backend ExerciseStatus (draft|open|closing|closed) to the values the
-// teacher list (assign.tsx) understands (open|closing|done).
+// Map backend ExerciseStatus (draft|open|closing|closed) → assign.tsx values (open|closing|done).
 function statusVi(s: string): string {
   switch (s) {
     case 'closed':
@@ -45,7 +31,6 @@ function statusVi(s: string): string {
   }
 }
 
-// Vietnamese relative due label from an ISO due date, matching the mock vocab.
 function dueInVi(due: string | Date | null | undefined): string {
   if (!due) return '';
   const d = new Date(due);
@@ -58,7 +43,6 @@ function dueInVi(due: string | Date | null | undefined): string {
   return `Còn ${diff} ngày`;
 }
 
-// Aggregated per-exercise attempt stats from the teacher attempts queue.
 type ExStat = { submitted: number; graded: number; total: number };
 
 export async function loadExercises(): Promise<void> {
@@ -66,8 +50,6 @@ export async function loadExercises(): Promise<void> {
     const res: any = await exercisesApi.list({ pageSize: 200 });
     const records: any[] = (res as any)?.records ?? [];
 
-    // ── Best-effort: derive submitted/graded/total per exercise + the current
-    //    user's own per-task status from the attempts queue. 401/403/down → {}.
     const stats: Record<string, ExStat> = {};
     const myStatus: Record<string, string> = {}; // exerciseId → 'done' | 'graded'
     try {
@@ -87,7 +69,6 @@ export async function loadExercises(): Promise<void> {
         s.total += 1;
         if (a?.submittedAt) s.submitted += 1; // queue only returns submitted, but guard anyway
         if (graded) s.graded += 1;
-        // Flip this exercise's task status for the logged-in student.
         const studentId = String(a?.studentId?._id ?? a?.studentId ?? '');
         if (myId && studentId === myId) {
           if (graded) myStatus[exId] = 'graded';
@@ -126,9 +107,7 @@ export async function loadExercises(): Promise<void> {
         graded: st?.graded ?? 0,
         status: statusVi(e.status),
         points: e.points ?? 10,
-        // questionCount is added by the backend list when available; 0 otherwise.
         questions: e.questionCount ?? 0,
-        // attemptCount/learnerCount come from the backend list (public read).
         attempts: e.attemptCount ?? 0,
         learners: e.learnerCount ?? 0,
       };
@@ -137,13 +116,11 @@ export async function loadExercises(): Promise<void> {
     (DB as any).STUDENT_TASKS = records.map((e: Record<string, any>) => ({
       id: e._id,
       title: e.title,
-      // Neutral label, never the class-filter key (see above).
       class: '',
       subject: e.subject ?? '',
       type: typeVi(e.type),
       due: formatDateVi(e.dueDate),
       dueIn: dueInVi(e.dueDate),
-      // Derive from the current user's own attempt when present, else 'todo'.
       status: myStatus[String(e._id)] ?? 'todo',
       points: e.points ?? 10,
       questions: e.questionCount ?? 0,
@@ -151,6 +128,7 @@ export async function loadExercises(): Promise<void> {
       learners: e.learnerCount ?? 0,
     }));
   } catch {
-    return;
+    (DB as any).ASSIGNMENTS = [];
+    (DB as any).STUDENT_TASKS = [];
   }
 }
