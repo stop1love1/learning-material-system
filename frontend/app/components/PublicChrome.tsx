@@ -160,11 +160,13 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Sáng/tối" />
           {auth && auth.loggedIn ? (
             <div className="lms-hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 10px 4px 5px', borderRadius: 20, border: `1px solid ${p.line}`, background: p.surface }}>
+              <div
+                title={auth.name}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9, border: `1px solid ${p.line}`, background: p.surface }}
+              >
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: p.accentSoft, color: p.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: serif, fontWeight: 700, fontSize: 12 }}>
                   {auth.initials}
                 </div>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: p.ink }}>{auth.name.split(' ').slice(-1)[0]}</span>
               </div>
               <IconBtn name="logout" p={p} onClick={() => auth.logout()} title="Đăng xuất" />
             </div>
