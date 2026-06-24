@@ -37,6 +37,7 @@ export async function loadLibrary(): Promise<void> {
       by: (f.userId && typeof f.userId === 'object' ? f.userId.name : undefined) ?? '—',
       downloads: f.downloadCount ?? 0,
       url: f.url ?? '',
+      desc: f.description ?? '', // HTML description (per-file), rendered in the reader.
     }));
 
     if (getToken()) {

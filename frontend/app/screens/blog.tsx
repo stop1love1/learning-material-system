@@ -99,11 +99,13 @@ export function SArticle({ p, t, ctx, setRoute, go }) {
           <div style={{ fontSize: 12, color: p.faint }}>{a.date} · {a.read} đọc</div></div>
       </div>
       <div style={{ height: 240, borderRadius: 14, background: `linear-gradient(135deg, ${hue}, ${hexA(hue, 0.5)})`, marginBottom: 28 }} />
-      <div>
-        {a.body.map((para, i) => (
-          <p key={i} style={{ fontSize: 16.5, lineHeight: 1.95, color: p.ink, margin: '0 0 20px', textWrap: 'pretty' }}>{para}</p>
-        ))}
-      </div>
+      {a.html
+        ? <div className="lms-rich" style={{ fontSize: 16.5, lineHeight: 1.95, color: p.ink }} dangerouslySetInnerHTML={{ __html: a.html }} />
+        : <div>
+            {(a.body || []).map((para, i) => (
+              <p key={i} style={{ fontSize: 16.5, lineHeight: 1.95, color: p.ink, margin: '0 0 20px', textWrap: 'pretty' }}>{para}</p>
+            ))}
+          </div>}
       <div style={{ display: 'flex', gap: 10, padding: '22px 0', borderTop: `1px solid ${p.line}`, borderBottom: `1px solid ${p.line}`, margin: '8px 0 32px' }}>
         <Btn p={p} variant="soft" icon="book" onClick={() => setRoute('s-docs')}>Xem học liệu liên quan</Btn>
         <Btn p={p} variant="ghost" icon="assign" onClick={() => setRoute('s-tasks')}>Luyện bài tập</Btn>

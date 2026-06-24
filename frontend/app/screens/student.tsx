@@ -658,6 +658,9 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   );
 }
 
+// Strip HTML tags + decode common entities → plain text (for card previews).
+const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
 // ── Student library (searchable) ─────────────────────────────────────────────
 export function SDocs({ p, t, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
@@ -694,7 +697,7 @@ export function SDocs({ p, t, go }) {
       ) : (
         <div className="reveal" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))', gap: 16 }}>
           {list.map((d) => {
-            const m = DOC_TYPE_META[d.type];
+            const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
             return (
               <div key={d.id} onClick={() => go('s-doc', { doc: d.id })} className="bento-tile hovlift" style={{ overflow: 'hidden', border: `1px solid ${p.line}`, background: p.surface, cursor: 'pointer' }}>
                 <div style={{ height: 96, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -704,6 +707,7 @@ export function SDocs({ p, t, go }) {
                 </div>
                 <div style={{ padding: 14 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 36 }}>{d.name}</div>
+                  {d.desc && <div style={{ fontSize: 11.5, color: p.sub, lineHeight: 1.45, marginTop: 6, maxHeight: 34, overflow: 'hidden' }}>{stripHtml(d.desc).slice(0, 110)}</div>}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
                     <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: p.faint }}>{d.size} · ↓ {d.downloads}</span>
                     <Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Đọc</Btn>
@@ -767,7 +771,7 @@ function MediaBlock({ d, p, m }) {
 export function SDocReader({ p, t, ctx, setRoute, go }) {
   const serif = FONTS.heading[t.headingFont] || FONTS.display;
   const d = DB.DOCS.find((x) => x.id === ctx.doc) || DB.DOCS[0];
-  const m = DOC_TYPE_META[d.type];
+  const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
   const related = DB.DOCS.filter((x) => x.folder === d.folder && x.id !== d.id).slice(0, 4);
   return (
     <div className="lms-content-pad" style={{ padding: '22px 30px 40px', maxWidth: 1480, margin: '0 auto' }}>
@@ -795,12 +799,22 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
             }}>Tải về</Btn>}
       </div>
 
+      {(() => {
+        const preview = d.url ? d.url.replace(/\/view.*$/, '/preview') : '';
+        return preview ? (
+          <div style={{ ...sCard(p, 0), marginBottom: 18, overflow: 'hidden' }}>
+            <iframe src={preview} title={d.name} style={{ width: '100%', height: 600, border: 'none', display: 'block', background: p.raise }} allow="autoplay" />
+          </div>
+        ) : (
+          <div style={{ ...sCard(p, 30), marginBottom: 18 }}><MediaBlock d={d} p={p} m={m} /></div>
+        );
+      })()}
       <div style={{ ...sCard(p, 30), marginBottom: 22 }}>
-        <MediaBlock d={d} p={p} m={m} />
-        {DOC_BODY.map((para, i) => (
-          <p key={i} style={{ fontSize: 15.5, lineHeight: 1.9, color: p.ink, margin: i ? '0 0 16px' : '0 0 16px', textWrap: 'pretty' }}>{para}</p>
-        ))}
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+        {d.desc
+          ? <div className="lms-rich" style={{ fontSize: 15.5, lineHeight: 1.9, color: p.ink }} dangerouslySetInnerHTML={{ __html: d.desc }} />
+          : <p style={{ fontSize: 15.5, lineHeight: 1.9, color: p.sub, margin: 0 }}>Tài liệu được chia sẻ từ kho học liệu Ngữ văn. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
+        <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+          {d.url && <Btn p={p} icon="book" onClick={() => window.open(d.url, '_blank')}>Mở trên Google Drive</Btn>}
           <Btn p={p} variant="soft" icon="assign" onClick={() => setRoute('s-tasks')}>Làm bài tập liên quan</Btn>
           <Btn p={p} variant="ghost" icon="rubric" onClick={() => setRoute('s-selfcheck')}>Tự đánh giá</Btn>
         </div>
@@ -811,7 +825,7 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
           <h3 style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, margin: '0 0 14px', color: p.ink }}>Học liệu liên quan</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px,1fr))', gap: 14 }}>
             {related.map((r) => {
-              const rm = DOC_TYPE_META[r.type];
+              const rm = DOC_TYPE_META[r.type] || DOC_TYPE_META.doc;
               return (
                 <div key={r.id} onClick={() => go('s-doc', { doc: r.id })} className="lms-card lms-row" style={{ ...sCard(p, 14), display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 8, background: p.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

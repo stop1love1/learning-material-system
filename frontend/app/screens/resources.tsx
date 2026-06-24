@@ -19,6 +19,9 @@ export const DOC_TYPE_META = {
   link: { icon: 'docs', label: 'Liên kết' },
 };
 
+// Strip HTML tags + decode common entities → plain text (for card previews).
+export const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
 // ── Document repository ──────────────────────────────────────────────────────
 export function TDocs({ p, t }) {
   useLMS(); // re-render on download/upload mock mutations
@@ -92,6 +95,7 @@ export function TDocs({ p, t }) {
                   </div>
                   <div style={{ padding: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: p.ink, lineHeight: 1.35, minHeight: 34 }}>{d.name}</div>
+                    {d.desc && <div style={{ fontSize: 11, color: p.sub, lineHeight: 1.4, marginTop: 5, maxHeight: 31, overflow: 'hidden' }}>{stripHtml(d.desc).slice(0, 100)}</div>}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, fontSize: 11, color: p.faint, fontFamily: FONTS.mono }}>
                       <span>{d.size}</span><span>↓ {d.downloads}</span>
                     </div>

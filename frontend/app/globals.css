@@ -81,3 +81,24 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 @media (max-width: 1080px) { .lms-hide-sm { display: none !important; } }
 @media (max-width: 920px) { .lms-foot-grid { grid-template-columns: 1fr 1fr !important; } }
 @media (max-width: 560px) { .lms-foot-grid { grid-template-columns: 1fr !important; } }
+
+/* ── Rich text (HTML from CKEditor) rendering ─────────────────────────────── */
+.lms-rich > *:first-child { margin-top: 0; }
+.lms-rich p { margin: 0 0 1em; }
+.lms-rich h1, .lms-rich h2, .lms-rich h3, .lms-rich h4 { margin: 1.2em 0 .5em; font-weight: 700; line-height: 1.3; }
+.lms-rich h2 { font-size: 1.3em; } .lms-rich h3 { font-size: 1.12em; }
+.lms-rich ul, .lms-rich ol { margin: 0 0 1em; padding-left: 1.5em; }
+.lms-rich ul { list-style: disc; } .lms-rich ol { list-style: decimal; }
+.lms-rich li { margin: .25em 0; }
+.lms-rich strong, .lms-rich b { font-weight: 700; }
+.lms-rich em, .lms-rich i { font-style: italic; }
+.lms-rich a { color: #2563eb; text-decoration: underline; }
+.lms-rich blockquote { margin: 0 0 1em; padding: .4em 1em; border-left: 3px solid rgba(0,0,0,.18); opacity: .9; }
+.lms-rich img { max-width: 100%; border-radius: 8px; }
+.lms-rich table { border-collapse: collapse; margin: 0 0 1em; }
+.lms-rich td, .lms-rich th { border: 1px solid rgba(0,0,0,.15); padding: 6px 10px; }
+
+/* CKEditor: keep the editor inside our cards, themed-neutral */
+.ck-editor__editable { min-height: 260px; }
+.ck.ck-editor { width: 100%; }
+.ck-editor__editable_inline { border-radius: 0 0 8px 8px !important; }

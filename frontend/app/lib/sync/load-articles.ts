@@ -20,6 +20,7 @@ export async function loadArticles(): Promise<void> {
       read: (a.readMinutes ?? 4) + ' phút',
       cover: a.cover ?? 'clay',
       body: a.content ? [a.content] : [],
+      html: a.content ?? '', // content is stored as HTML; rendered via dangerouslySetInnerHTML.
     }));
   } catch {
     return;

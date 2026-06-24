@@ -27,6 +27,33 @@ const fileTypeOf = (n) => {
   return 'link';
 };
 
+// Distinct, HTML descriptions per file — derived from the folder + a cleaned topic.
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const cleanName = (name) =>
+  name.replace(/\.[a-z0-9]+$/i, '')
+    .replace(/^(Đề bài:|Sơ đồ tư duy|Sơ đồ:|Thẻ:|Clip:|Tranh:|Trò chơi trên|Trò chơi:|Phiếu học tập:|Phiếu |\[Podcast tản văn\]\s*)/i, '')
+    .replace(/\s+/g, ' ').trim();
+const descHtml = (folder, name) => {
+  const t = esc(cleanName(name));
+  // Lead with the DISTINCTIVE topic (bold) so each card's snippet is visibly different,
+  // then a category-specific explanation.
+  const tail = {
+    'Bảng kiểm': 'Bảng kiểm tự đánh giá &amp; chỉnh sửa bài viết — giúp học sinh tự rà soát bài theo từng tiêu chí trước khi nộp (lớp 4–5, Kết nối tri thức).',
+    'Đề bài': 'Đề bài Tập làm văn lớp 4–5 (bộ Kết nối tri thức). Học sinh đọc kĩ đề, lập dàn ý rồi viết bài hoàn chỉnh.',
+    'Tiêu chí đánh giá': 'Bảng tiêu chí chấm bài — dùng để giáo viên và học sinh đánh giá bài viết theo thang điểm rõ ràng.',
+    'Phiếu học tập': 'Phiếu học tập luyện Tiếng Việt, có kèm phần đáp án để học sinh tự đối chiếu sau khi làm.',
+    'Ngữ liệu mẫu': 'Ngữ liệu đọc tham khảo — dùng cho hoạt động đọc hiểu, cảm thụ văn học hoặc đọc mở rộng.',
+    'Sơ đồ tư duy': 'Sơ đồ tư duy hỗ trợ lập ý và triển khai bài viết một cách mạch lạc.',
+    'Thẻ từ, bảng từ': 'Thẻ từ / bảng từ giúp mở rộng vốn từ và luyện đặt câu.',
+    'Tranh ảnh, clip': 'Học liệu nghe – nhìn (podcast/clip) tạo hứng thú và minh hoạ sinh động cho bài học.',
+    'Trò chơi học tập': 'Trò chơi học tập giúp ôn luyện kiến thức một cách vui vẻ, nhẹ nhàng.',
+    'Hồ sơ học tập': 'Mẫu hồ sơ học tập của học sinh — minh hoạ cách lưu giữ sản phẩm và theo dõi tiến bộ.',
+  };
+  return `<p><strong>${t}.</strong> ${tail[folder] || ''}</p>`;
+};
+// Plain text (paragraphs split by newlines) -> simple HTML.
+const paraHtml = (txt) => (txt || '').split(/\n+/).map((s) => s.trim()).filter(Boolean).map((s) => `<p>${s}</p>`).join('');
+
 let TOKEN = '';
 async function api(method, path, body) {
   const h = { 'Content-Type': 'application/json' };
@@ -67,6 +94,7 @@ async function main() {
         await api('POST', '/files', {
           name, fileType: fileTypeOf(name), source: 'external', url,
           folderId, subject: grp.subject || 'Tiếng Việt', tags: [grp.folder],
+          description: descHtml(grp.folder, name),
         });
         nFiles++;
       } catch (e) { fileErr++; if (fileErr <= 5) console.log('  file ERR', name, e.message); }
@@ -80,7 +108,7 @@ async function main() {
   const C = JSON.parse(fs.readFileSync(contentPath, 'utf8'));
 
   let nArt = 0;
-  for (const a of (C.articles || [])) { try { await api('POST', '/articles', a); nArt++; } catch (e) { console.log('  article ERR', e.message); } }
+  for (const a of (C.articles || [])) { try { await api('POST', '/articles', { ...a, content: paraHtml(a.content) }); nArt++; } catch (e) { console.log('  article ERR', e.message); } }
   console.log(`Articles: ${nArt}`);
 
   let nRub = 0;
