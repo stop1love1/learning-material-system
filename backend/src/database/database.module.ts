@@ -57,6 +57,8 @@ import {
   ArticleSchema,
   Settings,
   SettingsSchema,
+  Schedule,
+  ScheduleSchema,
 } from '../schemas';
 
 // Model name (X.name) is what `ref`/`refPath` point to, so registering with
@@ -90,13 +92,9 @@ const MODELS: ModelDefinition[] = [
   { name: SelfAssessment.name, schema: SelfAssessmentSchema },
   { name: Article.name, schema: ArticleSchema },
   { name: Settings.name, schema: SettingsSchema },
+  { name: Schedule.name, schema: ScheduleSchema },
 ];
 
-/**
- * Registers every collection model once and re-exports MongooseModule so any
- * feature module can inject models with @InjectModel(...). Global so it doesn't
- * need importing everywhere.
- */
 @Global()
 @Module({
   imports: [MongooseModule.forFeature(MODELS)],
