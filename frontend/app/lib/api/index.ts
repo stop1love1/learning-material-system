@@ -1,5 +1,4 @@
 'use client';
-// Typed endpoint helpers for every backend resource. Public reads pass { auth:false }.
 import { api, qs } from './client';
 
 export * from './client';
@@ -67,17 +66,13 @@ export const exercisesApi = {
   result: (attemptId: string) => api.get(`/attempts/${attemptId}/result`),
 };
 
-// Attempt lifecycle + teacher grading (all require a bearer token).
 export const attemptsApi = {
   start: (exerciseId: string) => api.post<any>('/attempts/start', { exerciseId }),
   submit: (attemptId: string, answers: any[]) => api.post<any>(`/attempts/${attemptId}/submit`, { answers }),
   result: (attemptId: string) => api.get<any>(`/attempts/${attemptId}/result`),
-  // Teacher: persist per-answer grades + optional overall score/percent/feedback.
   grade: (attemptId: string, body: any) => api.patch<any>(`/attempts/${attemptId}/grade`, body),
-  // Teacher: submitted-attempts queue (pagination envelope). pendingOnly filters
-  // to attempts whose submission is missing or not yet graded.
+  // pendingOnly: attempts whose submission is missing or not yet graded.
   list: (q: Record<string, unknown> = {}) => api.get<any>(`/attempts${qs(q)}`),
-  // Student: my own attempts (status + score per exercise).
   mine: () => api.get<any[]>('/attempts/me'),
 };
 // Alias to match the "submissions" naming used by the grading screen/loader.
@@ -109,13 +104,19 @@ export const usersApi = {
   remove: (id: string) => api.del(`/users/${id}`),
 };
 
-// Dashboard + báo cáo: số liệu thật tổng hợp từ backend (admin/teacher).
 export const statsApi = {
   overview: () => api.get<any>('/stats/overview'),
   reports: () => api.get<any>('/stats/reports'),
 };
 
-// Bảng tin hoạt động (tổng hợp sự kiện gần đây).
 export const notificationsApi = {
   list: (limit = 20) => api.get<any[]>(`/notifications${qs({ limit })}`),
+};
+
+export const scheduleApi = {
+  today: () => api.get<any[]>('/schedule/today'),
+  list: () => api.get<any[]>('/schedule'),
+  create: (body: any) => api.post('/schedule', body),
+  update: (id: string, body: any) => api.patch(`/schedule/${id}`, body),
+  remove: (id: string) => api.del(`/schedule/${id}`),
 };

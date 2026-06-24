@@ -1,8 +1,4 @@
 'use client';
-// hydrate.ts — orchestrator that fills the in-memory DB with LIVE backend data
-// for the current route, then bumps the store so subscribed screens re-render.
-// Each loader is best-effort and swallows its own errors, so the app keeps using
-// mock data when the API is unavailable / the user is logged out.
 import { LMS } from '@/app/store/store';
 import { loadLibrary } from './load-library';
 import { loadArticles } from './load-articles';
@@ -14,12 +10,11 @@ import { loadSubmissions } from './load-submissions';
 import { loadStats } from './load-stats';
 import { loadReports } from './load-reports';
 import { loadNotifications } from './load-notifications';
+import { loadSchedule } from './load-schedule';
 
 type Loader = () => Promise<void>;
 
-// Which collections each route needs (by the design's internal routeKey).
 const BY_ROUTE: Record<string, Loader[]> = {
-  // public
   home: [loadLibrary, loadArticles],
   's-docs': [loadLibrary],
   's-doc': [loadLibrary],
@@ -29,7 +24,6 @@ const BY_ROUTE: Record<string, Loader[]> = {
   's-selfcheck': [loadRubrics],
   blog: [loadArticles],
   article: [loadArticles],
-  // admin
   docs: [loadLibrary],
   bank: [loadQuestions],
   'bank-edit': [loadQuestions],
@@ -41,7 +35,7 @@ const BY_ROUTE: Record<string, Loader[]> = {
   'grade-one': [loadExercises, loadSubmissions],
   'a-blog': [loadArticles],
   'a-users': [loadUsers],
-  'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers],
+  'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers, loadSchedule],
   'a-reports': [loadReports],
   notify: [loadNotifications],
 };
