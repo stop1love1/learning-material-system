@@ -1,8 +1,3 @@
-// types.ts — shared type contracts for the Học Viện / Vườn Văn LMS port.
-// The design is a faithful port of an inline-style React prototype; these types
-// describe the two values threaded through every screen: the resolved color
-// `Palette` and the live `Tweaks` (appearance settings).
-
 export type AccentKey = 'grass' | 'sky' | 'coral' | 'amber' | 'grape' | 'custom';
 export type HeadingFont = 'baloo' | 'jakarta' | 'sora' | 'system';
 export type Density = 'compact' | 'regular';
@@ -10,7 +5,6 @@ export type AssignFlow = 'wizard' | 'single';
 export type RubricStyle = 'matrix' | 'cards';
 export type Role = 'user' | 'admin';
 
-/** Live appearance settings (persisted to localStorage, edited via the Tweaks panel). */
 export interface Tweaks {
   accent: AccentKey | string;
   accentHex: string;
@@ -23,7 +17,6 @@ export interface Tweaks {
   [key: string]: unknown;
 }
 
-/** Resolved color tokens for the current light/dark + accent combination. */
 export interface Palette {
   dark: boolean;
   bg: string;
@@ -45,9 +38,11 @@ export interface Palette {
   info: string;
   glow: string;
   shadow: string;
+  contrastBg: string;
+  contrastText: string;
+  contrastBorder: string;
 }
 
-/** Auth state passed into the public site + gated student screens. */
 export interface Auth {
   loggedIn: boolean;
   ready: boolean; // true sau khi khôi phục phiên (tránh nháy gate khi đang xác thực)
@@ -59,7 +54,6 @@ export interface Auth {
   logout: () => void;
 }
 
-/** Navigation context shared between screens (selected class / assignment / etc). */
 export interface Ctx {
   class: string;
   assignment: string;
@@ -68,7 +62,6 @@ export interface Ctx {
   [key: string]: string;
 }
 
-/** Props every routed screen receives from <App/>. */
 export interface ScreenProps {
   p: Palette;
   t: Tweaks;

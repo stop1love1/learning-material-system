@@ -1,10 +1,7 @@
 'use client';
-// ThemeProvider — global appearance state for the LMS (accent, font, density,
-// dark mode, layout variants). Replaces the per-screen theme state the old
-// single-route App owned; now any route reads it via useLmsTheme(). Persists to
-// localStorage and stays mounted across navigations (lives in the root layout).
 import React from 'react';
-import { palette } from '@/app/theme/palette';
+import { FONTS } from '@/app/theme/fonts';
+import { palette, paletteCssVars } from '@/app/theme/palette';
 import type { Palette, Tweaks } from '@/app/types';
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -57,7 +54,6 @@ export function useLmsTheme(): ThemeContextValue {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [t, setT] = React.useState<Tweaks>(TWEAK_DEFAULTS);
 
-  // Apply persisted theme after mount (avoids SSR/CSR hydration mismatch).
   React.useEffect(() => {
     const saved = loadTheme();
     if (Object.keys(saved).length) setT((prev) => ({ ...prev, ...saved }));
@@ -82,6 +78,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const dark = !!t.dark;
   const p = palette(dark, t);
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const vars = {
+      ...paletteCssVars(p, dark),
+      '--lms-heading-font': FONTS.heading[t.headingFont] || FONTS.display,
+    };
+    Object.entries(vars).forEach(([key, value]) => root.style.setProperty(key, value));
+  }, [dark, t.accent, t.accentHex, t.headingFont]);
 
   const value: ThemeContextValue = { t, p, dark, setTweak, setDark, resetTheme, defaults: TWEAK_DEFAULTS };
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

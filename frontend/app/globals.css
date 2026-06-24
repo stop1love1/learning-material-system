@@ -1,25 +1,80 @@
 @import "tailwindcss";
 
-/* ── Base reset (from the LMS Học Viện prototype) ─────────────────────────── */
+@theme {
+  --color-lms-bg: var(--lms-bg);
+  --color-lms-surface: var(--lms-surface);
+  --color-lms-raise: var(--lms-raise);
+  --color-lms-sink: var(--lms-sink);
+  --color-lms-ink: var(--lms-ink);
+  --color-lms-sub: var(--lms-sub);
+  --color-lms-faint: var(--lms-faint);
+  --color-lms-line: var(--lms-line);
+  --color-lms-line-soft: var(--lms-line-soft);
+  --color-lms-accent: var(--lms-accent);
+  --color-lms-accent-soft: var(--lms-accent-soft);
+  --color-lms-active-bg: var(--lms-active-bg);
+  --color-lms-rail-bg: var(--lms-rail-bg);
+  --color-lms-ok: var(--lms-ok);
+  --color-lms-warn: var(--lms-warn);
+  --color-lms-danger: var(--lms-danger);
+  --color-lms-info: var(--lms-info);
+  --color-lms-contrast: var(--lms-contrast-bg);
+  --color-lms-contrast-text: var(--lms-contrast-text);
+  --font-lms-heading: var(--lms-heading-font), sans-serif;
+}
+
+/* Default (light) theme values so the --lms-* variables exist on the very first
+   paint — before ThemeProvider's effect runs. Without these, var(--lms-line)
+   is undefined on SSR/first paint and borders fall back to currentColor (black),
+   causing a black-border flash on reload. ThemeProvider overrides these at runtime
+   for dark mode / accent changes. Keep in sync with palette() light + paletteCssVars(). */
+:root {
+  --lms-bg: #f7f4ef;
+  --lms-surface: #fffdfa;
+  --lms-surface-glass: rgba(255, 253, 250, 0.82);
+  --lms-raise: #faf6f0;
+  --lms-sink: #efe9df;
+  --lms-ink: rgba(31, 24, 16, 0.9);
+  --lms-sub: rgba(31, 24, 16, 0.6);
+  --lms-faint: rgba(31, 24, 16, 0.42);
+  --lms-line: #ece5d9;
+  --lms-line-soft: #f3ede3;
+  --lms-accent: #3f9d5c;
+  --lms-accent-soft: rgba(63, 157, 92, 0.1);
+  --lms-active-bg: rgba(63, 157, 92, 0.12);
+  --lms-rail-bg: #fffdfa;
+  --lms-ok: #3f9d5c;
+  --lms-warn: #d99413;
+  --lms-danger: #e0563f;
+  --lms-info: #3f9d5c;
+  --lms-glow: rgba(120, 82, 44, 0.1);
+  --lms-shadow: 0 2px 10px rgba(80, 55, 30, 0.05), 0 10px 30px rgba(80, 55, 30, 0.06);
+  --lms-contrast-bg: #1a1610;
+  --lms-contrast-text: #fffdfa;
+  --lms-contrast-border: #1a1610;
+  --lms-danger-border: rgba(224, 86, 63, 0.35);
+  --lms-hero-gradient: radial-gradient(120% 120% at 100% 0%, rgba(63, 157, 92, 0.18) 0%, #fffdfa 55%);
+  --lms-card-gradient: linear-gradient(160deg, rgba(63, 157, 92, 0.1), #fffdfa 80%);
+  --lms-feature-gradient: linear-gradient(135deg, #3f9d5c, rgba(63, 157, 92, 0.55));
+}
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; padding: 0; }
 body {
   font-family: var(--font-bvp), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Be Vietnam Pro', sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  background: #f7f4ef;
-  color: rgba(31, 24, 16, 0.9);
+  background: var(--lms-bg, #f7f4ef);
+  color: var(--lms-ink, rgba(31, 24, 16, 0.9));
 }
 input, textarea, select, button { font-family: inherit; }
 textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 
-/* ── Scrollbars ───────────────────────────────────────────────────────────── */
 .lms-scroll { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.18) transparent; }
 .lms-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
 .lms-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.16); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
 .lms-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); background-clip: content-box; }
 
-/* ── Cards / rows / nav / links / buttons (airy, soft elevation) ──────────── */
 .lms-card { transition: box-shadow .22s, border-color .22s, transform .22s;
   box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 14px rgba(0,0,0,.04); }
 .lms-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.07), 0 12px 32px rgba(0,0,0,.08); transform: translateY(-1px); }
@@ -35,7 +90,6 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 
 @media (prefers-reduced-motion: reduce) { .lms-card, .lms-row { transition: none; } }
 
-/* ── Bento grid (public pages) ────────────────────────────────────────────── */
 .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
 .bento .col-3 { grid-column: span 3; } .bento .col-4 { grid-column: span 4; }
 .bento .col-5 { grid-column: span 5; } .bento .col-6 { grid-column: span 6; }
@@ -45,11 +99,9 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 .bento-tile.hovlift:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,.10); }
 @media (max-width: 920px) { .bento > * { grid-column: span 12 !important; grid-row: auto !important; } }
 
-/* scroll/mount reveal — content is always visible (Motion was dropped on port) */
 .reveal { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1 !important; transform: none !important; } }
 
-/* ── Responsive ───────────────────────────────────────────────────────────── */
 .lms-rail-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.42); z-index: 55; opacity: 0; transition: opacity .25s; }
 @media (max-width: 960px) {
   .lms-rail { position: fixed !important; left: 0; top: 0; bottom: 0; height: 100% !important;
@@ -82,7 +134,6 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 @media (max-width: 920px) { .lms-foot-grid { grid-template-columns: 1fr 1fr !important; } }
 @media (max-width: 560px) { .lms-foot-grid { grid-template-columns: 1fr !important; } }
 
-/* ── Rich text (HTML from CKEditor) rendering ─────────────────────────────── */
 .lms-rich > *:first-child { margin-top: 0; }
 .lms-rich p { margin: 0 0 1em; }
 .lms-rich h1, .lms-rich h2, .lms-rich h3, .lms-rich h4 { margin: 1.2em 0 .5em; font-weight: 700; line-height: 1.3; }
@@ -98,7 +149,6 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 .lms-rich table { border-collapse: collapse; margin: 0 0 1em; }
 .lms-rich td, .lms-rich th { border: 1px solid rgba(0,0,0,.15); padding: 6px 10px; }
 
-/* CKEditor: keep the editor inside our cards, themed-neutral */
 .ck-editor__editable { min-height: 260px; }
 .ck.ck-editor { width: 100%; }
 .ck-editor__editable_inline { border-radius: 0 0 8px 8px !important; }

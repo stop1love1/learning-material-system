@@ -1,7 +1,3 @@
-// palette.ts — color tokens for the LMS. Light-first enterprise palette with a
-// warm paper background, an admin-selectable accent, and a dark variant.
-// Ported from the prototype's theme.jsx (exports: palette, hexA, lighten).
-
 import type { Palette, Tweaks } from '@/app/types';
 
 const ACCENTS: Record<string, { light: string; dark: string }> = {
@@ -12,8 +8,6 @@ const ACCENTS: Record<string, { light: string; dark: string }> = {
   grape: { light: '#8a52d6', dark: '#a87ce6' },
 };
 
-/** Lighten a hex toward white by `amt` (0..1) — derives a dark-mode-friendly
- *  variant for an admin-chosen custom accent. */
 export function lighten(hex: string, amt: number): string {
   const h = String(hex).replace('#', '');
   if (h.length < 6) return hex;
@@ -26,7 +20,6 @@ export function lighten(hex: string, amt: number): string {
   return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-/** Hex → rgba() with the given alpha. */
 export function hexA(hex: string, a: number): string {
   const h = hex.replace('#', '');
   const r = parseInt(h.slice(0, 2), 16),
@@ -47,6 +40,9 @@ export function palette(dark: boolean, t: Partial<Tweaks> = {}): Palette {
   }
   const accent = dark ? accDark : accLight;
   const accentSoft = hexA(accent, dark ? 0.2 : 0.1);
+  const contrast = dark
+    ? { bg: '#2e2a22', text: 'rgba(255,252,247,0.92)', border: '#454038' }
+    : { bg: '#1a1610', text: '#fffdfa', border: '#1a1610' };
   return dark
     ? {
         dark: true,
@@ -69,6 +65,9 @@ export function palette(dark: boolean, t: Partial<Tweaks> = {}): Palette {
         info: accent,
         glow: 'rgba(0,0,0,0.28)',
         shadow: '0 4px 12px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.35)',
+        contrastBg: contrast.bg,
+        contrastText: contrast.text,
+        contrastBorder: contrast.border,
       }
     : {
         dark: false,
@@ -91,7 +90,44 @@ export function palette(dark: boolean, t: Partial<Tweaks> = {}): Palette {
         info: accent,
         glow: 'rgba(120,82,44,0.10)',
         shadow: '0 2px 10px rgba(80,55,30,.05), 0 10px 30px rgba(80,55,30,.06)',
+        contrastBg: contrast.bg,
+        contrastText: contrast.text,
+        contrastBorder: contrast.border,
       };
+}
+
+export function paletteCssVars(p: Palette, dark: boolean): Record<string, string> {
+  const accentFade = hexA(p.accent, dark ? 0.35 : 0.18);
+  const accentMid = hexA(p.accent, 0.55);
+  return {
+    '--lms-bg': p.bg,
+    '--lms-surface': p.surface,
+    '--lms-surface-glass': hexA(p.surface, 0.82),
+    '--lms-raise': p.raise,
+    '--lms-sink': p.sink,
+    '--lms-ink': p.ink,
+    '--lms-sub': p.sub,
+    '--lms-faint': p.faint,
+    '--lms-line': p.line,
+    '--lms-line-soft': p.lineSoft,
+    '--lms-accent': p.accent,
+    '--lms-accent-soft': p.accentSoft,
+    '--lms-active-bg': p.activeBg,
+    '--lms-rail-bg': p.railBg,
+    '--lms-ok': p.ok,
+    '--lms-warn': p.warn,
+    '--lms-danger': p.danger,
+    '--lms-info': p.info,
+    '--lms-glow': p.glow,
+    '--lms-shadow': p.shadow,
+    '--lms-contrast-bg': p.contrastBg,
+    '--lms-contrast-text': p.contrastText,
+    '--lms-contrast-border': p.contrastBorder,
+    '--lms-danger-border': hexA(p.danger, 0.35),
+    '--lms-hero-gradient': `radial-gradient(120% 120% at 100% 0%, ${accentFade} 0%, ${p.surface} 55%)`,
+    '--lms-card-gradient': `linear-gradient(160deg, ${p.accentSoft}, ${p.surface} 80%)`,
+    '--lms-feature-gradient': `linear-gradient(135deg, ${p.accent}, ${accentMid})`,
+  };
 }
 
 export { ACCENTS };
