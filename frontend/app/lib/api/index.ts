@@ -7,8 +7,22 @@ export type AuthResult = { accessToken: string; user: Record<string, any> };
 
 export const authApi = {
   login: (email: string, password: string) => api.post<AuthResult>('/auth/login', { email, password }, { auth: false }),
+  // Registration no longer auto-logs-in: the account is created unverified and an
+  // email-verification link is sent. In dev (no SMTP) the link is returned as `devVerifyLink`.
   register: (name: string, email: string, password: string) =>
-    api.post<AuthResult>('/auth/register', { name, email, password }, { auth: false }),
+    api.post<{ ok: true; needsVerification?: boolean; devVerifyLink?: string }>(
+      '/auth/register',
+      { name, email, password },
+      { auth: false },
+    ),
+  // Confirm an email-verification token → activates the account and auto-logs-in.
+  verifyEmail: (token: string) =>
+    api.post<{ ok: true; accessToken: string; user: Record<string, any> }>('/auth/verify-email', { token }, { auth: false }),
+  // Re-send the verification email. In dev the link is returned as `devVerifyLink`.
+  resendVerification: (email: string) =>
+    api.post<{ ok: true; devVerifyLink?: string }>('/auth/resend-verification', { email }, { auth: false }),
+  // Sign in with a Google ID token (credential from @react-oauth/google).
+  google: (idToken: string) => api.post<AuthResult>('/auth/google', { idToken }, { auth: false }),
   me: () => api.get<Record<string, any>>('/auth/me'),
   updateMe: (body: { name?: string; email?: string; avatar?: string }) => api.patch<Record<string, any>>('/auth/me', body),
   // Server-side logout (best-effort token revocation). Frontend clears the token regardless.

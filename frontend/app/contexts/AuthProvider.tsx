@@ -61,9 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = React.useCallback(async (name: string, email: string, password: string) => {
+    // No auto-login: the backend creates an unverified account and emails a
+    // verification link. The modal stays open and shows a "check your email" view.
     const res = await authApi.register(name, email, password);
+    return { needsVerification: res.needsVerification, devVerifyLink: res.devVerifyLink };
+  }, []);
+
+  const googleLogin = React.useCallback(async (idToken: string) => {
+    const res = await authApi.google(idToken);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? name, role: res.user?.role ?? '' });
+    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '' });
     setOpen(false);
   }, []);
 
@@ -85,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     open: () => setOpen(true),
     login,
     register,
+    googleLogin,
     logout,
   };
 

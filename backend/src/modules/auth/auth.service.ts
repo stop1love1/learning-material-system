@@ -3,11 +3,13 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { createHash, randomBytes } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
 import { BcryptService } from '../../global/bcrypt.service';
@@ -17,10 +19,14 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { MailService } from './mail.service';
 
 const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 phút
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
+const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 giờ
 
 @Injectable()
 export class AuthService {
@@ -42,15 +48,33 @@ export class AuthService {
       throw new ConflictException('Email đã được sử dụng');
     }
     const password = await this.bcrypt.hash(dto.password);
-    const user = await this.userModel.create({
+
+    const rawToken = randomBytes(32).toString('hex');
+    const hashed = this.hashToken(rawToken);
+
+    await this.userModel.create({
       name: dto.name,
       email,
       password,
       role: UserRole.Student,
       status: UserStatus.Active,
       passwordChangedAt: new Date(),
+      emailVerified: false,
+      provider: 'local',
+      verifyToken: hashed,
+      verifyExpires: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
     });
-    return this.issue(user);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
+    const delivered = await this.mail.sendVerification(email, verifyLink);
+
+    // Không cấp access token — người dùng phải xác thực email trước.
+    return {
+      ok: true,
+      needsVerification: true,
+      ...(delivered ? {} : { devVerifyLink: verifyLink }),
+    };
   }
 
   async login(dto: LoginDto) {
@@ -84,6 +108,14 @@ export class AuthService {
 
     if (user.status !== UserStatus.Active) {
       throw new UnauthorizedException('Tài khoản đã bị khóa');
+    }
+
+    // Tài khoản local chưa xác thực email không được cấp token. `=== false` để
+    // không chặn người dùng cũ/legacy (emailVerified undefined).
+    if (user.provider !== 'google' && user.emailVerified === false) {
+      throw new ForbiddenException(
+        'Email chưa được xác thực. Vui lòng kiểm tra hộp thư hoặc gửi lại liên kết xác thực.',
+      );
     }
 
     return this.issue(user);
@@ -145,7 +177,6 @@ export class AuthService {
    */
   async forgotPassword(dto: ForgotPasswordDto) {
     const email = dto.email.toLowerCase();
-    const smtpHost = await this.getSmtpHost();
 
     const user = await this.userModel.findOne({ email });
     if (!user) {
@@ -161,11 +192,11 @@ export class AuthService {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/dat-lai-mat-khau?token=${rawToken}`;
-    this.mail.sendPasswordReset(email, resetLink, smtpHost);
+    const delivered = await this.mail.sendPasswordReset(email, resetLink);
 
-    // TODO: real SMTP not implemented — always surface dev link so the reset token is
-    // never silently lost (no real email is delivered even when smtpHost is set).
-    return { ok: true, devToken: rawToken, devResetLink: resetLink };
+    // Khi email không gửi được (SMTP chưa cấu hình / lỗi) thì lộ link dev để token
+    // đặt lại không bị mất.
+    return { ok: true, ...(delivered ? {} : { devToken: rawToken, devResetLink: resetLink }) };
   }
 
   /** Verify the reset token (hash + not expired), set a new password, clear token fields. */
@@ -199,6 +230,107 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * Verify the email-verification token (hash + not expired), mark the user verified,
+   * clear the token fields, then auto-login (issue a JWT).
+   */
+  async verifyEmail(dto: VerifyEmailDto) {
+    if (!dto.token || !dto.token.trim()) {
+      throw new BadRequestException('Liên kết xác thực không hợp lệ');
+    }
+    const hashed = this.hashToken(dto.token);
+    const user = await this.userModel
+      .findOne({ verifyToken: hashed })
+      .select('+verifyToken +verifyExpires');
+
+    if (!user) {
+      throw new BadRequestException('Liên kết xác thực không hợp lệ');
+    }
+    if (!user.verifyExpires || user.verifyExpires.getTime() < Date.now()) {
+      throw new UnauthorizedException('Liên kết xác thực đã hết hạn');
+    }
+
+    user.emailVerified = true;
+    user.verifyToken = null;
+    user.verifyExpires = null;
+    await user.save();
+
+    return { ok: true, ...this.issue(user) };
+  }
+
+  /**
+   * Regenerate + resend the verification link. Always returns 200 (no enumeration):
+   * if the user does not exist or is already verified there is nothing to do.
+   */
+  async resendVerification(dto: ResendVerificationDto) {
+    const email = dto.email.toLowerCase();
+    const user = await this.userModel.findOne({ email });
+    if (!user || user.emailVerified === true) {
+      return { ok: true };
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    user.verifyToken = this.hashToken(rawToken);
+    user.verifyExpires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+    await user.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
+    const delivered = await this.mail.sendVerification(email, verifyLink);
+
+    return { ok: true, ...(delivered ? {} : { devVerifyLink: verifyLink }) };
+  }
+
+  /**
+   * Verify a Google ID token, then log in (or auto-create) the matching user.
+   * Google has already verified the email so the account is marked verified.
+   */
+  async googleLogin(dto: GoogleLoginDto) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId || !clientId.trim()) {
+      throw new ServiceUnavailableException('Đăng nhập Google chưa được cấu hình');
+    }
+
+    const client = new OAuth2Client(clientId);
+    let payload: import('google-auth-library').TokenPayload | undefined;
+    try {
+      const ticket = await client.verifyIdToken({ idToken: dto.idToken, audience: clientId });
+      payload = ticket.getPayload();
+    } catch {
+      throw new UnauthorizedException('Token Google không hợp lệ');
+    }
+
+    if (!payload || !payload.email) {
+      throw new UnauthorizedException('Token Google không hợp lệ');
+    }
+
+    const email = payload.email.toLowerCase();
+    let user = await this.userModel.findOne({ email });
+
+    if (user) {
+      // Google đã xác thực email — mở khoá gate xác thực. Không ghi đè provider của
+      // tài khoản local; chỉ điền avatar nếu đang trống.
+      user.emailVerified = true;
+      if (!user.avatar && payload.picture) user.avatar = payload.picture;
+      user.lastActiveAt = new Date();
+      await user.save();
+    } else {
+      user = await this.userModel.create({
+        name: payload.name || email,
+        email,
+        password: null,
+        role: UserRole.Student,
+        status: UserStatus.Active,
+        emailVerified: true,
+        provider: 'google',
+        avatar: payload.picture || null,
+        passwordChangedAt: null,
+      });
+    }
+
+    return this.issue(user);
+  }
+
   // ---- helpers -------------------------------------------------------------
 
   private hashToken(raw: string): string {
@@ -220,16 +352,6 @@ export class AuthService {
       };
     } catch {
       return fallback;
-    }
-  }
-
-  private async getSmtpHost(): Promise<string | null> {
-    try {
-      const settings = await this.settingsModel.findOne({ key: 'system' }).lean();
-      const host = (settings as any)?.integration?.smtpHost;
-      return typeof host === 'string' ? host : null;
-    } catch {
-      return null;
     }
   }
 
@@ -266,6 +388,8 @@ export class AuthService {
     delete obj.resetPasswordExpires;
     delete obj.failedLoginAttempts;
     delete obj.lockUntil;
+    delete obj.verifyToken;
+    delete obj.verifyExpires;
     return obj;
   }
 }

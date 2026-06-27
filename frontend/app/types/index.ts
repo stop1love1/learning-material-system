@@ -52,7 +52,12 @@ export interface Auth {
   isStaff: boolean; // true khi role là 'teacher' hoặc 'admin'
   open: () => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<{ needsVerification?: boolean; devVerifyLink?: string }>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 
