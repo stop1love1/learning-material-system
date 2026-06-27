@@ -54,16 +54,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback(async (email: string, password: string) => {
-    const res = await authApi.login(email, password);
-    setToken(res.accessToken);
+    const res = (await authApi.login(email, password)) as {
+      accessToken?: string;
+      user?: { name?: string; role?: Role | '' };
+      needs2fa?: boolean;
+      email?: string;
+      devOtp?: string;
+    };
+    if (res.needs2fa) {
+      // Org-wide 2FA on: don't set token/user; the modal switches to the OTP step.
+      return { needs2fa: true, email: res.email, devOtp: res.devOtp };
+    }
+    setToken(res.accessToken!);
     setUser({ name: res.user?.name ?? email, role: res.user?.role ?? '' });
+    setOpen(false);
+    return {};
+  }, []);
+
+  const verify2fa = React.useCallback(async (email: string, code: string) => {
+    const res = await authApi.verify2fa(email, code);
+    setToken(res.accessToken);
+    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '' });
     setOpen(false);
   }, []);
 
   const register = React.useCallback(async (name: string, email: string, password: string) => {
+    // No auto-login: the backend creates an unverified account and emails a
+    // verification link. The modal stays open and shows a "check your email" view.
     const res = await authApi.register(name, email, password);
+    return { needsVerification: res.needsVerification, devVerifyLink: res.devVerifyLink };
+  }, []);
+
+  const googleLogin = React.useCallback(async (idToken: string) => {
+    const res = await authApi.google(idToken);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? name, role: res.user?.role ?? '' });
+    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '' });
     setOpen(false);
   }, []);
 
@@ -84,7 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isStaff: role === 'teacher' || role === 'admin',
     open: () => setOpen(true),
     login,
+    verify2fa,
     register,
+    googleLogin,
     logout,
   };
 

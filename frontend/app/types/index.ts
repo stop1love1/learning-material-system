@@ -51,8 +51,14 @@ export interface Auth {
   role: Role | ''; // '' khi chưa đăng nhập
   isStaff: boolean; // true khi role là 'teacher' hoặc 'admin'
   open: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ needs2fa?: boolean; email?: string; devOtp?: string }>;
+  verify2fa: (email: string, code: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<{ needsVerification?: boolean; devVerifyLink?: string }>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 

@@ -83,6 +83,8 @@ export class UsersService {
       password,
       role: UserRole.Admin,
       status: UserStatus.Active,
+      emailVerified: true,
+      provider: 'local',
     });
     this.logger.log(`Đã tạo admin: ${email}`);
   }

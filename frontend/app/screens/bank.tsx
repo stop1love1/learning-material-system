@@ -6,8 +6,13 @@ import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
-import { questionsApi } from '@/app/lib/api';
+import { questionsApi, topicsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { FolderTree, type TreeNode } from '@/app/components/FolderTree';
+
+// Carries the topic node selected in the tree into the (route-separate) compose form,
+// so a new question defaults to the chosen topic. Cleared after it is consumed.
+let pendingTopicId: string | null = null;
 
 export function typeMeta(id) { return DB.QTYPES.find((x) => x.id === id) || DB.QTYPES[0]; }
 export function levelMeta(id) { return DB.LEVELS.find((x) => x.id === id) || DB.LEVELS[0]; }
@@ -200,10 +205,44 @@ export function TBank({ p, t, setRoute, go }) {
   const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
   const [showFilter, setShowFilter] = React.useState(false);
   const [level, setLevel] = React.useState('all');
+  const [selTopic, setSelTopic] = React.useState<string | null>(null);
   const k = kw.trim().toLowerCase();
   const list = (type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type))
+    .filter((q) => selTopic === null || String(q.topicId) === selTopic)
     .filter((q) => level === 'all' || q.level === level)
     .filter((q) => !k || (q.stem || '').toLowerCase().includes(k) || (q.topic || '').toLowerCase().includes(k));
+
+  // Topic-tree management (backend @Roles gates teacher/admin; errors are surfaced/swallowed).
+  const addRootTopic = async () => {
+    const title = (typeof window !== 'undefined' && window.prompt('Tên chủ đề mới:'))?.trim();
+    if (!title) return;
+    try { await topicsApi.create({ title, parentId: null }); await hydrateFor('bank'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được chủ đề.'); }
+  };
+  const addChildTopic = async (parentId: string) => {
+    const title = (typeof window !== 'undefined' && window.prompt('Tên chủ đề con:'))?.trim();
+    if (!title) return;
+    try { await topicsApi.create({ title, parentId }); await hydrateFor('bank'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được chủ đề.'); }
+  };
+  const renameTopic = async (node: TreeNode) => {
+    const title = (typeof window !== 'undefined' && window.prompt('Đổi tên chủ đề:', node.name))?.trim();
+    if (!title || title === node.name) return;
+    try { await topicsApi.update(node.id, { title }); await hydrateFor('bank'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không đổi tên được.'); }
+  };
+  const deleteTopic = async (node: TreeNode) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Xoá chủ đề “${node.name}”?`)) return;
+    try {
+      await topicsApi.remove(node.id);
+      if (selTopic === node.id) setSelTopic(null);
+      await hydrateFor('bank');
+    } catch (e: any) {
+      // ConflictException (non-empty topic) → surface the backend message.
+      if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được chủ đề.');
+    }
+  };
+  const composeWithTopic = () => { pendingTopicId = selTopic; setRoute('bank-edit'); };
   const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
 
   // Nhân bản câu hỏi: tạo bản sao qua API (fallback LMS khi offline/đăng xuất).
@@ -226,27 +265,47 @@ export function TBank({ p, t, setRoute, go }) {
         options: src.options, answer: src.answer, pairs: src.pairs, topic: src.topic });
     }
   };
+  const treeSidebar = (
+    <aside>
+      <Btn p={p} icon="plus" full onClick={composeWithTopic}>Soạn câu hỏi</Btn>
+      <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ</div>
+      <FolderTree
+        nodes={(DB.TOPIC_TREE || []) as TreeNode[]}
+        selectedId={selTopic}
+        onSelect={setSelTopic}
+        p={p}
+        allLabel="Tất cả chủ đề"
+        allCount={DB.QUESTIONS.length}
+        onAddRoot={addRootTopic}
+        onAddChild={addChildTopic}
+        onRename={renameTopic}
+        onDelete={deleteTopic}
+      />
+    </aside>
+  );
+
   if (!q) {
     return (
-      <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-        <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
-          <div className="flex-1" />
-          <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
-        </div>
+      <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-[26px] px-[30px] pt-6 pb-10">
+        {treeSidebar}
         <div className="px-5 py-[60px] text-center text-lms-ink/60">
-          Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.
+          {selTopic === null
+            ? 'Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.'
+            : 'Chủ đề này chưa có câu hỏi nào.'}
         </div>
       </div>
     );
   }
   const tm = typeMeta(q.type), lm = levelMeta(q.level);
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-[26px] px-[30px] pt-6 pb-10">
+      {treeSidebar}
+      <div>
       <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
         <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
         <div className="flex-1" />
         <Btn p={p} variant={showFilter || level !== 'all' ? 'soft' : 'ghost'} size="md" icon="filter" onClick={() => setShowFilter((s) => !s)}>Bộ lọc</Btn>
-        <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
+        <Btn p={p} icon="plus" onClick={composeWithTopic}>Soạn câu hỏi</Btn>
       </div>
 
       {showFilter && (
@@ -313,6 +372,7 @@ export function TBank({ p, t, setRoute, go }) {
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -324,6 +384,10 @@ export function TBankEdit({ p, t, setRoute }) {
   const [options, setOptions] = React.useState(['', '', '', '']);
   const [correct, setCorrect] = React.useState([0]);
   const [topic, setTopic] = React.useState('');
+  // Default the new question's topic to the node selected in the tree (consumed once).
+  const [topicId, setTopicId] = React.useState<string | null>(() => {
+    const t0 = pendingTopicId; pendingTopicId = null; return t0;
+  });
   const [fillAns, setFillAns] = React.useState('');
   const [essayGrading, setEssayGrading] = React.useState('rubric');
   const [pairs, setPairs] = React.useState([['', ''], ['', '']]);
@@ -338,6 +402,8 @@ export function TBankEdit({ p, t, setRoute }) {
         if (!alive) return;
         const q = r.question || r; const d = r.detail || {};
         setType(q.type); setLevel(q.level || 'medium'); setStem(q.content || '');
+        const tref = q.topic ?? q.topicId;
+        if (tref) setTopicId(String(tref?._id ?? tref));
         if (q.type === 'single') { setOptions(d.options?.length ? d.options : ['', '', '', '']); setCorrect([d.correctOptionIndex ?? 0]); }
         else if (q.type === 'multi') { setOptions(d.options?.length ? d.options : ['', '', '', '']); setCorrect(d.correctOptionIndices?.length ? d.correctOptionIndices : [0]); }
         else if (q.type === 'truefalse') { setCorrect([d.isCorrect ? 0 : 1]); }
@@ -463,7 +529,13 @@ export function TBankEdit({ p, t, setRoute }) {
               </div>
               <div>
                 <label className={lblClass()}>CHỦ ĐỀ</label>
-                <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" className="mt-2.5" />
+                {(DB.TOPIC_TREE && DB.TOPIC_TREE.length) ? (
+                  <Select p={p} value={topicId ?? ''} onChange={(v) => setTopicId(v || null)} className="mt-2.5"
+                    options={[{ value: '', label: '— Không gán chủ đề —' },
+                      ...DB.TOPIC_TREE.map((tp: TreeNode) => ({ value: tp.id, label: tp.name }))]} />
+                ) : (
+                  <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" className="mt-2.5" />
+                )}
               </div>
             </div>
           </section>
@@ -507,8 +579,10 @@ export function TBankEdit({ p, t, setRoute }) {
                 detail = { pairs: ps.length ? ps : [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
               }
               try {
-                if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail });
-                else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail });
+                // Send the selected Topic ref id (omitted when no topic chosen).
+                const topicField = topicId ? { topic: topicId } : {};
+                if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail, ...topicField });
+                else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 await hydrateFor('bank');
               } catch {
                 // logged-out / student / API down → optimistic mock add (chỉ khi tạo mới)

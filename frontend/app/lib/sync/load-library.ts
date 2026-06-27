@@ -23,6 +23,12 @@ export async function loadLibrary(): Promise<void> {
     const folderMap: Record<string, string> = {};
     folders.forEach((x: Record<string, any>) => { folderMap[String(x._id)] = x.name; });
     DB.DOC_FOLDERS = ['Tất cả', ...folders.map((x: Record<string, any>) => x.name)];
+    // Real hierarchical tree for the sidebar (FolderTree consumes flat {id,name,parentId}).
+    DB.DOC_FOLDER_TREE = folders.map((f: Record<string, any>) => ({
+      id: String(f._id),
+      name: f.name,
+      parentId: f.parentId ? String(f.parentId?._id ?? f.parentId) : null,
+    }));
 
     const filesRes: any = await filesApi.list({ pageSize: 200 });
     const files: any[] = filesRes?.records ?? [];
@@ -31,6 +37,9 @@ export async function loadLibrary(): Promise<void> {
       name: f.name,
       type: f.fileType,
       size: f.sizeLabel ?? '',
+      // Real folder id (in ADDITION to the name-based `folder` below) so the tree
+      // sidebar can filter by id. Null when the file is unfiled.
+      folderId: f.folderId != null ? String(f.folderId?._id ?? f.folderId) : null,
       // Prefer the real folder name resolved from folderId; fall back to the
       // backend-populated folderName, then tag/subject, else default. This keeps
       // file grouping in sync with the real DB.DOC_FOLDERS names.
@@ -61,6 +70,7 @@ export async function loadLibrary(): Promise<void> {
     // API off / error → clear so no stale data lingers (no fallback).
     DB.DOCS = [];
     DB.DOC_FOLDERS = ['Tất cả'];
+    DB.DOC_FOLDER_TREE = [];
     DB.DOWNLOADS = [];
   }
 }

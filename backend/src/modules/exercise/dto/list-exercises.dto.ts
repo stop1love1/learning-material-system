@@ -23,4 +23,9 @@ export class ListExercisesDto extends PaginationQueryDto {
   @IsString()
   @ApiPropertyOptional({ type: String })
   grade?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ type: String, description: 'Lọc theo thư mục (folderId). Bỏ trống = tất cả.' })
+  folderId?: string;
 }

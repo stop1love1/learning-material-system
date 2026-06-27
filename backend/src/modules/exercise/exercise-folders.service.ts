@@ -1,0 +1,81 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ExerciseFolder } from '../../schemas/exercise/exercise-folder.schema';
+import { Exercise } from '../../schemas/exercise/exercise.schema';
+import { convertStringToObjectId } from '../../common/utils';
+import { UserRole } from '../../enums';
+import { CreateExerciseFolderDto } from './dto/create-exercise-folder.dto';
+import { UpdateExerciseFolderDto } from './dto/update-exercise-folder.dto';
+import { ListExerciseFoldersDto } from './dto/list-exercise-folders.dto';
+
+@Injectable()
+export class ExerciseFoldersService {
+  constructor(
+    @InjectModel(ExerciseFolder.name) private readonly folderModel: Model<ExerciseFolder>,
+    @InjectModel(Exercise.name) private readonly exerciseModel: Model<Exercise>,
+  ) {}
+
+  async list(dto: ListExerciseFoldersDto) {
+    const query: Record<string, any> = {
+      parentId: dto.parentId ? convertStringToObjectId(dto.parentId) : null,
+    };
+    return this.folderModel.find(query).sort({ name: 1 }).lean();
+  }
+
+  async create(dto: CreateExerciseFolderDto, userId: string) {
+    const folder = await this.folderModel.create({
+      name: dto.name,
+      parentId: dto.parentId ? convertStringToObjectId(dto.parentId) : null,
+      userId: convertStringToObjectId(userId),
+    });
+    return folder.toObject();
+  }
+
+  private assertOwnerOrAdmin(folder: { userId: any }, userId: string, role?: UserRole) {
+    if (role === UserRole.Admin) return;
+    if (folder.userId?.toString() !== convertStringToObjectId(userId).toString()) {
+      throw new ForbiddenException('Bạn không có quyền với thư mục này');
+    }
+  }
+
+  async update(id: string, dto: UpdateExerciseFolderDto, userId: string, role?: UserRole) {
+    const patch: Record<string, any> = {};
+    if (dto.name !== undefined) patch.name = dto.name;
+    if (dto.parentId !== undefined) patch.parentId = dto.parentId ? convertStringToObjectId(dto.parentId) : null;
+
+    // findByIdAndUpdate bypasses the pre('save') ancestors/depth hook; load + save
+    // the document so the hierarchy stays consistent when parentId changes.
+    const folder = await this.folderModel.findById(convertStringToObjectId(id));
+    if (!folder) throw new NotFoundException('Không tìm thấy thư mục');
+    this.assertOwnerOrAdmin(folder, userId, role);
+    Object.assign(folder, patch);
+    await folder.save();
+    return folder.toObject();
+  }
+
+  async remove(id: string, userId: string, role?: UserRole) {
+    const folder = await this.folderModel.findById(convertStringToObjectId(id));
+    if (!folder) throw new NotFoundException('Không tìm thấy thư mục');
+    this.assertOwnerOrAdmin(folder, userId, role);
+
+    // Không cho xoá thư mục còn nội dung (thư mục con hoặc bài tập) để tránh mồ côi dữ liệu.
+    const [childFolder, childExercise] = await Promise.all([
+      this.folderModel.exists({ parentId: folder._id }),
+      this.exerciseModel.exists({ folderId: folder._id }),
+    ]);
+    if (childFolder || childExercise) {
+      throw new ConflictException(
+        'Thư mục không rỗng — hãy xoá hoặc di chuyển nội dung bên trong trước.',
+      );
+    }
+
+    await folder.deleteOne();
+    return { deleted: true };
+  }
+}
