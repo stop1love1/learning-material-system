@@ -5,7 +5,7 @@ import { Icon, Avatar, Btn, Field } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { useLMS } from '@/app/store/store';
 import { authApi } from '@/app/lib/api';
-import { ToggleRow, lblClass, cardClass } from '@/app/helpers/shared';
+import { lblClass, cardClass } from '@/app/helpers/shared';
 
 export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
   useLMS();
@@ -36,6 +36,31 @@ export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
 }
 
 const ROLE_VI: Record<string, string> = { admin: 'Quản trị viên', teacher: 'Giáo viên', student: 'Học viên' };
+
+// Toggle tuỳ chọn cá nhân — lưu localStorage (prefs phía client, không có backend theo người dùng).
+function PrefToggle({ p, label, prefKey, def }: { p: Palette; label: React.ReactNode; prefKey: string; def?: boolean }) {
+  const storageKey = `lms-pref-${prefKey}`;
+  const [on, setOn] = React.useState<boolean>(!!def);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { const v = localStorage.getItem(storageKey); if (v != null) setOn(v === '1'); } catch {}
+  }, [storageKey]);
+  const toggle = () => {
+    setOn((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
+      return next;
+    });
+  };
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-lms-line bg-lms-raise px-3.5 py-[11px]">
+      <span className="text-[13.5px] text-lms-ink">{label}</span>
+      <div onClick={toggle} className={`flex h-6 w-[42px] cursor-pointer rounded-xl p-0.5 transition-colors ${on ? 'bg-lms-accent justify-end' : 'bg-lms-sink justify-start'}`}>
+        <div className="h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)]" />
+      </div>
+    </div>
+  );
+}
 
 export function SettingsScreen({ p, t }: { p: Palette; t: Tweaks }) {
   const [me, setMe] = React.useState<any>(null);
@@ -86,9 +111,13 @@ export function SettingsScreen({ p, t }: { p: Palette; t: Tweaks }) {
       </section>
       <section className={`mb-5 ${cardClass(24)}`}>
         <h3 className="mb-3.5 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Tuỳ chọn</h3>
-        {['Nhận email khi học viên nộp bài', 'Nhắc nhở bài chưa chấm hằng ngày', 'Cho phép học viên xem điểm ngay'].map((lab, i) => (
-          <div key={i} className="mb-2.5">
-            <ToggleRow p={p} label={lab} def={i !== 2} />
+        {[
+          { lab: 'Nhận email khi học viên nộp bài', key: 'notify-submit', def: true },
+          { lab: 'Nhắc nhở bài chưa chấm hằng ngày', key: 'remind-grading', def: true },
+          { lab: 'Cho phép học viên xem điểm ngay', key: 'show-score', def: false },
+        ].map((o) => (
+          <div key={o.key} className="mb-2.5">
+            <PrefToggle p={p} label={o.lab} prefKey={o.key} def={o.def} />
           </div>
         ))}
       </section>

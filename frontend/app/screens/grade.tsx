@@ -51,7 +51,7 @@ export function TGrade({ p, t, go }) {
                 <div className="font-lms-heading text-2xl font-semibold leading-none text-lms-accent">{left}</div>
                 <div className="mt-[3px] font-mono text-[10.5px] text-lms-faint">chờ chấm</div>
               </div>
-              <Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Chấm</Btn>
+              <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go('grade-one', { assignment: a.id })}>Chấm</Btn>
             </div>
           );
         })}
@@ -73,7 +73,34 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const [sel, setSel] = React.useState({});
   const [score, setScore] = React.useState('');
   const [fb, setFb] = React.useState('');
+  const [draftSaved, setDraftSaved] = React.useState(false);
   const rubricStyle = t.rubricStyle || 'matrix';
+
+  const draftKey = (id) => `lms-grade-draft-${id}`;
+  // Khôi phục bản nháp đã lưu khi mở từng bài nộp.
+  React.useEffect(() => {
+    if (!sub || typeof window === 'undefined') return;
+    setDraftSaved(false);
+    try {
+      const raw = localStorage.getItem(draftKey(sub.id));
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.score != null) setScore(String(d.score));
+        if (d.fb != null) setFb(d.fb);
+        if (d.sel) setSel(d.sel);
+      }
+    } catch {}
+  }, [sub?.id]);
+
+  const saveDraft = () => {
+    if (!sub || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(draftKey(sub.id), JSON.stringify({ score, fb, sel }));
+      setDraftSaved(true);
+      setTimeout(() => setDraftSaved(false), 2000);
+    } catch {}
+  };
+  const clearDraft = (id) => { if (typeof window !== 'undefined') try { localStorage.removeItem(draftKey(id)); } catch {} };
 
   const rubricScore = React.useMemo(() => {
     if (!rubric) return null;
@@ -252,8 +279,14 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
           </div>
 
           <div className="mt-5 flex gap-2.5">
-            <Btn p={p} variant="ghost" full>Lưu nháp</Btn>
-            <Btn p={p} variant="accent" full icon="check" onClick={() => { persistGrade(sub, score || rubricScore || 0, fb); reset((idx + 1) % subs.length); }}>Lưu & bài tiếp</Btn>
+            <Btn p={p} variant="ghost" full icon={draftSaved ? 'check' : 'docs'} onClick={saveDraft}>{draftSaved ? 'Đã lưu nháp' : 'Lưu nháp'}</Btn>
+            <Btn p={p} variant="accent" full icon="check" onClick={() => {
+              const effective = score || rubricScore;
+              if (effective == null || effective === '') {
+                if (typeof window !== 'undefined' && !window.confirm('Chưa nhập điểm — vẫn lưu với điểm 0?')) return;
+              }
+              persistGrade(sub, effective || 0, fb); clearDraft(sub.id); reset((idx + 1) % subs.length);
+            }}>Lưu & bài tiếp</Btn>
           </div>
         </div>
           </div>

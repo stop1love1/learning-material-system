@@ -4,6 +4,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -42,5 +44,39 @@ export class AuthController {
   @ApiOperation({ summary: 'Cập nhật hồ sơ cá nhân' })
   updateMe(@CurrentUser('sub') userId: string, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(userId, dto);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đăng xuất' })
+  logout() {
+    return this.authService.logout();
+  }
+
+  @Post('refresh')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cấp lại access token' })
+  refresh(@CurrentUser('sub') userId: string) {
+    return this.authService.refresh(userId);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Quên mật khẩu — gửi liên kết đặt lại' })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đặt lại mật khẩu bằng token' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

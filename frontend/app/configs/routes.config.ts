@@ -20,6 +20,7 @@ export const ROUTES = {
   dashBlog: '/quan-tri/bai-viet',
   grade: '/quan-tri/cham-bai',
   gradeOne: (id: string) => `/quan-tri/cham-bai/${id}`,
+  schedule: '/quan-tri/lich-day',
   users: '/quan-tri/nguoi-dung',
   reports: '/quan-tri/bao-cao',
   settings: '/quan-tri/cai-dat',
@@ -52,6 +53,7 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'a-blog': return ROUTES.dashBlog;
     case 'grade': return ROUTES.grade;
     case 'grade-one': return ROUTES.gradeOne(id('assignment'));
+    case 'a-schedule': return ROUTES.schedule;
     case 'a-users': return ROUTES.users;
     case 'a-reports': return ROUTES.reports;
     case 'a-settings': return ROUTES.settings;
@@ -81,6 +83,7 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (seg.startsWith('/quan-tri/bai-viet')) return r('a-blog', 'a-blog');
   if (/^\/quan-tri\/cham-bai\/[^/]+/.test(seg)) return r('grade-one', 'grade');
   if (seg.startsWith('/quan-tri/cham-bai')) return r('grade', 'grade');
+  if (seg.startsWith('/quan-tri/lich-day')) return r('a-schedule', 'a-schedule');
   if (seg.startsWith('/quan-tri/nguoi-dung')) return r('a-users', 'a-users');
   if (seg.startsWith('/quan-tri/bao-cao')) return r('a-reports', 'a-reports');
   if (seg.startsWith('/quan-tri/cai-dat')) return r('a-settings', 'a-settings');

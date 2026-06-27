@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import type { Auth } from '@/app/types';
+import type { Auth, Role } from '@/app/types';
 import { LoginModal } from '@/app/components/LoginModal';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { authApi, setToken, clearToken, getToken } from '@/app/lib/api';
@@ -23,9 +23,11 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
+type SessionUser = { name: string; role: Role | '' };
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { p, t } = useLmsTheme();
-  const [user, setUser] = React.useState<{ name: string } | null>(null);
+  const [user, setUser] = React.useState<SessionUser | null>(null);
   const [open, setOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
@@ -33,35 +35,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!getToken()) { setReady(true); return; }
     authApi
       .me()
-      .then((u) => setUser({ name: u.name }))
-      .catch(() => clearToken())
+      .then((u) => setUser({ name: u.name, role: u.role ?? '' }))
+      .catch(() => {})
       .finally(() => setReady(true));
+  }, []);
+
+  // Auto-logout when any authenticated request gets a 401 (token expired/revoked).
+  // client.ts already clears the token; here we drop the user and prompt re-login.
+  React.useEffect(() => {
+    const onUnauthorized = () => {
+      setUser((u) => {
+        if (u) setOpen(true);
+        return null;
+      });
+    };
+    window.addEventListener('lms:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('lms:unauthorized', onUnauthorized);
   }, []);
 
   const login = React.useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? email });
+    setUser({ name: res.user?.name ?? email, role: res.user?.role ?? '' });
     setOpen(false);
   }, []);
 
   const register = React.useCallback(async (name: string, email: string, password: string) => {
     const res = await authApi.register(name, email, password);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? name });
+    setUser({ name: res.user?.name ?? name, role: res.user?.role ?? '' });
     setOpen(false);
   }, []);
 
   const logout = React.useCallback(() => {
+    // Best-effort server-side token revocation; never block the UI on it.
+    authApi.logout().catch(() => {});
     clearToken();
     setUser(null);
   }, []);
 
+  const role = user?.role ?? '';
   const auth: Auth = {
     loggedIn: !!user,
     ready,
     name: user?.name ?? '',
     initials: user ? initialsOf(user.name) : '',
+    role,
+    isStaff: role === 'teacher' || role === 'admin',
     open: () => setOpen(true),
     login,
     register,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
@@ -27,5 +27,19 @@ export class SettingsController {
   @ApiOperation({ summary: 'Cập nhật cấu hình hệ thống' })
   update(@Body() dto: UpdateSettingsDto) {
     return this.settingsService.update(dto);
+  }
+
+  @Get('export')
+  @Roles([UserRole.Admin])
+  @ApiOperation({ summary: 'Xuất bản sao lưu nội dung (JSON)' })
+  exportBackup() {
+    return this.settingsService.exportBackup();
+  }
+
+  @Post('import')
+  @Roles([UserRole.Admin])
+  @ApiOperation({ summary: 'Khôi phục nội dung từ bản sao lưu' })
+  importBackup(@Body('snapshot') snapshot: any) {
+    return this.settingsService.importBackup(snapshot);
   }
 }

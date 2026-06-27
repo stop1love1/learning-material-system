@@ -58,6 +58,97 @@ export class Settings {
   @ApiProperty({ type: Object })
   misc: { allowGoogleLogin: boolean };
 
+  // Cấu hình đánh giá (thang điểm, ngưỡng đạt, làm tròn…).
+  @Prop({
+    type: {
+      scoreScale: { type: Number, default: 10 },
+      passThreshold: { type: Number, default: 5 },
+      rounding: { type: String, default: 'none' }, // 'none' | 'half' | 'integer'
+      allowResubmit: { type: Boolean, default: false },
+      showScoreImmediately: { type: Boolean, default: true },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  academic: {
+    scoreScale: number;
+    passThreshold: number;
+    rounding: string;
+    allowResubmit: boolean;
+    showScoreImmediately: boolean;
+  };
+
+  // Bảo mật & đăng nhập.
+  @Prop({
+    type: {
+      twoFactor: { type: Boolean, default: false },
+      passwordRotationDays: { type: Number, default: 0 }, // 0 = không bắt buộc
+      lockoutThreshold: { type: Number, default: 5 },
+      allowSelfRegister: { type: Boolean, default: true },
+      ssoEnabled: { type: Boolean, default: false },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  security: {
+    twoFactor: boolean;
+    passwordRotationDays: number;
+    lockoutThreshold: number;
+    allowSelfRegister: boolean;
+    ssoEnabled: boolean;
+  };
+
+  // Thông báo hệ thống.
+  @Prop({
+    type: {
+      emailOnSubmit: { type: Boolean, default: true },
+      remindUngraded: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: false },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  notifications: { emailOnSubmit: boolean; remindUngraded: boolean; weeklyDigest: boolean };
+
+  // Tích hợp (SMTP, lưu trữ, API key).
+  @Prop({
+    type: {
+      smtpHost: { type: String, default: null },
+      smtpPort: { type: Number, default: null },
+      smtpUser: { type: String, default: null },
+      smtpFrom: { type: String, default: null },
+      storageProvider: { type: String, default: 'external' },
+      apiKey: { type: String, default: null },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  integration: {
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpUser: string | null;
+    smtpFrom: string | null;
+    storageProvider: string;
+    apiKey: string | null;
+  };
+
+  // Dữ liệu & sao lưu.
+  @Prop({
+    type: {
+      autoBackup: { type: Boolean, default: false },
+      backupFrequency: { type: String, default: 'weekly' }, // 'daily' | 'weekly' | 'monthly'
+      encryptBackups: { type: Boolean, default: false },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  data: { autoBackup: boolean; backupFrequency: string; encryptBackups: boolean };
+
   // Nội dung trang chủ công khai (admin tự chỉnh thay vì fix cứng trong code).
   @Prop({
     type: {

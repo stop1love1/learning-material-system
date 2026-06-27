@@ -46,6 +46,22 @@ export class User {
   @ApiProperty({ type: Date, nullable: true })
   lastActiveAt: Date | null;
 
+  /** SHA-256 hash of the password reset token (never the raw token). */
+  @Prop({ type: String, default: null, select: false })
+  resetPasswordToken: string | null;
+
+  @Prop({ type: Date, default: null, select: false })
+  resetPasswordExpires: Date | null;
+
+  @Prop({ type: Date, default: null, select: false })
+  passwordChangedAt: Date | null;
+
+  @Prop({ type: Number, default: 0, select: false })
+  failedLoginAttempts: number;
+
+  @Prop({ type: Date, default: null, select: false })
+  lockUntil: Date | null;
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

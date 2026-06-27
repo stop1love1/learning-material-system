@@ -130,6 +130,17 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     if (auth.ready && !auth.loggedIn) auth.open();
   }, [auth.ready, auth.loggedIn]);
 
+  if (!auth.ready) {
+    return (
+      <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-lms-bg p-[30px] text-center font-sans text-lms-ink">
+        <div className="flex h-[60px] w-[60px] items-center justify-center rounded-2xl bg-lms-accent-soft">
+          <Icon name="settings" size={26} stroke={p.accent} />
+        </div>
+        <p className="m-0 text-sm leading-relaxed text-lms-sub">Đang tải…</p>
+      </div>
+    );
+  }
+
   if (auth.ready && !auth.loggedIn) {
     return (
       <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-lms-bg p-[30px] text-center font-sans text-lms-ink">
@@ -140,6 +151,21 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         <p className="m-0 max-w-[380px] text-sm leading-relaxed text-lms-sub">Khu vực quản trị yêu cầu tài khoản giáo viên hoặc quản trị viên.</p>
         <div className="flex gap-2.5">
           <Btn p={p} icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
+          <Btn p={p} variant="ghost" onClick={() => push(ROUTES.home)}>Về trang chủ</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  if (auth.ready && auth.loggedIn && !auth.isStaff) {
+    return (
+      <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-lms-bg p-[30px] text-center font-sans text-lms-ink">
+        <div className="flex h-[60px] w-[60px] items-center justify-center rounded-2xl bg-lms-accent-soft">
+          <Icon name="settings" size={26} stroke={p.accent} />
+        </div>
+        <h2 className="m-0 font-lms-heading text-[22px] font-bold text-lms-ink">Bạn không có quyền truy cập khu vực quản trị</h2>
+        <p className="m-0 max-w-[380px] text-sm leading-relaxed text-lms-sub">Khu vực quản trị chỉ dành cho tài khoản giáo viên hoặc quản trị viên.</p>
+        <div className="flex gap-2.5">
           <Btn p={p} variant="ghost" onClick={() => push(ROUTES.home)}>Về trang chủ</Btn>
         </div>
       </div>

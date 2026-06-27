@@ -274,7 +274,7 @@ export function SOverview({ p, t, setRoute, go }) {
                 <div className="mt-0.5 text-xs text-lms-faint">{task.type} · {task.questions} câu{task.learners ? ' · ' + task.learners + ' người làm' : ''}</div>
               </div>
               <Tag p={p} color={task.dueIn === 'Hôm nay' ? p.danger : p.sub}>{task.dueIn}</Tag>
-              <Btn p={p} variant="soft" size="sm">Làm bài</Btn>
+              <Btn p={p} variant="soft" size="sm" onClick={() => go('s-task', { task: task.id })}>Làm bài</Btn>
             </div>
           ))}
         </section>
@@ -318,7 +318,7 @@ function STaskRow({ task, p, go }) {
       {task.score != null
         ? <div className="text-center"><div className="font-lms-heading text-[22px] font-semibold text-lms-ok">{task.score}</div><div className="text-[10px] text-lms-faint">/{task.points}</div></div>
         : <Tag p={p} color={tone}>{task.dueIn}</Tag>}
-      {task.status === 'todo' ? <Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Làm bài</Btn> : <Tag p={p} color={taskTone(p, task.status)}>{taskLabel(task.status)}</Tag>}
+      {task.status === 'todo' ? <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go('s-task', { task: task.id })}>Làm bài</Btn> : <Tag p={p} color={taskTone(p, task.status)}>{taskLabel(task.status)}</Tag>}
     </div>
   );
 }
@@ -562,6 +562,22 @@ export function STask({ p, t, ctx, setRoute, auth }) {
     { id: 'ws2', name: 'Phiếu luyện viết đoạn văn tả con vật' },
   ];
 
+  // Tải phiếu: nếu có liên kết thì mở; nếu không, xuất nội dung phiếu ra tệp .txt.
+  const downloadWorksheet = (w: any) => {
+    if (typeof window === 'undefined') return;
+    if (w?.url) { window.open(w.url, '_blank', 'noopener'); return; }
+    try {
+      const content = `${w.name}\n\n${DOC_BODY.join('\n\n')}`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(w.name || 'phieu-hoc-tap').replace(/[^\wÀ-ỹ .-]/g, '').trim().slice(0, 60)}.txt`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {}
+  };
+
   if (!q) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center p-[30px] text-center">
@@ -615,7 +631,7 @@ export function STask({ p, t, ctx, setRoute, auth }) {
                 {DOC_BODY.slice(0, 3).map((para, i) => (
                   <p key={i} className="mb-2.5 mt-0 text-[13.5px] leading-[1.8] text-pretty text-lms-sub">{para}</p>
                 ))}
-                <Btn p={p} variant="ghost" size="sm" icon="download">Tải phiếu</Btn>
+                <Btn p={p} variant="ghost" size="sm" icon="download" onClick={() => downloadWorksheet(ws)}>Tải phiếu</Btn>
               </div>
             )}
           </div>

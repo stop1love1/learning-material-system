@@ -49,9 +49,17 @@ TopicSchema.pre('save', async function (this: TopicDocument) {
     this.depth = 0;
     return;
   }
+  // Không cho phép tự làm cha của chính nó.
+  if (this.parentId.equals(this._id)) {
+    throw new Error('A topic cannot be its own parent');
+  }
   const model = this.constructor as Model<TopicDocument>;
   const parent = await model.findById(this.parentId).select('_id ancestors depth').lean();
   if (!parent) throw new Error('Parent topic not found');
+  // Chống chu trình: cha mới không được nằm trong cây con của node này.
+  if ((parent.ancestors || []).some((a) => a.equals(this._id))) {
+    throw new Error('A topic cannot be moved under its own descendant');
+  }
   this.ancestors = [...(parent.ancestors || []), parent._id];
   this.depth = (parent.depth || 0) + 1;
 });

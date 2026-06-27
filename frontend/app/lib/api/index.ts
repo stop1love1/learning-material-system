@@ -11,6 +11,16 @@ export const authApi = {
     api.post<AuthResult>('/auth/register', { name, email, password }, { auth: false }),
   me: () => api.get<Record<string, any>>('/auth/me'),
   updateMe: (body: { name?: string; email?: string; avatar?: string }) => api.patch<Record<string, any>>('/auth/me', body),
+  // Server-side logout (best-effort token revocation). Frontend clears the token regardless.
+  logout: () => api.post('/auth/logout'),
+  // Silent session extension. Returns a fresh accessToken for the current user.
+  refresh: () => api.post<{ accessToken: string }>('/auth/refresh'),
+  // Password recovery. forgotPassword always 200 (no user enumeration); in dev the reset
+  // token/link is returned in `devToken`/`devResetLink` when SMTP is not configured.
+  forgotPassword: (email: string) =>
+    api.post<{ ok: true; devToken?: string; devResetLink?: string }>('/auth/forgot-password', { email }, { auth: false }),
+  resetPassword: (token: string, password: string) =>
+    api.post<{ ok: true }>('/auth/reset-password', { token, password }, { auth: false }),
 };
 
 export const foldersApi = {
@@ -94,6 +104,9 @@ export const articlesApi = {
 export const settingsApi = {
   get: () => api.get<any>('/settings', { auth: false }),
   update: (body: any) => api.patch('/settings', body),
+  // Admin content backup: export returns a JSON snapshot; import restores it (upsert by _id).
+  export: () => api.get<any>('/settings/export'),
+  import: (snapshot: any) => api.post<{ ok: true; restored: Record<string, number> }>('/settings/import', { snapshot }),
 };
 
 export const usersApi = {

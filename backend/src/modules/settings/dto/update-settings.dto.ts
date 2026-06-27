@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class OrgSettingsDto {
   @ApiPropertyOptional({ type: String })
@@ -113,6 +113,126 @@ export class SeoSettingsDto {
   ogImage?: string;
 }
 
+export class AcademicSettingsDto {
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  scoreScale?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  passThreshold?: number;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  rounding?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  allowResubmit?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  showScoreImmediately?: boolean;
+}
+
+export class SecuritySettingsDto {
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  twoFactor?: boolean;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  passwordRotationDays?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  lockoutThreshold?: number;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  allowSelfRegister?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  ssoEnabled?: boolean;
+}
+
+export class NotificationsSettingsDto {
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  emailOnSubmit?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  remindUngraded?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  weeklyDigest?: boolean;
+}
+
+export class IntegrationSettingsDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  smtpHost?: string;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  smtpPort?: number;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  smtpUser?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  smtpFrom?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  storageProvider?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  apiKey?: string;
+}
+
+export class DataSettingsDto {
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  autoBackup?: boolean;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  backupFrequency?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  encryptBackups?: boolean;
+}
+
 export class UpdateSettingsDto {
   @ApiPropertyOptional({ type: OrgSettingsDto })
   @IsOptional()
@@ -143,4 +263,34 @@ export class UpdateSettingsDto {
   @ValidateNested()
   @Type(() => SeoSettingsDto)
   seo?: SeoSettingsDto;
+
+  @ApiPropertyOptional({ type: AcademicSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AcademicSettingsDto)
+  academic?: AcademicSettingsDto;
+
+  @ApiPropertyOptional({ type: SecuritySettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SecuritySettingsDto)
+  security?: SecuritySettingsDto;
+
+  @ApiPropertyOptional({ type: NotificationsSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NotificationsSettingsDto)
+  notifications?: NotificationsSettingsDto;
+
+  @ApiPropertyOptional({ type: IntegrationSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => IntegrationSettingsDto)
+  integration?: IntegrationSettingsDto;
+
+  @ApiPropertyOptional({ type: DataSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DataSettingsDto)
+  data?: DataSettingsDto;
 }

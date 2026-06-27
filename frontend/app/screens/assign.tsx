@@ -55,7 +55,7 @@ export function TAssignments({ p, t, setRoute, go }) {
                 <Progress p={p} value={pct} height={6} />
               </div>
               <div className="min-w-[110px] text-center">
-                {a.submitted > a.graded ? <Btn p={p} variant="soft" size="sm" icon="grade">Chấm {a.submitted - a.graded}</Btn>
+                {a.submitted > a.graded ? <Btn p={p} variant="soft" size="sm" icon="grade" onClick={() => go('grade-one', { assignment: a.id })}>Chấm {a.submitted - a.graded}</Btn>
                   : <Tag p={p} color={p.ok}>Đã chấm xong</Tag>}
               </div>
             </div>

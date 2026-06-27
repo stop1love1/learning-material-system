@@ -77,7 +77,10 @@ export function TOverview({ p, t, setRoute, go }) {
           <section className={cardClass(20)}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="m-0 font-lms-heading text-xl font-medium text-lms-ink">Lịch hôm nay</h3>
-              <Tag p={p} color={p.sub}>{DB.SCHEDULE.length} BUỔI</Tag>
+              <div className="flex items-center gap-2.5">
+                <Tag p={p} color={p.sub}>{DB.SCHEDULE.length} BUỔI</Tag>
+                <span onClick={() => setRoute('a-schedule')} className="cursor-pointer font-mono text-[11.5px] text-lms-accent">Quản lý lịch →</span>
+              </div>
             </div>
             {DB.SCHEDULE.length === 0 && (
               <div className="py-6 text-center text-[13px] text-lms-faint">Hôm nay chưa có buổi học nào.</div>

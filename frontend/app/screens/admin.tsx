@@ -3,10 +3,10 @@ import React from 'react';
 import { Icon, Tag, Pill, Avatar, Btn, Field, Select, Progress, Bars, Segmented, Stat, fmt } from '@/app/components/ui';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/store/store';
-import { ToggleRow, lblClass, cardClass } from '@/app/helpers/shared';
-import { usersApi, settingsApi } from '@/app/lib/api';
+import { lblClass, cardClass } from '@/app/helpers/shared';
+import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
-import { downloadCsv } from '@/app/helpers/export';
+import { downloadCsv, downloadJson } from '@/app/helpers/export';
 
 function AdminModal({ p, title, onClose, children }) {
   return (
@@ -283,8 +283,61 @@ function UserFormModal({ p, mode, user, busy, onClose, onSave }) {
   );
 }
 
+// yyyy-mm-dd from a Date, for download filenames (handlers are client-only).
+const isoDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
 export function AReports({ p, t }) {
   const r = DB.ADMIN_REPORTS || {};
+  const [exporting, setExporting] = React.useState('');
+
+  // Fetch the live reports payload (falls back to the in-memory DB slice if the
+  // API is unavailable / not authed) and hand it to a consumer.
+  const withReports = React.useCallback(async (fn) => {
+    let data = null;
+    try { data = await statsApi.reports(); } catch { /* fall back to DB below */ }
+    fn(data || DB.ADMIN_REPORTS || {});
+  }, []);
+
+  const exportAll = async () => {
+    setExporting('all');
+    try { await withReports((data) => downloadJson(`bao-cao-tong-hop-${isoDay()}.json`, data)); }
+    finally { setExporting(''); }
+  };
+
+  // Each card maps to a slice of the reports payload + CSV column set.
+  const REPORT_CARDS = [
+    {
+      key: 'users', label: 'Báo cáo người dùng', file: 'bao-cao-nguoi-dung',
+      pick: (d) => d?.users?.records ?? d?.users ?? [],
+      cols: [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'createdAt', label: 'Tham gia' }],
+    },
+    {
+      key: 'downloads', label: 'Lượt tải học liệu', file: 'luot-tai-hoc-lieu',
+      pick: (d) => d?.downloads?.records ?? d?.downloads ?? d?.topDocs ?? [],
+      cols: [{ key: 'name', label: 'Học liệu' }, { key: 'folder', label: 'Thư mục' }, { key: 'downloads', label: 'Lượt tải' }],
+    },
+    {
+      key: 'articles', label: 'Bài viết phổ biến', file: 'bai-viet-pho-bien',
+      pick: (d) => d?.articles?.records ?? d?.popularArticles ?? d?.articles ?? [],
+      cols: [{ key: 'title', label: 'Tiêu đề' }, { key: 'author', label: 'Tác giả' }, { key: 'views', label: 'Lượt xem' }],
+    },
+    {
+      key: 'practice', label: 'Hoạt động luyện tập', file: 'hoat-dong-luyen-tap',
+      pick: (d) => d?.weeklySeries ?? d?.practice?.records ?? d?.practice ?? [],
+      cols: [{ key: 'date', label: 'Ngày' }, { key: 'count', label: 'Lượt làm bài' }],
+    },
+  ];
+
+  const exportCard = async (card) => {
+    setExporting(card.key);
+    try {
+      await withReports((data) => {
+        const rows = card.pick(data);
+        downloadCsv(`${card.file}-${isoDay()}.csv`, card.cols, Array.isArray(rows) ? rows : []);
+      });
+    } finally { setExporting(''); }
+  };
+
   const weekdayVi = (iso) => ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][new Date(iso).getDay()];
   const bars = (Array.isArray(r.weeklySeries) && r.weeklySeries.length
     ? r.weeklySeries.map((x) => ({ label: weekdayVi(x.date), value: x.count }))
@@ -318,14 +371,17 @@ export function AReports({ p, t }) {
         <section className={`${cardClass(20)} p-[22px]! col-span-full`}>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Báo cáo có sẵn</h3>
-            <Btn p={p} variant="ghost" size="sm" icon="download">Xuất tất cả</Btn>
+            <Btn p={p} variant="ghost" size="sm" icon="download" onClick={() => { if (!exporting) exportAll(); }}>
+              {exporting === 'all' ? 'Đang xuất…' : 'Xuất tất cả'}
+            </Btn>
           </div>
           <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-            {['Báo cáo người dùng', 'Lượt tải học liệu', 'Bài viết phổ biến', 'Hoạt động luyện tập'].map((r, i) => (
-              <div key={i} className="lms-row flex cursor-pointer items-center gap-3 rounded-xl border border-lms-line bg-lms-raise p-3.5">
+            {REPORT_CARDS.map((card) => (
+              <div key={card.key} onClick={() => { if (!exporting) exportCard(card); }}
+                className="lms-row flex cursor-pointer items-center gap-3 rounded-xl border border-lms-line bg-lms-raise p-3.5">
                 <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-lms-accent-soft"><Icon name="report" size={18} stroke={p.accent} /></div>
-                <span className="flex-1 text-[13px] font-semibold text-lms-ink">{r}</span>
-                <Icon name="download" size={16} stroke={p.faint} />
+                <span className="flex-1 text-[13px] font-semibold text-lms-ink">{card.label}</span>
+                <Icon name="download" size={16} stroke={exporting === card.key ? p.accent : p.faint} />
               </div>
             ))}
           </div>
@@ -351,6 +407,16 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [saved, setSaved] = React.useState(false);
   const [homepage, setHomepage] = React.useState({ badge: '', heroTitle: '', heroSubtitle: '', ctaLabel: '' });
   const [seo, setSeo] = React.useState({ title: '', description: '', keywords: '', ogImage: '' });
+  const [logoUrl, setLogoUrl] = React.useState('');
+
+  // Sections that now persist to the backend (academic / security / notifications / integration / data).
+  const [academic, setAcademic] = React.useState({ scoreScale: 10, passThreshold: 5, rounding: 'half', allowResubmit: true, showScoreImmediately: true });
+  const [security, setSecurity] = React.useState({ twoFactor: true, passwordRotationDays: 0, lockoutThreshold: 5, allowSelfRegister: true, ssoEnabled: true });
+  const [notifications, setNotifications] = React.useState({ emailOnSubmit: true, remindUngraded: true, weeklyDigest: false });
+  const [integration, setIntegration] = React.useState({ smtpHost: '', smtpPort: 587, smtpUser: '', smtpFrom: '', storageProvider: 's3', apiKey: '' });
+  const [data, setData] = React.useState({ autoBackup: true, backupFrequency: 'daily', encryptBackups: true });
+  const [restoring, setRestoring] = React.useState(false);
+  const restoreInputRef = React.useRef(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -358,18 +424,114 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       try {
         const s = await settingsApi.get();
         if (!alive || !s) return;
-        if (s.org) setOrg({
-          name: s.org.name ?? ORG_DEFAULTS.name,
-          domain: s.org.domain ?? '',
-          timezone: tzToOpt(s.org.timezone),
-        });
+        if (s.org) {
+          setOrg({
+            name: s.org.name ?? ORG_DEFAULTS.name,
+            domain: s.org.domain ?? '',
+            timezone: tzToOpt(s.org.timezone),
+          });
+          setLogoUrl(s.org.logoUrl ?? '');
+        }
         if (s.misc) setMisc({ allowGoogleLogin: s.misc.allowGoogleLogin !== false });
         if (s.homepage) setHomepage({ badge: s.homepage.badge ?? '', heroTitle: s.homepage.heroTitle ?? '', heroSubtitle: s.homepage.heroSubtitle ?? '', ctaLabel: s.homepage.ctaLabel ?? '' });
         if (s.seo) setSeo({ title: s.seo.title ?? '', description: s.seo.description ?? '', keywords: (s.seo.keywords ?? []).join(', '), ogImage: s.seo.ogImage ?? '' });
+        if (s.academic) setAcademic((a) => ({ ...a, ...s.academic }));
+        if (s.security) setSecurity((a) => ({ ...a, ...s.security }));
+        if (s.notifications) setNotifications((a) => ({ ...a, ...s.notifications }));
+        if (s.integration) setIntegration((a) => ({ ...a, ...s.integration }));
+        if (s.data) setData((a) => ({ ...a, ...s.data }));
       } catch { /* API down / not authed → keep defaults */ }
     })();
     return () => { alive = false; };
   }, []);
+
+  // Persist a single settings group; reuses the org section's saved/saving banner.
+  const saveGroup = React.useCallback(async (group) => {
+    setSaving(true);
+    try {
+      await settingsApi.update(group);
+      setSaved(true);
+      if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
+    } catch {
+      if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
+    }
+    setSaving(false);
+  }, []);
+
+  // Controlled on/off toggle (shared ToggleRow is uncontrolled, so we use a local one for persisted settings).
+  const Toggle = ({ label, value, onChange }) => (
+    <div className="flex items-center justify-between rounded-xl border border-lms-line bg-lms-raise px-3.5 py-[11px]">
+      <span className="text-[13.5px] text-lms-ink">{label}</span>
+      <div onClick={() => onChange(!value)}
+        className={`flex h-6 w-[42px] cursor-pointer rounded-xl p-0.5 transition-colors ${value ? 'bg-lms-accent justify-end' : 'bg-lms-sink justify-start'}`}>
+        <div className="h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)]" />
+      </div>
+    </div>
+  );
+
+  // Save row reused by the persisted sections (academic/security/notifications/integration/data).
+  const SaveRow = ({ onSave }) => (
+    <div className="mt-5 flex items-center justify-end gap-3 border-t border-lms-line-soft pt-4">
+      {saved && (
+        <span className="flex items-center gap-1.5 font-mono text-[11.5px] text-lms-ok">
+          <Icon name="checkCircle" size={15} stroke={p.ok} /> Đã lưu
+        </span>
+      )}
+      <Btn p={p} icon="check" onClick={() => { if (!saving) onSave(); }}>Lưu thay đổi</Btn>
+    </div>
+  );
+
+  const changeLogo = async () => {
+    if (typeof window === 'undefined') return;
+    const url = window.prompt('Dán URL logo (https://...)', logoUrl || '');
+    if (url == null) return;
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) { window.alert('URL logo phải bắt đầu bằng http hoặc https.'); return; }
+    setLogoUrl(trimmed);
+    await saveGroup({ org: { logoUrl: trimmed } });
+  };
+
+  const regenApiKey = async () => {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    const apiKey = `vv_${hex}`;
+    setIntegration((o) => ({ ...o, apiKey }));
+    await saveGroup({ integration: { apiKey } });
+  };
+
+  const backupNow = async () => {
+    try {
+      const snap = await settingsApi.export();
+      const day = String(snap?.exportedAt || '').slice(0, 10) || 'backup';
+      downloadJson(`vuonvan-backup-${day}.json`, snap);
+    } catch {
+      if (typeof window !== 'undefined') window.alert('Không thể sao lưu. Vui lòng kiểm tra quyền truy cập.');
+    }
+  };
+
+  const onRestoreFile = async (e) => {
+    const file = e?.target?.files?.[0];
+    if (e?.target) e.target.value = '';
+    if (!file) return;
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      if (typeof window !== 'undefined') window.alert('Tệp sao lưu không hợp lệ (không phải JSON).');
+      return;
+    }
+    if (typeof window !== 'undefined' && !window.confirm('Khôi phục sẽ ghi đè nội dung hiện tại. Tiếp tục?')) return;
+    setRestoring(true);
+    try {
+      const res = await settingsApi.import(parsed);
+      const total = Object.values(res?.restored || {}).reduce((a, n) => a + (Number(n) || 0), 0);
+      if (typeof window !== 'undefined') window.alert(`Đã khôi phục ${total.toLocaleString('vi-VN')} bản ghi.`);
+    } catch {
+      if (typeof window !== 'undefined') window.alert('Không thể khôi phục. Vui lòng kiểm tra tệp và quyền truy cập.');
+    }
+    setRestoring(false);
+  };
 
   const saveSettings = React.useCallback(async () => {
     setSaving(true);
@@ -377,8 +539,6 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       await settingsApi.update({
         org: { name: org.name, domain: org.domain, timezone: optToTz(org.timezone) },
         misc: { allowGoogleLogin: misc.allowGoogleLogin },
-        homepage: { badge: homepage.badge, heroTitle: homepage.heroTitle, heroSubtitle: homepage.heroSubtitle, ctaLabel: homepage.ctaLabel },
-        seo: { title: seo.title, description: seo.description, keywords: seo.keywords.split(',').map((x) => x.trim()).filter(Boolean), ogImage: seo.ogImage || undefined },
       });
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
@@ -386,7 +546,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
     }
     setSaving(false);
-  }, [org, misc, homepage, seo]);
+  }, [org, misc]);
   const SECTIONS = [
     { id: 'appearance', icon: 'image', label: 'Giao diện' },
     { id: 'org', icon: 'settings', label: 'Tổ chức' },
@@ -516,8 +676,10 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           <section className={cardClass(24)}>
             <H desc="Thông tin chung của trung tâm hiển thị trên toàn hệ thống.">Tổ chức</H>
             <div className="mb-[18px] flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-lms-accent font-lms-heading text-[28px] font-bold text-white">V</div>
-              <Btn p={p} variant="ghost" icon="upload">Đổi logo</Btn>
+              {logoUrl
+                ? <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-xl border border-lms-line object-cover" />
+                : <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-lms-accent font-lms-heading text-[28px] font-bold text-white">V</div>}
+              <Btn p={p} variant="ghost" icon="upload" onClick={changeLogo}>Đổi logo</Btn>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className={lblClass()}>TÊN TRUNG TÂM</label><Field p={p} value={org.name} onChange={(v) => setOrg((o) => ({ ...o, name: v }))} className="mt-2" /></div>
@@ -544,30 +706,31 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           <section className={cardClass(24)}>
             <H desc="Chính sách đăng nhập và bảo vệ tài khoản toàn hệ thống.">Bảo mật & đăng nhập</H>
             <div className="mb-[18px] flex flex-col gap-2.5">
-              <ToggleRow p={p} label="Xác thực hai lớp (2FA) bắt buộc cho quản trị" def={true} />
-              <ToggleRow p={p} label="Cho phép đăng nhập bằng Google (SSO)" def={true} />
-              <ToggleRow p={p} label="Bắt buộc đổi mật khẩu định kỳ 90 ngày" def={false} />
-              <ToggleRow p={p} label="Khoá tài khoản sau 5 lần đăng nhập sai" def={true} />
+              <Toggle label="Xác thực hai lớp (2FA) bắt buộc cho quản trị" value={security.twoFactor} onChange={(v) => setSecurity((o) => ({ ...o, twoFactor: v }))} />
+              <Toggle label="Cho phép đăng nhập bằng SSO" value={security.ssoEnabled} onChange={(v) => setSecurity((o) => ({ ...o, ssoEnabled: v }))} />
+              <Toggle label="Cho phép người dùng tự đăng ký" value={security.allowSelfRegister} onChange={(v) => setSecurity((o) => ({ ...o, allowSelfRegister: v }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className={lblClass()}>ĐỘ DÀI MẬT KHẨU TỐI THIỂU</label><Field p={p} value="8" onChange={() => {}} mono className="mt-2" /></div>
-              <div><label className={lblClass()}>HẾT PHIÊN SAU</label><Select p={p} value="8h" onChange={() => {}} className="mt-2" options={[{ value: '1h', label: '1 giờ' }, { value: '8h', label: '8 giờ' }, { value: '24h', label: '24 giờ' }]} /></div>
+              <div><label className={lblClass()}>BẮT BUỘC ĐỔI MẬT KHẨU SAU (NGÀY, 0 = TẮT)</label><Field p={p} value={String(security.passwordRotationDays)} onChange={(v) => setSecurity((o) => ({ ...o, passwordRotationDays: parseInt(v, 10) || 0 }))} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>KHOÁ TÀI KHOẢN SAU SỐ LẦN SAI</label><Field p={p} value={String(security.lockoutThreshold)} onChange={(v) => setSecurity((o) => ({ ...o, lockoutThreshold: parseInt(v, 10) || 0 }))} mono className="mt-2" /></div>
             </div>
+            <SaveRow onSave={() => saveGroup({ security })} />
           </section>
         )}
 
         {sec === 'academic' && (
           <section className={cardClass(24)}>
             <H desc="Quy định chấm điểm & đánh giá áp dụng toàn hệ thống.">Cấu hình đánh giá</H>
-            <div className="mb-[18px] grid grid-cols-2 gap-4">
-              <div><label className={lblClass()}>THANG ĐIỂM</label><Select p={p} value="10" onChange={() => {}} className="mt-2" options={[{ value: '10', label: 'Hệ 10' }, { value: '100', label: 'Hệ 100' }, { value: 'letter', label: 'Điểm chữ A–F' }]} /></div>
-              <div><label className={lblClass()}>ĐIỂM ĐẠT TỐI THIỂU</label><Field p={p} value="5,0" onChange={() => {}} mono className="mt-2" /></div>
+            <div className="mb-[18px] grid grid-cols-3 gap-4">
+              <div><label className={lblClass()}>THANG ĐIỂM</label><Select p={p} value={String(academic.scoreScale)} onChange={(v) => setAcademic((o) => ({ ...o, scoreScale: parseInt(v, 10) || 10 }))} className="mt-2" options={[{ value: '10', label: 'Hệ 10' }, { value: '100', label: 'Hệ 100' }]} /></div>
+              <div><label className={lblClass()}>ĐIỂM ĐẠT TỐI THIỂU</label><Field p={p} value={String(academic.passThreshold)} onChange={(v) => setAcademic((o) => ({ ...o, passThreshold: parseFloat(v.replace(',', '.')) || 0 }))} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>LÀM TRÒN</label><Select p={p} value={academic.rounding} onChange={(v) => setAcademic((o) => ({ ...o, rounding: v }))} className="mt-2" options={[{ value: 'none', label: 'Không' }, { value: 'half', label: 'Đến 0,5' }, { value: 'integer', label: 'Số nguyên' }]} /></div>
             </div>
             <div className="flex flex-col gap-2.5">
-              <ToggleRow p={p} label="Làm tròn điểm đến 0,5" def={true} />
-              <ToggleRow p={p} label="Cho phép người dùng phúc khảo" def={true} />
-              <ToggleRow p={p} label="Hiển thị điểm ngay sau khi nộp" def={true} />
+              <Toggle label="Cho phép người dùng nộp lại" value={academic.allowResubmit} onChange={(v) => setAcademic((o) => ({ ...o, allowResubmit: v }))} />
+              <Toggle label="Hiển thị điểm ngay sau khi nộp" value={academic.showScoreImmediately} onChange={(v) => setAcademic((o) => ({ ...o, showScoreImmediately: v }))} />
             </div>
+            <SaveRow onSave={() => saveGroup({ academic })} />
           </section>
         )}
 
@@ -575,15 +738,11 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           <section className={cardClass(24)}>
             <H desc="Kênh và quy tắc gửi thông báo cho người dùng.">Thông báo</H>
             <div className="mb-[18px] flex flex-col gap-2.5">
-              <ToggleRow p={p} label="Gửi email khi có bài tập mới" def={true} />
-              <ToggleRow p={p} label="Nhắc hạn nộp bài trước 24 giờ" def={true} />
-              <ToggleRow p={p} label="Thông báo khi điểm được công bố" def={true} />
-              <ToggleRow p={p} label="Gửi báo cáo tổng hợp định kỳ cho quản trị" def={false} />
+              <Toggle label="Gửi email khi có bài nộp" value={notifications.emailOnSubmit} onChange={(v) => setNotifications((o) => ({ ...o, emailOnSubmit: v }))} />
+              <Toggle label="Nhắc giáo viên bài chưa chấm" value={notifications.remindUngraded} onChange={(v) => setNotifications((o) => ({ ...o, remindUngraded: v }))} />
+              <Toggle label="Gửi báo cáo tổng hợp hằng tuần cho quản trị" value={notifications.weeklyDigest} onChange={(v) => setNotifications((o) => ({ ...o, weeklyDigest: v }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className={lblClass()}>KÊNH GỬI</label><Select p={p} value="both" onChange={() => {}} className="mt-2" options={[{ value: 'email', label: 'Email' }, { value: 'app', label: 'Trong ứng dụng' }, { value: 'both', label: 'Email + ứng dụng' }]} /></div>
-              <div><label className={lblClass()}>TẦN SUẤT TÓM TẮT</label><Select p={p} value="week" onChange={() => {}} className="mt-2" options={[{ value: 'day', label: 'Hằng ngày' }, { value: 'week', label: 'Hằng tuần' }]} /></div>
-            </div>
+            <SaveRow onSave={() => saveGroup({ notifications })} />
           </section>
         )}
 
@@ -591,14 +750,18 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           <section className={cardClass(24)}>
             <H desc="Kết nối email, lưu trữ và API bên ngoài.">Tích hợp</H>
             <div className="mb-[18px] grid grid-cols-2 gap-4">
-              <div><label className={lblClass()}>MÁY CHỦ EMAIL (SMTP)</label><Field p={p} value="smtp.vuonvan.edu.vn" onChange={() => {}} mono className="mt-2" /></div>
-              <div><label className={lblClass()}>DỊCH VỤ LƯU TRỮ</label><Select p={p} value="s3" onChange={() => {}} className="mt-2" options={[{ value: 's3', label: 'Amazon S3' }, { value: 'local', label: 'Máy chủ nội bộ' }]} /></div>
+              <div><label className={lblClass()}>MÁY CHỦ EMAIL (SMTP)</label><Field p={p} value={integration.smtpHost} onChange={(v) => setIntegration((o) => ({ ...o, smtpHost: v }))} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>CỔNG SMTP</label><Field p={p} value={integration.smtpPort == null ? '' : String(integration.smtpPort)} onChange={(v) => setIntegration((o) => { const n = parseInt(v, 10); return { ...o, smtpPort: Number.isFinite(n) && n > 0 ? n : null }; })} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>TÀI KHOẢN SMTP</label><Field p={p} value={integration.smtpUser} onChange={(v) => setIntegration((o) => ({ ...o, smtpUser: v }))} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>EMAIL GỬI ĐI (FROM)</label><Field p={p} value={integration.smtpFrom} onChange={(v) => setIntegration((o) => ({ ...o, smtpFrom: v }))} mono className="mt-2" /></div>
+              <div><label className={lblClass()}>DỊCH VỤ LƯU TRỮ</label><Select p={p} value={integration.storageProvider} onChange={(v) => setIntegration((o) => ({ ...o, storageProvider: v }))} className="mt-2" options={[{ value: 's3', label: 'Amazon S3' }, { value: 'local', label: 'Máy chủ nội bộ' }]} /></div>
             </div>
             <label className={lblClass()}>API KEY</label>
             <div className="mt-2 flex gap-2.5">
-              <Field p={p} value="sk_live_••••••••••••3f9a" onChange={() => {}} mono className="flex-1" />
-              <Btn p={p} variant="ghost" icon="copy">Tạo lại</Btn>
+              <Field p={p} value={integration.apiKey || '(chưa tạo)'} onChange={() => {}} mono className="flex-1" />
+              <Btn p={p} variant="ghost" icon="copy" onClick={regenApiKey}>Tạo lại</Btn>
             </div>
+            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider } })} />
           </section>
         )}
 
@@ -637,26 +800,33 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
         {sec === 'data' && (
           <section className={cardClass(24)}>
             <H desc="Sao lưu tự động toàn hệ thống.">Dữ liệu & sao lưu</H>
+            <div className="mb-[18px] grid grid-cols-2 gap-4">
+              <div><label className={lblClass()}>TẦN SUẤT SAO LƯU</label><Select p={p} value={data.backupFrequency} onChange={(v) => setData((o) => ({ ...o, backupFrequency: v }))} className="mt-2" options={[{ value: 'daily', label: 'Hằng ngày' }, { value: 'weekly', label: 'Hằng tuần' }, { value: 'monthly', label: 'Hằng tháng' }]} /></div>
+            </div>
             <div className="mb-[18px] flex flex-col gap-2.5">
-              <ToggleRow p={p} label="Tự động sao lưu hằng ngày" def={true} />
-              <ToggleRow p={p} label="Mã hoá dữ liệu sao lưu" def={true} />
+              <Toggle label="Tự động sao lưu" value={data.autoBackup} onChange={(v) => setData((o) => ({ ...o, autoBackup: v }))} />
+              <Toggle label="Mã hoá dữ liệu sao lưu" value={data.encryptBackups} onChange={(v) => setData((o) => ({ ...o, encryptBackups: v }))} />
             </div>
             <div className="flex gap-2.5">
-              <Btn p={p} icon="download">Sao lưu ngay</Btn>
-              <Btn p={p} variant="ghost" icon="upload">Khôi phục</Btn>
+              <Btn p={p} icon="download" onClick={backupNow}>Sao lưu ngay</Btn>
+              <Btn p={p} variant="ghost" icon="upload" onClick={() => restoreInputRef.current?.click()}>{restoring ? 'Đang khôi phục…' : 'Khôi phục'}</Btn>
+              <input ref={restoreInputRef} type="file" accept=".json,application/json" onChange={onRestoreFile} className="hidden" />
             </div>
+            <SaveRow onSave={() => saveGroup({ data })} />
           </section>
         )}
 
-        {sec !== 'appearance' && sec !== 'org' && (
+        {(sec === 'homepage' || sec === 'seo') && (
           <div className="flex items-center justify-end gap-2.5">
             {saved && (
               <span className="flex items-center gap-1.5 font-mono text-[11.5px] text-lms-ok">
                 <Icon name="checkCircle" size={15} stroke={p.ok} /> Đã lưu
               </span>
             )}
-            <Btn p={p} variant="ghost">Khôi phục mặc định</Btn>
-            <Btn p={p} icon="check" onClick={() => { if (!saving) saveSettings(); }}>Lưu thay đổi</Btn>
+            <Btn p={p} icon="check" onClick={() => { if (!saving) saveGroup({
+              homepage: { badge: homepage.badge, heroTitle: homepage.heroTitle, heroSubtitle: homepage.heroSubtitle, ctaLabel: homepage.ctaLabel },
+              seo: { title: seo.title, description: seo.description, keywords: seo.keywords.split(',').map((x) => x.trim()).filter(Boolean), ogImage: seo.ogImage || undefined },
+            }); }}>Lưu thay đổi</Btn>
           </div>
         )}
       </div>

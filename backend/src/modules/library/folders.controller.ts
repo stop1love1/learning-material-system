@@ -35,14 +35,19 @@ export class FoldersController {
   @Patch(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật thư mục' })
-  update(@Param('id') id: string, @Body() dto: UpdateFolderDto) {
-    return this.foldersService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateFolderDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.foldersService.update(id, dto, userId, role);
   }
 
   @Delete(':id')
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Xóa thư mục' })
-  remove(@Param('id') id: string) {
-    return this.foldersService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.foldersService.remove(id, userId, role);
   }
 }

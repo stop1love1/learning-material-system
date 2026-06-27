@@ -198,10 +198,34 @@ export function TBank({ p, t, setRoute, go }) {
   const [type, setType] = React.useState('all');
   const [kw, setKw] = React.useState('');
   const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
+  const [showFilter, setShowFilter] = React.useState(false);
+  const [level, setLevel] = React.useState('all');
   const k = kw.trim().toLowerCase();
   const list = (type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type))
+    .filter((q) => level === 'all' || q.level === level)
     .filter((q) => !k || (q.stem || '').toLowerCase().includes(k) || (q.topic || '').toLowerCase().includes(k));
   const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
+
+  // Nhân bản câu hỏi: tạo bản sao qua API (fallback LMS khi offline/đăng xuất).
+  const duplicate = async (src) => {
+    if (!src) return;
+    const detail: Record<string, any> = {};
+    if (src.type === 'single') detail.options = src.options || [];
+    else if (src.type === 'multi') detail.options = src.options || [];
+    else if (src.type === 'fill') detail.answers = src.answer || [];
+    else if (src.type === 'match') detail.pairs = (src.pairs || []).map((pr) => ({ left: pr[0], right: pr[1] }));
+    if (src.type === 'single') detail.correctOptionIndex = (src.answer || [0])[0] ?? 0;
+    else if (src.type === 'multi') detail.correctOptionIndices = src.answer || [];
+    else if (src.type === 'truefalse') detail.isCorrect = (src.answer || [])[0] === 0;
+    else if (src.type === 'essay') detail.gradingType = src.detail?.gradingType === 'rubric' ? 'rubric' : 'manual';
+    try {
+      await questionsApi.create({ type: src.type, level: src.level, content: (src.stem || '') + ' (bản sao)', detail });
+      await hydrateFor('bank');
+    } catch {
+      LMS && LMS.addQuestion({ type: src.type, level: src.level, stem: (src.stem || '') + ' (bản sao)',
+        options: src.options, answer: src.answer, pairs: src.pairs, topic: src.topic });
+    }
+  };
   if (!q) {
     return (
       <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
@@ -221,9 +245,22 @@ export function TBank({ p, t, setRoute, go }) {
       <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
         <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
         <div className="flex-1" />
-        <Btn p={p} variant="ghost" size="md" icon="filter">Bộ lọc</Btn>
+        <Btn p={p} variant={showFilter || level !== 'all' ? 'soft' : 'ghost'} size="md" icon="filter" onClick={() => setShowFilter((s) => !s)}>Bộ lọc</Btn>
         <Btn p={p} icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi</Btn>
       </div>
+
+      {showFilter && (
+        <div className="mb-[18px] flex flex-wrap items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise px-4 py-3">
+          <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">ĐỘ KHÓ</span>
+          <Pill p={p} active={level === 'all'} onClick={() => setLevel('all')}>Tất cả</Pill>
+          {DB.LEVELS.map((l) => (
+            <Pill key={l.id} p={p} active={level === l.id} onClick={() => setLevel(l.id)}>{l.label}</Pill>
+          ))}
+          {level !== 'all' && (
+            <button onClick={() => setLevel('all')} className="ml-auto cursor-pointer border-0 bg-transparent font-mono text-[11px] text-lms-accent">Xoá lọc</button>
+          )}
+        </div>
+      )}
 
       <div className="mb-[18px] flex flex-wrap gap-2">
         <Pill p={p} active={type === 'all'} onClick={() => setType('all')}>Tất cả · {DB.QUESTIONS.length}</Pill>
@@ -264,7 +301,7 @@ export function TBank({ p, t, setRoute, go }) {
               </div>
               <div className="flex gap-1.5">
                 <IconBtn name="pen" p={p} size={32} onClick={() => (go ? go('bank-edit', { question: q.id }) : setRoute('bank-edit'))} title="Sửa" />
-                <IconBtn name="copy" p={p} size={32} title="Nhân bản" />
+                <IconBtn name="copy" p={p} size={32} title="Nhân bản" onClick={() => duplicate(q)} />
               </div>
             </div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ · {q.topic.toUpperCase()}</div>

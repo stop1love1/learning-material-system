@@ -5,6 +5,9 @@ import { Exercise } from '../../schemas/exercise/exercise.schema';
 import { ExerciseQuestion } from '../../schemas/exercise/exercise-question.schema';
 import { Question } from '../../schemas/question-bank/question.schema';
 import { Attempt } from '../../schemas/exercise/attempt.schema';
+import { Participant } from '../../schemas/exercise/participant.schema';
+import { Submission } from '../../schemas/exercise/submission.schema';
+import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
 import { UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
@@ -19,6 +22,9 @@ export class ExercisesService {
     @InjectModel(ExerciseQuestion.name) private readonly exerciseQuestionModel: Model<ExerciseQuestion>,
     @InjectModel(Question.name) private readonly questionModel: Model<Question>,
     @InjectModel(Attempt.name) private readonly attemptModel: Model<Attempt>,
+    @InjectModel(Participant.name) private readonly participantModel: Model<Participant>,
+    @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
+    @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
   ) {}
 
   async list(dto: ListExercisesDto) {
@@ -122,6 +128,20 @@ export class ExercisesService {
     const res = await this.exerciseModel.deleteOne(this.ownerFilter(id, userId, role));
     if (res.deletedCount === 0) throw new NotFoundException('Không tìm thấy bài tập');
     await this.exerciseQuestionModel.deleteMany({ exerciseId });
+
+    // Dọn các bản ghi liên quan để tránh dữ liệu mồ côi. Attempt trỏ trực tiếp tới
+    // exerciseId; participant/submission/student-question chỉ trỏ tới attemptId,
+    // nên resolve attempt ids của exercise trước rồi xóa theo attemptId.
+    const attempts = await this.attemptModel.find({ exerciseId }).select('_id').lean();
+    const attemptIds = attempts.map((a) => a._id);
+    if (attemptIds.length > 0) {
+      await Promise.all([
+        this.participantModel.deleteMany({ attemptId: { $in: attemptIds } }),
+        this.submissionModel.deleteMany({ attemptId: { $in: attemptIds } }),
+        this.studentQuestionModel.deleteMany({ attemptId: { $in: attemptIds } }),
+      ]);
+    }
+    await this.attemptModel.deleteMany({ exerciseId });
     return { deleted: true };
   }
 

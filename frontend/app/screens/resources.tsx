@@ -87,6 +87,37 @@ export function TDocs({ p, t }) {
   };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
 
+  // "..." menu: mở liên kết, sao chép liên kết, hoặc xoá tài liệu (có xác nhận).
+  const [menuFor, setMenuFor] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!menuFor) return;
+    const close = () => setMenuFor(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [menuFor]);
+  const openDoc = (d: any) => { if (d.url) window.open(d.url, '_blank', 'noopener'); };
+  const copyLink = (d: any) => { try { navigator.clipboard?.writeText(d.url || ''); } catch {} };
+  const deleteDoc = async (d: any) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Xoá tài liệu “${d.name}”?`)) return;
+    try { await filesApi.remove(d.id); await hydrateFor('docs'); }
+    catch { DB.DOCS = DB.DOCS.filter((x) => x.id !== d.id); LMS && LMS.bump(); }
+  };
+  const DocMenu = ({ d, up }: { d: any; up?: boolean }) => (
+    <div onClick={(e) => e.stopPropagation()} className={`absolute right-0 z-30 w-[168px] overflow-hidden rounded-xl border border-lms-line bg-lms-surface py-1 shadow-[0_12px_36px_rgba(0,0,0,.18)] ${up ? 'bottom-[38px]' : 'top-[38px]'}`}>
+      {[
+        { ic: 'eye', lab: 'Mở tài liệu', fn: () => openDoc(d), disabled: !d.url },
+        { ic: 'link', lab: 'Sao chép liên kết', fn: () => copyLink(d), disabled: !d.url },
+        { ic: 'download', lab: 'Tải về', fn: () => doDownload(d.id) },
+        { ic: 'trash', lab: 'Xoá', fn: () => deleteDoc(d), danger: true },
+      ].map((m) => (
+        <button key={m.lab} disabled={m.disabled} onClick={() => { setMenuFor(null); m.fn(); }}
+          className={`flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[12.5px] ${m.disabled ? 'cursor-not-allowed text-lms-faint' : 'cursor-pointer ' + (m.danger ? 'text-lms-danger' : 'text-lms-ink')} hover:bg-lms-raise`}>
+          <Icon name={m.ic} size={15} stroke={m.danger ? p.danger : p.sub} /> {m.lab}
+        </button>
+      ))}
+    </div>
+  );
+
   const addDocModal = composing && (
     <div onClick={() => { setComposing(false); setForm(blankForm); }}
       className="fixed inset-0 z-60 flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5">
@@ -160,7 +191,10 @@ export function TDocs({ p, t }) {
                     </div>
                     <div className="mt-3 flex gap-2">
                       <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d.id)}>Tải về</Btn>
-                      <IconBtn name="more" p={p} size={34} />
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        <IconBtn name="more" p={p} size={34} onClick={() => setMenuFor(menuFor === d.id ? null : d.id)} />
+                        {menuFor === d.id && <DocMenu d={d} up />}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -182,7 +216,10 @@ export function TDocs({ p, t }) {
                   <div className="w-[110px] text-xs text-lms-sub">{d.updated}</div>
                   <div className="w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>
                   <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
-                  <IconBtn name="more" p={p} size={34} />
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <IconBtn name="more" p={p} size={34} onClick={() => setMenuFor(menuFor === d.id ? null : d.id)} />
+                    {menuFor === d.id && <DocMenu d={d} />}
+                  </div>
                 </div>
               );
             })}

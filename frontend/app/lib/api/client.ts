@@ -51,6 +51,13 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
+    // Auto-logout on 401 — but only when a token was actually sent. A 401 from an
+    // unauthenticated endpoint (login/forgot/reset use { auth:false }) is just a
+    // credential error and must NOT clear the session or loop.
+    if (res.status === 401 && auth && token) {
+      clearToken();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('lms:unauthorized'));
+    }
     const msg = data?.message ?? res.statusText;
     throw new ApiError(Array.isArray(msg) ? msg.join(', ') : String(msg), res.status, data);
   }
