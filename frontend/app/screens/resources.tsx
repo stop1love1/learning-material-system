@@ -5,6 +5,7 @@ import { DB } from '@/app/store/store';
 import { LMS, useLMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { filesApi, foldersApi, rubricsApi } from '@/app/lib/api';
+import { FolderTree } from '@/app/components/FolderTree';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
 import GoogleDrivePicker from '@/app/components/GoogleDrivePicker';
@@ -30,57 +31,92 @@ export const DOC_TYPE_META = {
 
 export const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
-export function TDocs({ p, t }) {
+export function TDocs({ p, t, auth }) {
   useLMS();
-  const [folder, setFolder] = React.useState('Tất cả');
+  // selId === null → "Tất cả"; otherwise a real Folder _id (string).
+  const [selId, setSelId] = React.useState<string | null>(null);
   const [view, setView] = React.useState('grid');
   const [kw, setKw] = React.useState('');
-  const docs = (folder === 'Tất cả' ? DB.DOCS : DB.DOCS.filter((d) => d.folder === folder))
+  const tree: any[] = DB.DOC_FOLDER_TREE || [];
+  const canManage = !!(auth && auth.isStaff);
+  const docs = (selId === null ? DB.DOCS : DB.DOCS.filter((d) => String(d.folderId) === selId))
     .filter((d) => { const k = kw.trim().toLowerCase(); return !k || (d.name || '').toLowerCase().includes(k); });
+  // Per-folder doc counts for the tree badges.
+  const folderCounts = React.useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const d of DB.DOCS) { if (d.folderId != null) m[String(d.folderId)] = (m[String(d.folderId)] || 0) + 1; }
+    return m;
+  }, [DB.DOCS]);
+  const treeNodes = tree.map((n) => ({ ...n, count: folderCounts[n.id] || 0 }));
   const FTYPES = [
     { value: 'pdf', label: 'PDF' }, { value: 'doc', label: 'Tài liệu (Word/Docs)' },
     { value: 'image', label: 'Ảnh' }, { value: 'video', label: 'Video' },
     { value: 'audio', label: 'Âm thanh' }, { value: 'slide', label: 'Slide' }, { value: 'link', label: 'Liên kết' },
   ];
-  const folderNames = DB.DOC_FOLDERS.filter((f) => f !== 'Tất cả');
-  const blankForm = { name: '', ftype: 'pdf', url: '', folderName: folderNames[0] || 'Tư liệu', desc: '' };
+  // Folder picker options for the create-file form: id-based (value=id, label=name),
+  // plus an "unfiled" option. Defaults to the currently-selected tree node.
+  const folderOptions = [{ value: '', label: 'Không có thư mục' }, ...tree.map((n) => ({ value: n.id, label: n.name }))];
+  const blankForm = () => ({ name: '', ftype: 'pdf', url: '', folderId: selId ?? '', desc: '' });
   const [composing, setComposing] = React.useState(false);
   const [form, setForm] = React.useState(blankForm);
   const [saving, setSaving] = React.useState(false);
   const setF = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+  const openCompose = () => { setForm(blankForm()); setComposing(true); };
+  const closeCompose = () => { setComposing(false); setForm(blankForm()); };
   const saveDoc = async () => {
     if (!form.name.trim() || !form.url.trim()) return;
     setSaving(true);
+    const folderId = form.folderId || null;
+    const tag = folderId ? (tree.find((n) => n.id === folderId)?.name) : undefined;
     try {
-      // Resolve the folder id by name so the file is a real folder member.
-      let folderId = null;
-      try {
-        const fl: any = await foldersApi.list();
-        const arr: any[] = Array.isArray(fl) ? fl : (fl?.records ?? []);
-        folderId = (arr.find((x) => x.name === form.folderName) || {})._id ?? null;
-      } catch {}
-      await filesApi.create({ name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: [form.folderName], description: form.desc });
+      await filesApi.create({ name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: tag ? [tag] : [], description: form.desc });
       await hydrateFor('docs');
-      setComposing(false); setForm(blankForm);
+      closeCompose();
     } catch {
-      LMS && LMS.addDoc({ name: form.name.trim(), type: form.ftype, folder: form.folderName });
-      setComposing(false); setForm(blankForm);
+      LMS && LMS.addDoc({ name: form.name.trim(), type: form.ftype, folder: tag ?? 'Tư liệu' });
+      closeCompose();
     } finally { setSaving(false); }
   };
 
-  const importDriveDocs = async (picked: any[]) => {
-    const folderName = folder !== 'Tất cả' ? folder : (folderNames[0] || 'Tư liệu');
-    let folderId: any = null;
+  // Folder management (teacher/admin). All refresh via hydrateFor('docs').
+  const addRootFolder = async () => {
+    const name = (typeof window !== 'undefined' ? window.prompt('Tên thư mục mới') : '')?.trim();
+    if (!name) return;
+    try { await foldersApi.create({ name, parentId: null }); await hydrateFor('docs'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được thư mục.'); }
+  };
+  const addChildFolder = async (parentId: string) => {
+    const name = (typeof window !== 'undefined' ? window.prompt('Tên thư mục con') : '')?.trim();
+    if (!name) return;
+    try { await foldersApi.create({ name, parentId }); await hydrateFor('docs'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được thư mục.'); }
+  };
+  const renameFolder = async (node: any) => {
+    const name = (typeof window !== 'undefined' ? window.prompt('Đổi tên thư mục', node.name) : '')?.trim();
+    if (!name || name === node.name) return;
+    try { await foldersApi.update(node.id, { name }); await hydrateFor('docs'); }
+    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không đổi tên được thư mục.'); }
+  };
+  const deleteFolder = async (node: any) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Xoá thư mục “${node.name}”?`)) return;
     try {
-      const fl: any = await foldersApi.list();
-      const arr: any[] = Array.isArray(fl) ? fl : (fl?.records ?? []);
-      folderId = (arr.find((x) => x.name === folderName) || {})._id ?? null;
-    } catch {}
+      await foldersApi.remove(node.id);
+      if (selId === node.id) setSelId(null);
+      await hydrateFor('docs');
+    } catch (e: any) {
+      // Backend ConflictException (e.g. non-empty folder) → surface its message.
+      if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được thư mục.');
+    }
+  };
+
+  const importDriveDocs = async (picked: any[]) => {
+    const folderId: any = selId ?? null;
+    const tag = folderId ? (tree.find((n) => n.id === folderId)?.name) : undefined;
     for (const d of picked) {
       const url = d.url || (d.id ? `https://drive.google.com/file/d/${d.id}/view` : '');
       if (!url) continue;
       try {
-        await filesApi.create({ name: d.name || 'Tài liệu', fileType: mimeToType(d.mimeType), source: 'external', url, folderId, tags: [folderName], description: '' });
+        await filesApi.create({ name: d.name || 'Tài liệu', fileType: mimeToType(d.mimeType), source: 'external', url, folderId, tags: tag ? [tag] : [], description: '' });
       } catch {}
     }
     await hydrateFor('docs');
@@ -119,26 +155,26 @@ export function TDocs({ p, t }) {
   );
 
   const addDocModal = composing && (
-    <div onClick={() => { setComposing(false); setForm(blankForm); }}
+    <div onClick={closeCompose}
       className="fixed inset-0 z-60 flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5">
       <div onClick={(e) => e.stopPropagation()}
         className="w-full max-w-[620px] max-h-[88vh] overflow-y-auto bg-lms-surface rounded-2xl border border-lms-line p-6 shadow-[0_24px_70px_rgba(0,0,0,.22)]">
         <div className="flex items-center justify-between mb-[18px]">
           <h2 className="m-0 font-lms-heading text-xl font-bold text-lms-ink">Thêm tài liệu</h2>
-          <button onClick={() => { setComposing(false); setForm(blankForm); }} className="cursor-pointer border-0 bg-transparent text-lg leading-none text-lms-sub">✕</button>
+          <button onClick={closeCompose} className="cursor-pointer border-0 bg-transparent text-lg leading-none text-lms-sub">✕</button>
         </div>
         <label className={lblClass()}>TÊN TÀI LIỆU</label>
         <Field p={p} value={form.name} onChange={(v) => setF('name', v)} placeholder="vd: Đề bài — Tả con vật nuôi em yêu thích" className="mt-2 mb-4" />
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div><label className={lblClass()}>LOẠI</label><Select p={p} value={form.ftype} onChange={(v) => setF('ftype', v)} options={FTYPES} className="mt-2" /></div>
-          <div><label className={lblClass()}>THƯ MỤC</label><Select p={p} value={form.folderName} onChange={(v) => setF('folderName', v)} options={folderNames} className="mt-2" /></div>
+          <div><label className={lblClass()}>THƯ MỤC</label><Select p={p} value={form.folderId} onChange={(v) => setF('folderId', v)} options={folderOptions} className="mt-2" /></div>
         </div>
         <label className={lblClass()}>LIÊN KẾT (URL)</label>
         <Field p={p} value={form.url} onChange={(v) => setF('url', v)} placeholder="https://drive.google.com/file/d/.../view" className="mt-2 mb-4" />
         <label className={lblClass()}>MÔ TẢ (soạn bằng trình soạn thảo)</label>
         <div className="mt-2"><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
         <div className="flex justify-end gap-2.5 mt-[18px]">
-          <Btn p={p} variant="ghost" onClick={() => { setComposing(false); setForm(blankForm); }}>Huỷ</Btn>
+          <Btn p={p} variant="ghost" onClick={closeCompose}>Huỷ</Btn>
           <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
         </div>
       </div>
@@ -148,20 +184,22 @@ export function TDocs({ p, t }) {
   return (
     <div className="mx-auto grid max-w-[1480px] grid-cols-[210px_1fr] gap-[26px] px-[30px] pt-6 pb-10">
       <aside>
-        <Btn p={p} icon="plus" full onClick={() => setComposing(true)}>Thêm tài liệu</Btn>
+        <Btn p={p} icon="plus" full onClick={openCompose}>Thêm tài liệu</Btn>
         <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">THƯ MỤC</div>
-        <div className="flex flex-col gap-px">
-          {DB.DOC_FOLDERS.map((f) => {
-            const on = f === folder, n = f === 'Tất cả' ? DB.DOCS.length : DB.DOCS.filter((d) => d.folder === f).length;
-            return (
-              <div key={f} onClick={() => setFolder(f)} className={`lms-nav-item flex cursor-pointer items-center gap-[9px] rounded-[9px] px-[11px] py-2 text-[13px] ${on ? 'bg-lms-active-bg font-semibold text-lms-ink' : 'bg-transparent font-[450] text-lms-sub'}`}>
-                <Icon name={f === 'Tất cả' ? 'cloud' : 'folder'} size={16} stroke={on ? p.accent : p.faint} />
-                <span className="flex-1">{f}</span>
-                <span className="font-mono text-[11px] text-lms-faint">{n}</span>
-              </div>
-            );
-          })}
-        </div>
+        <FolderTree
+          nodes={treeNodes}
+          selectedId={selId}
+          onSelect={setSelId}
+          p={p}
+          allLabel="Tất cả"
+          allCount={DB.DOCS.length}
+          {...(canManage ? {
+            onAddRoot: addRootFolder,
+            onAddChild: addChildFolder,
+            onRename: renameFolder,
+            onDelete: deleteFolder,
+          } : {})}
+        />
       </aside>
 
       <div>

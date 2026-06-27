@@ -67,6 +67,11 @@ export class Submission {
   @ApiProperty({ type: Number, nullable: true })
   percent: number | null;
 
+  // Đạt/không đạt theo academic.passThreshold (null = chưa có điểm cuối).
+  @Prop({ type: Boolean, default: null })
+  @ApiProperty({ type: Boolean, nullable: true })
+  isPassed: boolean | null;
+
   @Prop({ type: String, default: null })
   @ApiProperty({ type: String, nullable: true })
   feedback: string | null;

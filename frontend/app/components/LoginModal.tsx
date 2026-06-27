@@ -24,6 +24,9 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   // When login fails because the email is unverified, expose a "resend" action.
   const [needsVerify, setNeedsVerify] = React.useState(false);
   const [resent, setResent] = React.useState<null | { devVerifyLink?: string }>(null);
+  // When org-wide 2FA is on, login returns needs2fa → switch to the OTP step.
+  const [twofa, setTwofa] = React.useState<null | { email: string; devOtp?: string }>(null);
+  const [otp, setOtp] = React.useState('');
 
   const friendly = (e: unknown) =>
     e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Có lỗi xảy ra';
@@ -39,7 +42,11 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
         const res = await auth.register(name, email, pw);
         setSent({ devVerifyLink: res?.devVerifyLink });
       } else {
-        await auth.login(email, pw);
+        const r = await auth.login(email, pw);
+        if (r?.needs2fa) {
+          setTwofa({ email: r.email ?? email, devOtp: r.devOtp });
+          setOtp('');
+        }
       }
     } catch (e) {
       const msg = friendly(e);
@@ -62,6 +69,27 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
     } finally {
       setBusy(false);
     }
+  };
+
+  const verifyOtp = async () => {
+    if (!twofa) return;
+    setErr('');
+    setBusy(true);
+    try {
+      await auth.verify2fa(twofa.email, otp.trim());
+      // verify2fa closes the modal on success.
+    } catch (e) {
+      setErr(friendly(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const backFrom2fa = () => {
+    setTwofa(null);
+    setOtp('');
+    setErr('');
+    setBusy(false);
   };
 
   const resend = async () => {
@@ -110,6 +138,66 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
           setTab('login');
         }}
       />
+    );
+  }
+  // Org-wide 2FA: enter the email OTP sent to the user.
+  if (twofa) {
+    return (
+      <div
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        className="fixed inset-0 z-100 flex items-center justify-center bg-[rgba(10,12,16,0.5)] p-5 backdrop-blur-[3px]"
+      >
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !busy) {
+              e.preventDefault();
+              verifyOtp();
+            }
+          }}
+          className="max-h-[92vh] w-full max-w-[420px] overflow-y-auto rounded-[18px] border border-lms-line bg-lms-surface p-7 shadow-[0_24px_70px_rgba(0,0,0,0.3)]"
+        >
+          <div className="mb-[18px] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-lms-accent font-lms-heading text-[19px] font-bold text-white">
+                V
+              </div>
+              <div className="font-lms-heading text-base font-bold text-lms-ink">Vườn Văn</div>
+            </div>
+            <IconBtn name="x" p={p} size={32} onClick={onClose} />
+          </div>
+          <h2 className="m-0 mb-1 font-lms-heading text-[22px] font-extrabold tracking-[-0.4px] text-lms-ink">
+            Xác thực hai bước
+          </h2>
+          <p className="m-0 mb-[18px] text-[13px] leading-normal text-lms-sub">
+            Đã gửi mã xác thực tới <b className="text-lms-ink">{twofa.email}</b>. Nhập mã 6 số để hoàn tất đăng nhập.
+          </p>
+
+          <label className={lblClass()}>MÃ XÁC THỰC (6 SỐ)</label>
+          <Field p={p} value={otp} onChange={setOtp} placeholder="123456" icon="target" className="mt-2 mb-3.5" />
+
+          {twofa.devOtp && (
+            <div className="mb-3.5 rounded-[9px] border border-lms-line bg-lms-sink px-3 py-2 text-[12.5px] text-lms-sub">
+              Mã (chế độ dev): <b className="text-lms-ink">{twofa.devOtp}</b>
+            </div>
+          )}
+
+          {err && <div className="mb-2.5 text-center text-[12.5px] text-lms-danger">{err}</div>}
+
+          <Btn p={p} full size="lg" icon="check" onClick={verifyOtp}>
+            {busy ? 'Đang xử lý…' : 'Xác nhận'}
+          </Btn>
+
+          <p className="m-0 mt-[18px] text-center text-[13px] text-lms-sub">
+            <span onClick={backFrom2fa} className="cursor-pointer font-bold text-lms-accent">
+              Quay lại
+            </span>
+          </p>
+        </div>
+      </div>
     );
   }
   // Post-register: "check your email" view.

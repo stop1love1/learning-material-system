@@ -1,7 +1,7 @@
 'use client';
 // GET /exercises has meta only — submitted/graded counts come from GET /attempts (401 for students → 0).
 import { DB } from '@/app/store/store';
-import { authApi, exercisesApi, attemptsApi } from '@/app/lib/api';
+import { authApi, exercisesApi, attemptsApi, exerciseFoldersApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
 function typeVi(t: string): string {
@@ -46,6 +46,19 @@ function dueInVi(due: string | Date | null | undefined): string {
 type ExStat = { submitted: number; graded: number; total: number };
 
 export async function loadExercises(): Promise<void> {
+  // Exercise folder tree (best-effort): "Kho đề thi" + "Bài tập" are browsed as a
+  // folder hierarchy. Stored flat as { id, name, parentId } for <FolderTree>.
+  try {
+    const folders: any[] = await exerciseFoldersApi.list();
+    (DB as any).EX_FOLDERS = (folders ?? []).map((f: Record<string, any>) => ({
+      id: String(f._id),
+      name: f.name,
+      parentId: f.parentId ? String(f.parentId) : null,
+    }));
+  } catch {
+    (DB as any).EX_FOLDERS = [];
+  }
+
   try {
     const res: any = await exercisesApi.list({ pageSize: 200 });
     const records: any[] = (res as any)?.records ?? [];
@@ -95,6 +108,7 @@ export async function loadExercises(): Promise<void> {
       return {
         id: e._id,
         title: e.title,
+        folderId: e.folderId ? String(e.folderId) : null,
         // Keep `subject` as a neutral label only; do NOT put it in `class`, which
         // feeds the class filter (subject is not a class code → tasks vanish).
         class: '',

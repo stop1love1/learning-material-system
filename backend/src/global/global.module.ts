@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtService } from './jwt.service';
 import { BcryptService } from './bcrypt.service';
+import { MailService } from './mail.service';
 
 @Global()
 @Module({
@@ -17,7 +18,7 @@ import { BcryptService } from './bcrypt.service';
       }),
     }),
   ],
-  providers: [JwtService, BcryptService],
-  exports: [JwtService, BcryptService, JwtModule],
+  providers: [JwtService, BcryptService, MailService],
+  exports: [JwtService, BcryptService, MailService, JwtModule],
 })
 export class GlobalModule {}

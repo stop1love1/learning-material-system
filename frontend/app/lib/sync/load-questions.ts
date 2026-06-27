@@ -13,7 +13,13 @@ export async function loadQuestions(): Promise<void> {
     try {
       const topics = (await topicsApi.list()) as any[];
       (topics ?? []).forEach((tp: Record<string, any>) => { topicMap[String(tp._id)] = tp.title; });
-    } catch { /* leave map empty → topics fall back to '' */ }
+      // Flat tree for the FolderTree sidebar (label field is `name`).
+      DB.TOPIC_TREE = (topics ?? []).map((tp: Record<string, any>) => ({
+        id: String(tp._id),
+        name: tp.title,
+        parentId: tp.parentId ? String(tp.parentId) : null,
+      }));
+    } catch { DB.TOPIC_TREE = []; /* leave map empty → topics fall back to '' */ }
 
     // Questions are user-scoped (@CurrentUser on the backend list), so every
     // record belongs to the logged-in user — use their name as the author.
@@ -46,11 +52,15 @@ export async function loadQuestions(): Promise<void> {
             }
           }
         } catch { /* leave defaults — never let an undefined field crash the preview */ }
+        // The Question's Topic ref may arrive as `topic` or `topicId` (raw id or populated object).
+        const topicRef = q.topic ?? q.topicId;
+        const topicId = topicRef ? String(topicRef?._id ?? topicRef) : '';
         return {
           id: q._id,
           type: q.type,
           level: q.level,
-          topic: (q.topicId && topicMap[String(q.topicId)]) ?? '',
+          topicId,
+          topic: (topicId && topicMap[topicId]) ?? '',
           uses: q.uses ?? 0,
           updated: formatRelativeVi(q.updatedAt),
           author: q.userId?.name ?? author,

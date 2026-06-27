@@ -18,6 +18,7 @@ export * from './rubric/rubric.schema';
 export * from './rubric/rubric-level.schema';
 export * from './rubric/rubric-criterion.schema';
 export * from './exercise/exercise.schema';
+export * from './exercise/exercise-folder.schema';
 export * from './exercise/exercise-question.schema';
 export * from './exercise/attempt.schema';
 export * from './exercise/participant.schema';

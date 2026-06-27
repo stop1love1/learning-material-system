@@ -1,6 +1,6 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Exercise } from '../../schemas/exercise/exercise.schema';
 import { ExerciseQuestion } from '../../schemas/exercise/exercise-question.schema';
 import { Question } from '../../schemas/question-bank/question.schema';
@@ -8,6 +8,9 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
+import { User } from '../../schemas/user.schema';
+import { Settings } from '../../schemas/settings.schema';
+import { MailService } from '../../global/mail.service';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
 import { QuestionType } from '../../enums';
 import { StartAttemptDto } from './dto/start-attempt.dto';
@@ -15,8 +18,18 @@ import { SubmitAttemptDto } from './dto/submit-attempt.dto';
 import { GradeAttemptDto } from './dto/grade-attempt.dto';
 import { ListAttemptsDto } from './dto/list-attempts.dto';
 
+interface AcademicPolicy {
+  scoreScale: number;
+  passThreshold: number;
+  rounding: string;
+  allowResubmit: boolean;
+  showScoreImmediately: boolean;
+}
+
 @Injectable()
 export class AttemptsService {
+  private readonly logger = new Logger(AttemptsService.name);
+
   constructor(
     @InjectModel(Exercise.name) private readonly exerciseModel: Model<Exercise>,
     @InjectModel(ExerciseQuestion.name) private readonly exerciseQuestionModel: Model<ExerciseQuestion>,
@@ -25,7 +38,63 @@ export class AttemptsService {
     @InjectModel(Participant.name) private readonly participantModel: Model<Participant>,
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Settings.name) private readonly settingsModel: Model<Settings>,
+    private readonly mail: MailService,
   ) {}
+
+  /** Đọc nhóm `academic` từ settings (system). Đọc phòng thủ với mặc định hợp lý. */
+  private async getAcademicPolicy(): Promise<AcademicPolicy> {
+    const defaults: AcademicPolicy = {
+      scoreScale: 10,
+      passThreshold: 5,
+      rounding: 'none',
+      allowResubmit: false,
+      showScoreImmediately: true,
+    };
+    try {
+      const doc = await this.settingsModel.findOne({ key: 'system' }).select('academic').lean();
+      const a = (doc as any)?.academic ?? {};
+      return {
+        scoreScale: typeof a.scoreScale === 'number' ? a.scoreScale : defaults.scoreScale,
+        passThreshold: typeof a.passThreshold === 'number' ? a.passThreshold : defaults.passThreshold,
+        rounding: typeof a.rounding === 'string' ? a.rounding : defaults.rounding,
+        allowResubmit: typeof a.allowResubmit === 'boolean' ? a.allowResubmit : defaults.allowResubmit,
+        showScoreImmediately:
+          typeof a.showScoreImmediately === 'boolean' ? a.showScoreImmediately : defaults.showScoreImmediately,
+      };
+    } catch {
+      return defaults;
+    }
+  }
+
+  /** Đọc 1 cờ thông báo từ settings (mặc định true). */
+  private async getEmailOnSubmit(): Promise<boolean> {
+    try {
+      const doc = await this.settingsModel.findOne({ key: 'system' }).select('notifications').lean();
+      const n = (doc as any)?.notifications ?? {};
+      return typeof n.emailOnSubmit === 'boolean' ? n.emailOnSubmit : true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Áp chính sách điểm: clamp [0, scoreScale], làm tròn theo rounding, và tính isPassed.
+   * `raw` là điểm đã ở thang scoreScale (caller tự scale nếu nguồn là count/percent).
+   */
+  private applyScorePolicy(raw: number, policy: AcademicPolicy): { score: number; isPassed: boolean } {
+    let score = raw;
+    if (!Number.isFinite(score)) score = 0;
+    // (a) clamp
+    score = Math.max(0, Math.min(policy.scoreScale, score));
+    // (b) round
+    if (policy.rounding === 'half') score = Math.round(score * 2) / 2;
+    else if (policy.rounding === 'integer') score = Math.round(score);
+    // (c) pass/fail
+    const isPassed = score >= policy.passThreshold;
+    return { score, isPassed };
+  }
 
   async start(dto: StartAttemptDto, userId: string) {
     const exerciseId = convertStringToObjectId(dto.exerciseId);
@@ -64,11 +133,27 @@ export class AttemptsService {
       throw new ForbiddenException('Không có quyền nộp lượt làm này');
     }
 
+    const policy = await this.getAcademicPolicy();
+
+    // Respect allowResubmit: nếu tắt và học viên đã có lượt khác (cùng exercise) đã nộp,
+    // chặn nộp mới. Bỏ qua chính lượt hiện tại (cho phép cập nhật lại bài chưa nộp lần nào).
+    if (!policy.allowResubmit) {
+      const priorSubmitted = await this.attemptModel.exists({
+        exerciseId: attempt.exerciseId,
+        studentId,
+        submittedAt: { $ne: null },
+        _id: { $ne: id },
+      });
+      if (priorSubmitted) {
+        throw new ConflictException('Bài tập này không cho phép nộp lại — bạn đã có lượt làm đã nộp.');
+      }
+    }
+
     // Determine which questions of this exercise are essays, so essay points are
     // bucketed into essayGrades (not multipleChoiceGrades) and counted.
     const links = await this.exerciseQuestionModel
       .find({ exerciseId: attempt.exerciseId })
-      .select('questionId')
+      .select('questionId grades')
       .lean();
     const qIds = links.map((l) => l.questionId);
     const essayDocs = await this.questionModel
@@ -119,20 +204,36 @@ export class AttemptsService {
       }
     }
 
+    const set: Record<string, unknown> = {
+      attemptId: id,
+      correct,
+      wrong,
+      notComplete,
+      waitingGrades,
+      numberOfEssays,
+      multipleChoiceGrades,
+      essayGrades,
+      submittedAt: new Date(),
+    };
+
+    // Auto-graded quiz: nếu không còn câu chờ chấm tay (waitingGrades === 0) thì điểm
+    // đã là cuối cùng → scale raw lên scoreScale, áp policy và lưu totalScore/percent/isPassed.
+    // Tổng điểm thô tối đa = sum(grades) của các câu trong bài (mặc định 1đ/câu nếu chưa đặt).
+    if (waitingGrades === 0) {
+      const rawEarned = (multipleChoiceGrades || 0) + (essayGrades || 0);
+      const maxRaw = links.reduce((sum, l: any) => sum + (l.grades != null ? l.grades : 1), 0);
+      const scaled = maxRaw > 0 ? (rawEarned / maxRaw) * policy.scoreScale : 0;
+      const { score, isPassed } = this.applyScorePolicy(scaled, policy);
+      set.totalScore = score;
+      set.percent = maxRaw > 0 ? Math.round((rawEarned / maxRaw) * 100) : 0;
+      set.isPassed = isPassed;
+      set.isGraded = true;
+    }
+
     const submission = await this.submissionModel.findOneAndUpdate(
       { attemptId: id },
       {
-        $set: {
-          attemptId: id,
-          correct,
-          wrong,
-          notComplete,
-          waitingGrades,
-          numberOfEssays,
-          multipleChoiceGrades,
-          essayGrades,
-          submittedAt: new Date(),
-        },
+        $set: set,
         $inc: { submissionCount: 1 },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -146,7 +247,36 @@ export class AttemptsService {
       { isFinished: true, endedAt: new Date() },
     );
 
+    // Thông báo email cho chủ bài tập (best-effort, không bao giờ làm hỏng submit).
+    await this.notifyOwnerOnSubmit(attempt.exerciseId, studentId).catch(() => undefined);
+
     return submission.toObject();
+  }
+
+  /** Gửi email cho người tạo bài tập khi có bài nộp (nếu notifications.emailOnSubmit bật). */
+  private async notifyOwnerOnSubmit(exerciseId: Types.ObjectId, studentId: Types.ObjectId): Promise<void> {
+    try {
+      const enabled = await this.getEmailOnSubmit();
+      if (!enabled) return;
+      const exercise = await this.exerciseModel.findById(exerciseId).select('userId title').lean();
+      if (!exercise?.userId) return;
+      const [owner, student] = await Promise.all([
+        this.userModel.findById(exercise.userId).select('email name').lean(),
+        this.userModel.findById(studentId).select('name email').lean(),
+      ]);
+      if (!owner?.email) return;
+      const studentName = student?.name || student?.email || 'Một học viên';
+      const title = exercise.title || 'Bài tập';
+      const html = `
+        <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;color:#1f2937">
+          <h2 style="color:#0f766e">Có bài nộp mới</h2>
+          <p><strong>${studentName}</strong> vừa nộp bài cho bài tập <strong>${title}</strong>.</p>
+          <p style="color:#6b7280;font-size:13px">Đăng nhập hệ thống để xem và chấm bài.</p>
+        </div>`;
+      await this.mail.sendMail(owner.email, 'Có bài nộp mới', html);
+    } catch (err) {
+      this.logger.warn(`Gửi email báo bài nộp thất bại: ${(err as Error)?.message ?? err}`);
+    }
   }
 
   async result(attemptId: string, userId: string) {
@@ -233,7 +363,13 @@ export class AttemptsService {
       gradedBy: convertStringToObjectId(graderId),
       gradedAt: new Date(),
     };
-    if (dto.totalScore !== undefined) set.totalScore = dto.totalScore;
+    if (dto.totalScore !== undefined) {
+      // Áp chính sách academic lên điểm cuối do giáo viên nhập: clamp/làm tròn + đạt/không đạt.
+      const policy = await this.getAcademicPolicy();
+      const { score, isPassed } = this.applyScorePolicy(dto.totalScore, policy);
+      set.totalScore = score;
+      set.isPassed = isPassed;
+    }
     if (dto.percent !== undefined) set.percent = dto.percent;
     if (dto.feedback !== undefined) set.feedback = dto.feedback;
 

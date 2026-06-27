@@ -23,6 +23,9 @@ export const authApi = {
     api.post<{ ok: true; devVerifyLink?: string }>('/auth/resend-verification', { email }, { auth: false }),
   // Sign in with a Google ID token (credential from @react-oauth/google).
   google: (idToken: string) => api.post<AuthResult>('/auth/google', { idToken }, { auth: false }),
+  // Step 2 of email-OTP 2FA: exchange the 6-digit code for a session.
+  verify2fa: (email: string, code: string) =>
+    api.post<AuthResult>('/auth/verify-2fa', { email, code }, { auth: false }),
   me: () => api.get<Record<string, any>>('/auth/me'),
   updateMe: (body: { name?: string; email?: string; avatar?: string }) => api.patch<Record<string, any>>('/auth/me', body),
   // Server-side logout (best-effort token revocation). Frontend clears the token regardless.
@@ -52,6 +55,13 @@ export const filesApi = {
   remove: (id: string) => api.del(`/files/${id}`),
   download: (id: string) => api.post(`/files/${id}/download`),
   myDownloads: () => api.get<any[]>('/files/me/downloads'),
+};
+
+export const exerciseFoldersApi = {
+  list: (parentId?: string) => api.get<any[]>(`/exercise-folders${qs({ parentId })}`, { auth: false }),
+  create: (body: any) => api.post('/exercise-folders', body),
+  update: (id: string, body: any) => api.patch(`/exercise-folders/${id}`, body),
+  remove: (id: string) => api.del(`/exercise-folders/${id}`),
 };
 
 export const topicsApi = {

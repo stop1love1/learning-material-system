@@ -35,6 +35,7 @@ export class ExercisesService {
       ...(dto.status ? { status: dto.status } : {}),
       ...(dto.subject ? { subject: dto.subject } : {}),
       ...(dto.grade ? { grade: dto.grade } : {}),
+      ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
     const [records, total] = await Promise.all([
       this.exerciseModel
@@ -96,12 +97,13 @@ export class ExercisesService {
   }
 
   async create(dto: CreateExerciseDto, userId: string) {
-    const { materialIds, dueDate, ...rest } = dto;
+    const { materialIds, dueDate, folderId, ...rest } = dto;
     const exercise = await this.exerciseModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
       ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
       ...(materialIds ? { materialIds: materialIds.map((m) => convertStringToObjectId(m)) } : {}),
+      ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
     });
     return this.findOne(exercise._id.toString());
   }
@@ -112,10 +114,11 @@ export class ExercisesService {
   }
 
   async update(id: string, dto: UpdateExerciseDto, userId: string, role?: UserRole) {
-    const { materialIds, dueDate, ...rest } = dto;
+    const { materialIds, dueDate, folderId, ...rest } = dto;
     const patch: Record<string, unknown> = { ...rest };
     if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null;
     if (materialIds !== undefined) patch.materialIds = materialIds.map((m) => convertStringToObjectId(m));
+    if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();

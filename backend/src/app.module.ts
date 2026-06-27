@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 import { APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,10 +19,12 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    NestScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -41,6 +44,7 @@ import { ScheduleModule } from './modules/schedule/schedule.module';
     StatsModule,
     NotificationsModule,
     ScheduleModule,
+    MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_FILTER, useClass: AllExceptionsFilter }],

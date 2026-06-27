@@ -3,25 +3,87 @@ import React from 'react';
 import { Icon, Tag, Pill, Btn, Field, Select, Progress } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
-import { exercisesApi } from '@/app/lib/api';
+import { exercisesApi, exerciseFoldersApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { FolderTree } from '@/app/components/FolderTree';
 import { lblClass, cardClass, ToggleRow } from '@/app/helpers/shared';
 import { typeMeta } from '@/app/screens/bank';
 import { DOC_TYPE_META } from '@/app/screens/resources';
 
-export function TAssignments({ p, t, setRoute, go }) {
+export function TAssignments({ p, t, setRoute, go, auth }) {
   const [status, setStatus] = React.useState('all');
+  const [selFolder, setSelFolder] = React.useState<string | null>(null);
+
+  const canManage = !!auth?.isStaff;
+  const folders = (DB as any).EX_FOLDERS || [];
+
+  const refresh = () => hydrateFor('assignments');
+
+  const inFolder = (a) => selFolder === null || String(a.folderId ?? '') === selFolder;
   const filt = { all: () => true, open: (a) => a.status === 'open' || a.status === 'closing',
     grading: (a) => a.submitted > a.graded, done: (a) => a.status === 'done' };
-  const list = DB.ASSIGNMENTS.filter(filt[status]);
+  // Scope status counts + the all-count to the selected folder so the numbers track the tree.
+  const scoped = DB.ASSIGNMENTS.filter(inFolder);
+  const list = scoped.filter(filt[status]);
   const counts = {
-    open: DB.ASSIGNMENTS.filter(filt.open).length, grading: DB.ASSIGNMENTS.filter(filt.grading).length,
-    done: DB.ASSIGNMENTS.filter(filt.done).length,
+    open: scoped.filter(filt.open).length, grading: scoped.filter(filt.grading).length,
+    done: scoped.filter(filt.done).length,
   };
+
+  // Per-folder exercise tally (counts only direct members; null folderId → "all" root only).
+  const folderCounts: Record<string, number> = {};
+  for (const a of DB.ASSIGNMENTS) {
+    const fid = a.folderId ? String(a.folderId) : null;
+    if (fid) folderCounts[fid] = (folderCounts[fid] || 0) + 1;
+  }
+  const treeNodes = folders.map((f) => ({ ...f, count: folderCounts[f.id] || 0 }));
+
+  const onAddRoot = async () => {
+    const name = window.prompt('Tên thư mục mới')?.trim();
+    if (!name) return;
+    try { await exerciseFoldersApi.create({ name, parentId: null }); await refresh(); }
+    catch (e: any) { window.alert(e?.message || 'Không tạo được thư mục.'); }
+  };
+  const onAddChild = async (parentId: string) => {
+    const name = window.prompt('Tên thư mục con')?.trim();
+    if (!name) return;
+    try { await exerciseFoldersApi.create({ name, parentId }); await refresh(); }
+    catch (e: any) { window.alert(e?.message || 'Không tạo được thư mục.'); }
+  };
+  const onRename = async (node) => {
+    const name = window.prompt('Đổi tên thư mục', node.name)?.trim();
+    if (!name || name === node.name) return;
+    try { await exerciseFoldersApi.update(node.id, { name }); await refresh(); }
+    catch (e: any) { window.alert(e?.message || 'Không đổi tên được.'); }
+  };
+  const onDelete = async (node) => {
+    if (!window.confirm(`Xoá thư mục "${node.name}"?`)) return;
+    try {
+      await exerciseFoldersApi.remove(node.id);
+      if (selFolder === node.id) setSelFolder(null);
+      await refresh();
+    } catch (e: any) { window.alert(e?.message || 'Không xoá được thư mục (thư mục có thể chưa rỗng).'); }
+  };
+
   return (
-    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto flex max-w-[1480px] gap-6 px-[30px] pt-6 pb-10">
+      <aside className="hidden w-[240px] shrink-0 lg:block">
+        <FolderTree
+          nodes={treeNodes}
+          selectedId={selFolder}
+          onSelect={setSelFolder}
+          p={p}
+          allLabel="Tất cả bài tập / đề thi"
+          allCount={DB.ASSIGNMENTS.length}
+          onAddRoot={canManage ? onAddRoot : undefined}
+          onAddChild={canManage ? onAddChild : undefined}
+          onRename={canManage ? onRename : undefined}
+          onDelete={canManage ? onDelete : undefined}
+        />
+      </aside>
+      <div className="min-w-0 flex-1">
       <div className="mb-[22px] flex flex-wrap items-center gap-2">
-        <Pill p={p} active={status === 'all'} onClick={() => setStatus('all')}>Tất cả · {DB.ASSIGNMENTS.length}</Pill>
+        <Pill p={p} active={status === 'all'} onClick={() => setStatus('all')}>Tất cả · {scoped.length}</Pill>
         <Pill p={p} active={status === 'open'} onClick={() => setStatus('open')}>Đang mở · {counts.open}</Pill>
         <Pill p={p} active={status === 'grading'} onClick={() => setStatus('grading')}>Chờ chấm · {counts.grading}</Pill>
         <Pill p={p} active={status === 'done'} onClick={() => setStatus('done')}>Đã đóng · {counts.done}</Pill>
@@ -62,6 +124,7 @@ export function TAssignments({ p, t, setRoute, go }) {
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -72,7 +135,7 @@ const STEPS = [
   { id: 2, label: 'Cài đặt & giao', icon: 'send' },
 ];
 
-export function TAssignNew({ p, t, setRoute }) {
+export function TAssignNew({ p, t, setRoute, ctx }) {
   const wizard = (t.assignFlow || 'wizard') === 'wizard';
   const [step, setStep] = React.useState(0);
   const [title, setTitle] = React.useState('');
@@ -86,6 +149,10 @@ export function TAssignNew({ p, t, setRoute }) {
   const [points, setPoints] = React.useState(10);
   const [rubric, setRubric] = React.useState('none');
   const [due, setDue] = React.useState('26/06/2026 · 23:59');
+  // Default to the folder selected in the tree sidebar (passed via ctx by ScreenHost),
+  // falling back to "no folder". Lets newly-created exercises land in "Kho đề thi" folders.
+  const [folder, setFolder] = React.useState<string>(ctx?.folderId ? String(ctx.folderId) : '');
+  const exFolders = (DB as any).EX_FOLDERS || [];
 
   const togglePick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
@@ -96,6 +163,11 @@ export function TAssignNew({ p, t, setRoute }) {
       <h3 className="mb-[18px] m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Thông tin bài tập</h3>
       <label className={lblClass()}>TIÊU ĐỀ</label>
       <Field p={p} value={title} onChange={setTitle} placeholder="vd: Trắc nghiệm đọc hiểu — Dế Mèn bênh vực kẻ yếu" className="mt-2 mb-[18px]" />
+      <div className="mb-[18px]">
+        <label className={lblClass()}>THƯ MỤC (Kho đề thi)</label>
+        <Select p={p} value={folder} onChange={setFolder} className="mt-2"
+          options={[{ value: '', label: 'Không xếp vào thư mục' }, ...exFolders.map((f) => ({ value: f.id, label: f.name }))]} />
+      </div>
       <div className="mb-[18px] grid grid-cols-2 gap-4">
         <div><label className={lblClass()}>PHẠM VI</label>
           <Select p={p} value={cls} onChange={setCls} className="mt-2"
@@ -217,6 +289,7 @@ export function TAssignNew({ p, t, setRoute }) {
               // kind ('quiz'|'essay'|'file') already matches the ExerciseType enum.
               // dueDate is NOT bound to state (HẠN NỘP is a display string), so omit it.
               const body: any = { title: title || 'Bài luyện tập mới', type: kind, points: Number(points) || 10, status: 'open' };
+              if (folder) body.folderId = folder;
               try {
                 const ex: any = await exercisesApi.create(body);
                 const exId = ex?._id ?? ex?.id;

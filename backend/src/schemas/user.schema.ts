@@ -79,6 +79,13 @@ export class User {
   @Prop({ type: Date, default: null, select: false })
   lockUntil: Date | null;
 
+  /** SHA-256 hash of the 6-digit email-OTP 2FA code (never the raw code). */
+  @Prop({ type: String, default: null, select: false })
+  otpCode: string | null;
+
+  @Prop({ type: Date, default: null, select: false })
+  otpExpires: Date | null;
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

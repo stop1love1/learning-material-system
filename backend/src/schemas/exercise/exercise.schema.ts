@@ -66,6 +66,10 @@ export class Exercise {
   @ApiProperty({ type: [String] })
   materialIds: Types.ObjectId[];
 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'ExerciseFolder', default: null, index: true })
+  @ApiProperty({ type: String, nullable: true })
+  folderId: Types.ObjectId | null;
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

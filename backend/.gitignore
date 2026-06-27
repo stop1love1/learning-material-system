@@ -30,3 +30,6 @@ Thumbs.db
 
 # misc
 *.tsbuildinfo
+
+# Auto-backup output (maintenance cron)
+backups/

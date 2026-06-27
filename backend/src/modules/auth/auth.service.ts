@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomInt } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
@@ -22,11 +22,21 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
-import { MailService } from './mail.service';
+import { Verify2faDto } from './dto/verify-2fa.dto';
+import { MailService } from '../../global/mail.service';
 
 const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 phút
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 giờ
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 phút
+const EMAIL_SEND_COOLDOWN_MS = 60 * 1000; // 60s chống gửi lặp
+
+/**
+ * In-memory cooldown for outbound transactional emails (forgot-password /
+ * resend-verification), keyed by lowercased email → last-send epoch ms.
+ * Acceptable for this single-instance app.
+ */
+const emailSendCooldown = new Map<string, number>();
 
 @Injectable()
 export class AuthService {
@@ -80,7 +90,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.userModel
       .findOne({ email: dto.email.toLowerCase() })
-      .select('+password +failedLoginAttempts +lockUntil');
+      .select('+password +failedLoginAttempts +lockUntil +passwordChangedAt');
 
     if (!user) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
@@ -117,6 +127,59 @@ export class AuthService {
         'Email chưa được xác thực. Vui lòng kiểm tra hộp thư hoặc gửi lại liên kết xác thực.',
       );
     }
+
+    const security = await this.getSecurity();
+
+    // Chính sách hết hạn mật khẩu (chỉ áp dụng tài khoản local).
+    if (
+      user.provider !== 'google' &&
+      security.passwordRotationDays > 0 &&
+      user.passwordChangedAt &&
+      user.passwordChangedAt.getTime() + security.passwordRotationDays * 86400000 < Date.now()
+    ) {
+      throw new UnauthorizedException(
+        'Mật khẩu đã hết hạn theo chính sách bảo mật. Vui lòng dùng "Quên mật khẩu" để đặt lại.',
+      );
+    }
+
+    // 2FA qua email-OTP: không cấp token ngay, gửi mã 6 số rồi chờ /auth/verify-2fa.
+    if (security.twoFactor === true && user.provider !== 'google') {
+      const code = String(randomInt(100000, 1000000));
+      user.otpCode = this.hashToken(code);
+      user.otpExpires = new Date(Date.now() + OTP_TTL_MS);
+      await user.save();
+
+      const delivered = await this.mail.sendOtp(user.email, code);
+      return {
+        needs2fa: true as const,
+        email: user.email,
+        ...(delivered ? {} : { devOtp: code }),
+      };
+    }
+
+    return this.issue(user);
+  }
+
+  /** Step 2 of email-OTP 2FA: verify the 6-digit code and issue a token. */
+  async verify2fa(dto: Verify2faDto) {
+    const user = await this.userModel
+      .findOne({ email: dto.email.toLowerCase() })
+      .select('+otpCode +otpExpires');
+
+    if (!user) {
+      throw new UnauthorizedException('Mã không hợp lệ');
+    }
+    if (!user.otpExpires || user.otpExpires.getTime() < Date.now()) {
+      throw new UnauthorizedException('Mã đã hết hạn');
+    }
+    if (this.hashToken(dto.code) !== user.otpCode) {
+      throw new UnauthorizedException('Mã không đúng');
+    }
+
+    user.otpCode = null;
+    user.otpExpires = null;
+    user.lastActiveAt = new Date();
+    await user.save();
 
     return this.issue(user);
   }
@@ -184,6 +247,12 @@ export class AuthService {
       return { ok: true };
     }
 
+    // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
+    const last = emailSendCooldown.get(email);
+    if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
+      return { ok: true };
+    }
+
     const rawToken = randomBytes(32).toString('hex');
     const hashed = this.hashToken(rawToken);
     user.resetPasswordToken = hashed;
@@ -193,6 +262,7 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/dat-lai-mat-khau?token=${rawToken}`;
     const delivered = await this.mail.sendPasswordReset(email, resetLink);
+    emailSendCooldown.set(email, Date.now());
 
     // Khi email không gửi được (SMTP chưa cấu hình / lỗi) thì lộ link dev để token
     // đặt lại không bị mất.
@@ -269,6 +339,12 @@ export class AuthService {
       return { ok: true };
     }
 
+    // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
+    const last = emailSendCooldown.get(email);
+    if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
+      return { ok: true };
+    }
+
     const rawToken = randomBytes(32).toString('hex');
     user.verifyToken = this.hashToken(rawToken);
     user.verifyExpires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
@@ -277,6 +353,7 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
     const delivered = await this.mail.sendVerification(email, verifyLink);
+    emailSendCooldown.set(email, Date.now());
 
     return { ok: true, ...(delivered ? {} : { devVerifyLink: verifyLink }) };
   }
@@ -338,8 +415,18 @@ export class AuthService {
   }
 
   /** Read the `security` group from the `system` settings doc, defensively. */
-  private async getSecurity(): Promise<{ lockoutThreshold: number; allowSelfRegister: boolean }> {
-    const fallback = { lockoutThreshold: 5, allowSelfRegister: true };
+  private async getSecurity(): Promise<{
+    lockoutThreshold: number;
+    allowSelfRegister: boolean;
+    twoFactor: boolean;
+    passwordRotationDays: number;
+  }> {
+    const fallback = {
+      lockoutThreshold: 5,
+      allowSelfRegister: true,
+      twoFactor: false,
+      passwordRotationDays: 0,
+    };
     try {
       const settings = await this.settingsModel.findOne({ key: 'system' }).lean();
       const security = (settings as any)?.security;
@@ -349,6 +436,9 @@ export class AuthService {
           typeof security.lockoutThreshold === 'number' ? security.lockoutThreshold : 5,
         allowSelfRegister:
           typeof security.allowSelfRegister === 'boolean' ? security.allowSelfRegister : true,
+        twoFactor: typeof security.twoFactor === 'boolean' ? security.twoFactor : false,
+        passwordRotationDays:
+          typeof security.passwordRotationDays === 'number' ? security.passwordRotationDays : 0,
       };
     } catch {
       return fallback;
@@ -390,6 +480,8 @@ export class AuthService {
     delete obj.lockUntil;
     delete obj.verifyToken;
     delete obj.verifyExpires;
+    delete obj.otpCode;
+    delete obj.otpExpires;
     return obj;
   }
 }

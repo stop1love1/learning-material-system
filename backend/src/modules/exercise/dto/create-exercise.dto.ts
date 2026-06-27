@@ -81,4 +81,9 @@ export class CreateExerciseDto {
   @IsArray()
   @IsString({ each: true })
   materialIds?: string[];
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Thư mục chứa bài tập (folderId). null = không thuộc thư mục.' })
+  @IsOptional()
+  @IsString()
+  folderId?: string | null;
 }
