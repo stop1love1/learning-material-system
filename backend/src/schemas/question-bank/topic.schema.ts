@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import mongoose, { HydratedDocument, Model, Types } from 'mongoose';
@@ -51,14 +52,14 @@ TopicSchema.pre('save', async function (this: TopicDocument) {
   }
   // Không cho phép tự làm cha của chính nó.
   if (this.parentId.equals(this._id)) {
-    throw new Error('A topic cannot be its own parent');
+    throw new BadRequestException('Chủ đề không thể là cha của chính nó');
   }
   const model = this.constructor as Model<TopicDocument>;
   const parent = await model.findById(this.parentId).select('_id ancestors depth').lean();
-  if (!parent) throw new Error('Parent topic not found');
+  if (!parent) throw new BadRequestException('Không tìm thấy chủ đề cha');
   // Chống chu trình: cha mới không được nằm trong cây con của node này.
   if ((parent.ancestors || []).some((a) => a.equals(this._id))) {
-    throw new Error('A topic cannot be moved under its own descendant');
+    throw new BadRequestException('Không thể di chuyển chủ đề vào trong chủ đề con của nó');
   }
   this.ancestors = [...(parent.ancestors || []), parent._id];
   this.depth = (parent.depth || 0) + 1;
