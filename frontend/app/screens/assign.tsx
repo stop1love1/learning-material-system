@@ -3,7 +3,7 @@ import React from 'react';
 import { Icon, Tag, Pill, Btn, Field, Select, Progress } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
-import { exercisesApi, exerciseFoldersApi } from '@/app/lib/api';
+import { exercisesApi, exerciseFoldersApi, classesApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { FolderTree } from '@/app/components/FolderTree';
 import { lblClass, cardClass } from '@/app/helpers/shared';
@@ -139,7 +139,9 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const wizard = (t.assignFlow || 'wizard') === 'wizard';
   const [step, setStep] = React.useState(0);
   const [title, setTitle] = React.useState('');
+  // PHẠM VI = lớp học. 'public' = công khai (không gán lớp); ngược lại là _id của lớp.
   const [cls, setCls] = React.useState('public');
+  const [classes, setClasses] = React.useState<any[]>([]);
   const [kind, setKind] = React.useState('quiz');
   // Start with nothing pre-selected — the teacher picks real questions/docs from
   // the (live) bank. Seeding mock ids ('q1'/'q2') made the attach-question step
@@ -161,6 +163,19 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   // falling back to "no folder". Lets newly-created exercises land in "Kho đề thi" folders.
   const [folder, setFolder] = React.useState<string>(ctx?.folderId ? String(ctx.folderId) : '');
   const exFolders = (DB as any).EX_FOLDERS || [];
+
+  // Load the teacher's classes for the PHẠM VI selector (best-effort; empty on error/logged-out).
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res: any = await classesApi.list({ pageSize: 200 });
+        const records: any[] = res?.records ?? (Array.isArray(res) ? res : []);
+        if (alive) setClasses(records.map((c) => ({ id: c._id || c.id, name: c.name, grade: c.grade ?? '' })));
+      } catch { if (alive) setClasses([]); }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const togglePick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
@@ -186,9 +201,16 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
       allowLateSubmit: allowLate,
       showScoreAfter: showScore,
       notifyOnAssign: notify,
-      // PHẠM VI: nhãn lớp/nhóm tự do — gửi nhãn người dùng đã chọn.
-      scope: cls === 'public' ? 'Công khai' : 'Chỉ người đã đăng nhập',
     };
+    // PHẠM VI = lớp học. 'public' → công khai (không gán classId). Ngược lại gửi classId
+    // và đặt scope = tên lớp để hiển thị.
+    if (cls && cls !== 'public') {
+      body.classId = cls;
+      const picked = classes.find((c) => c.id === cls);
+      body.scope = picked?.name || 'Lớp học';
+    } else {
+      body.scope = 'Công khai';
+    }
     if (folder) body.folderId = folder;
     if (instructions.trim()) body.instructions = instructions.trim();
     if (rubric && rubric !== 'none') body.rubricId = rubric;
@@ -232,9 +254,10 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
           options={[{ value: '', label: 'Không xếp vào thư mục' }, ...exFolders.map((f) => ({ value: f.id, label: f.name }))]} />
       </div>
       <div className="mb-[18px] grid grid-cols-2 gap-4">
-        <div><label className={lblClass()}>PHẠM VI</label>
+        <div><label className={lblClass()}>PHẠM VI (LỚP HỌC)</label>
           <Select p={p} value={cls} onChange={setCls} className="mt-2"
-            options={[{ value: 'public', label: 'Công khai cho mọi người' }, { value: 'member', label: 'Chỉ người đã đăng nhập' }]} /></div>
+            options={[{ value: 'public', label: 'Công khai (không gán lớp)' },
+              ...classes.map((c) => ({ value: c.id, label: c.grade ? `${c.name} · Khối ${c.grade}` : c.name }))]} /></div>
         <div><label className={lblClass()}>HÌNH THỨC</label>
           <div className="mt-2 flex gap-2">
             {[['quiz', 'Trắc nghiệm', 'bank'], ['essay', 'Tự luận', 'docs'], ['file', 'Nộp tệp', 'upload']].map(([k, lab, ic]) => (

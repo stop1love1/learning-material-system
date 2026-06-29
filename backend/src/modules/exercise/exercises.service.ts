@@ -8,8 +8,9 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
+import { Enrollment } from '../../schemas/class/enrollment.schema';
 import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
-import { UserRole } from '../../enums';
+import { EnrollmentStatus, UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -25,9 +26,10 @@ export class ExercisesService {
     @InjectModel(Participant.name) private readonly participantModel: Model<Participant>,
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
+    @InjectModel(Enrollment.name) private readonly enrollmentModel: Model<Enrollment>,
   ) {}
 
-  async list(dto: ListExercisesDto) {
+  async list(dto: ListExercisesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
     const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
@@ -38,6 +40,26 @@ export class ExercisesService {
       ...(dto.grade ? { grade: dto.grade } : {}),
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
+
+    // Phạm vi lớp:
+    //  · Admin → thấy tất cả (không thêm điều kiện).
+    //  · Teacher → thấy tất cả (giữ nguyên hành vi: chủ xem được bài mình giao).
+    //  · Student → chỉ bài công khai (classId null) HOẶC thuộc lớp đang ghi danh Active.
+    //  · Khách (không đăng nhập) → chỉ bài công khai (classId null).
+    const role = viewer?.role;
+    if (role === UserRole.Admin || role === UserRole.Teacher) {
+      // không giới hạn theo lớp
+    } else if (viewer?.userId) {
+      const enrolled = await this.enrollmentModel
+        .find({ studentId: convertStringToObjectId(viewer.userId), status: EnrollmentStatus.Active })
+        .select('classId')
+        .lean();
+      const classIds = enrolled.map((e) => e.classId);
+      query.$or = [{ classId: null }, { classId: { $in: classIds } }];
+    } else {
+      query.classId = null;
+    }
+
     const [records, total] = await Promise.all([
       this.exerciseModel
         .find(query)
@@ -136,7 +158,7 @@ export class ExercisesService {
   }
 
   async create(dto: CreateExerciseDto, userId: string) {
-    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
     const exercise = await this.exerciseModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
@@ -144,6 +166,7 @@ export class ExercisesService {
       ...(materialIds ? { materialIds: materialIds.map((m) => convertStringToObjectId(m)) } : {}),
       ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
       ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
+      ...(classId !== undefined ? { classId: classId ? convertStringToObjectId(classId) : null } : {}),
     });
     // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
     return this.findOne(exercise._id.toString(), { userId });
@@ -155,12 +178,13 @@ export class ExercisesService {
   }
 
   async update(id: string, dto: UpdateExerciseDto, userId: string, role?: UserRole) {
-    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
     const patch: Record<string, unknown> = { ...rest };
     if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null;
     if (materialIds !== undefined) patch.materialIds = materialIds.map((m) => convertStringToObjectId(m));
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
     if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
+    if (classId !== undefined) patch.classId = classId ? convertStringToObjectId(classId) : null;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();

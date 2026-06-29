@@ -21,6 +21,7 @@ export const ROUTES = {
   grade: '/quan-tri/cham-bai',
   gradeOne: (id: string) => `/quan-tri/cham-bai/${id}`,
   schedule: '/quan-tri/lich-day',
+  classes: '/quan-tri/lop-hoc',
   users: '/quan-tri/nguoi-dung',
   reports: '/quan-tri/bao-cao',
   settings: '/quan-tri/cai-dat',
@@ -54,14 +55,14 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'grade': return ROUTES.grade;
     case 'grade-one': return ROUTES.gradeOne(id('assignment'));
     case 'a-schedule': return ROUTES.schedule;
+    case 'a-classes': return ROUTES.classes;
     case 'a-users': return ROUTES.users;
     case 'a-reports': return ROUTES.reports;
     case 'a-settings': return ROUTES.settings;
     case 'settings': return ROUTES.settings;
     case 'notify': return ROUTES.notifications;
     case 'account': return ROUTES.account;
-    // legacy class keys → dashboard (lớp học đã gỡ bỏ).
-    case 'classes':
+    // legacy student-facing class keys → dashboard (no public class screen).
     case 'class': return ROUTES.dashboard;
     default: return ROUTES.home;
   }
@@ -84,6 +85,7 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (/^\/quan-tri\/cham-bai\/[^/]+/.test(seg)) return r('grade-one', 'grade');
   if (seg.startsWith('/quan-tri/cham-bai')) return r('grade', 'grade');
   if (seg.startsWith('/quan-tri/lich-day')) return r('a-schedule', 'a-schedule');
+  if (seg.startsWith('/quan-tri/lop-hoc')) return r('a-classes', 'a-classes');
   if (seg.startsWith('/quan-tri/nguoi-dung')) return r('a-users', 'a-users');
   if (seg.startsWith('/quan-tri/bao-cao')) return r('a-reports', 'a-reports');
   if (seg.startsWith('/quan-tri/cai-dat')) return r('a-settings', 'a-settings');

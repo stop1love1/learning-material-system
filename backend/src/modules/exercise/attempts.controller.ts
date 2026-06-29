@@ -33,8 +33,8 @@ export class AttemptsController {
 
   @Post('start')
   @ApiOperation({ summary: 'Bắt đầu một lượt làm bài tập' })
-  start(@Body() dto: StartAttemptDto, @CurrentUser('sub') userId: string) {
-    return this.attemptsService.start(dto, userId);
+  start(@Body() dto: StartAttemptDto, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.attemptsService.start(dto, userId, role);
   }
 
   @Post(':attemptId/submit')

@@ -39,8 +39,8 @@ export class ExercisesController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Danh sách bài tập (phân trang, lọc type/subject/grade/status)' })
-  list(@Query() dto: ListExercisesDto) {
-    return this.exercisesService.list(dto);
+  list(@Query() dto: ListExercisesDto, @Headers('authorization') authorization?: string) {
+    return this.exercisesService.list(dto, this.resolveViewer(authorization));
   }
 
   @Get(':id')

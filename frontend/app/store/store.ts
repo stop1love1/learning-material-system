@@ -31,6 +31,7 @@ export const DB: Record<string, any> = {
   SCHEDULE: [] as Rec[],
   STUDENT_TASKS: [] as Rec[],
   ARTICLES: [] as Rec[],
+  CLASSES: [] as Rec[],
   ADMIN_STATS: {
     users: 0, docs: 0, exercises: 0, articles: 0, questions: 0,
     attempts: 0, submissions: 0, graded: 0, ungraded: 0,
