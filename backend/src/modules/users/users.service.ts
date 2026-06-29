@@ -1,9 +1,9 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
 import { BcryptService } from '../../global/bcrypt.service';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { UserRole, UserStatus } from '../../enums';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -20,9 +20,15 @@ export class UsersService {
 
   async list(dto: ListUsersDto) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
-      ...(keyword
-        ? { $or: [{ name: { $regex: keyword, $options: 'i' } }, { email: { $regex: keyword, $options: 'i' } }] }
+      ...(safeKeyword
+        ? {
+            $or: [
+              { name: { $regex: safeKeyword, $options: 'i' } },
+              { email: { $regex: safeKeyword, $options: 'i' } },
+            ],
+          }
         : {}),
       ...(dto.role ? { role: dto.role } : {}),
       ...(dto.status ? { status: dto.status } : {}),
@@ -53,10 +59,28 @@ export class UsersService {
     return this.findById(user._id.toString());
   }
 
-  async update(id: string, dto: UpdateUserDto) {
-    const patch: Record<string, unknown> = { ...dto };
-    if (dto.email) patch.email = dto.email.toLowerCase();
-    if (dto.password) patch.password = await this.bcrypt.hash(dto.password);
+  // Build the update patch from a whitelist so an unexpected/extra body field
+  // can never be written. `email`/`password` are normalised below.
+  async update(id: string, dto: UpdateUserDto, currentUserId?: string) {
+    // Self-protection: an admin must not lock or demote their OWN account, which
+    // could leave the system without an active admin. Only enforced when the
+    // caller id is supplied (see note in users.controller — pass @CurrentUser('sub')).
+    if (currentUserId && currentUserId === id) {
+      if (dto.role !== undefined && dto.role !== UserRole.Admin) {
+        throw new ForbiddenException('Không thể tự hạ quyền tài khoản của chính mình');
+      }
+      if (dto.status !== undefined && dto.status !== UserStatus.Active) {
+        throw new ForbiddenException('Không thể tự khóa tài khoản của chính mình');
+      }
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (dto.name !== undefined) patch.name = dto.name;
+    if (dto.role !== undefined) patch.role = dto.role;
+    if (dto.status !== undefined) patch.status = dto.status;
+    if (dto.email !== undefined) patch.email = dto.email.toLowerCase();
+    if (dto.password !== undefined) patch.password = await this.bcrypt.hash(dto.password);
+
     const user = await this.userModel
       .findByIdAndUpdate(convertStringToObjectId(id), patch, { new: true })
       .lean();
@@ -64,7 +88,21 @@ export class UsersService {
     return user;
   }
 
-  async remove(id: string) {
+  async remove(id: string, currentUserId?: string) {
+    // Self-protection: an admin must not delete their OWN account.
+    if (currentUserId && currentUserId === id) {
+      throw new ForbiddenException('Không thể tự xóa tài khoản của chính mình');
+    }
+    // Last-admin guard: never remove the final remaining Admin account, which
+    // would leave the system with no administrator.
+    const target = await this.userModel.findById(convertStringToObjectId(id)).select('role').lean();
+    if (!target) throw new NotFoundException('Không tìm thấy người dùng');
+    if (target.role === UserRole.Admin) {
+      const adminCount = await this.userModel.countDocuments({ role: UserRole.Admin });
+      if (adminCount <= 1) {
+        throw new ForbiddenException('Không thể xóa Admin cuối cùng của hệ thống');
+      }
+    }
     const res = await this.userModel.deleteOne({ _id: convertStringToObjectId(id) });
     if (res.deletedCount === 0) throw new NotFoundException('Không tìm thấy người dùng');
     return { deleted: true };

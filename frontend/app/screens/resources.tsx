@@ -359,6 +359,10 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
   const addCrit = () => setRubric({ ...rubric, criteria: [...rubric.criteria, { name: 'Tiêu chí mới', weight: 0, desc: '' }] });
   const delCrit = (i) => setRubric({ ...rubric, criteria: rubric.criteria.filter((_, j) => j !== i) });
 
+  const patchLevel = (i, k, v) => setRubric((r) => ({ ...r, scale: (r.scale || []).map((s, j) => j === i ? { ...s, [k]: v } : s) }));
+  const addLevel = () => setRubric((r) => { const sc = r.scale || []; const lastPct = sc.length ? (sc[sc.length - 1].pct ?? 0) : 0; return { ...r, scale: [...sc, { label: `Mức ${sc.length + 1}`, pct: lastPct }] }; });
+  const delLevel = (i) => setRubric((r) => ({ ...r, scale: (r.scale || []).filter((_, j) => j !== i) }));
+
   return (
     <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
       <div onClick={() => setRoute('rubrics')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
@@ -424,6 +428,31 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
           ))}
         </div>
         <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-3 pl-0" onClick={addCrit}>Thêm tiêu chí</Btn>
+      </section>
+
+      <section className={`${cardClass(24)} mb-[22px]`}>
+        <label className={lblClass()}>MỨC ĐÁNH GIÁ (cột ma trận)</label>
+        <div className="mt-3 flex flex-col gap-2.5">
+          {(rubric.scale || []).map((s, i) => (
+            <div key={i} className="flex items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise p-3">
+              <Icon name="drag" size={16} stroke={p.faint} />
+              <input value={s.label} onChange={(e) => patchLevel(i, 'label', e.target.value)} placeholder="Tên mức (vd: Tốt)…"
+                className="flex-1 border-0 bg-transparent font-sans text-sm font-semibold text-lms-ink outline-none" />
+              <div className="flex items-center gap-1.5 rounded-xl border border-lms-line bg-lms-surface px-2.5 py-1.5">
+                <input type="number" value={s.pct ?? 0} onChange={(e) => patchLevel(i, 'pct', Number(e.target.value))}
+                  className="w-12 border-0 bg-transparent text-right font-mono text-sm text-lms-ink outline-none" />
+                <span className="font-mono text-[13px] text-lms-faint">%</span>
+              </div>
+              <IconBtn name="trash" p={p} size={36} onClick={() => delLevel(i)} />
+            </div>
+          ))}
+          {!(rubric.scale || []).length && (
+            <div className="rounded-xl border border-dashed border-lms-line bg-lms-raise px-3.5 py-4 text-center text-[12.5px] text-lms-faint">
+              Chưa có mức đánh giá nào. Thêm ít nhất một mức để tạo cột cho ma trận điểm.
+            </div>
+          )}
+        </div>
+        <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-3 pl-0" onClick={addLevel}>Thêm mức</Btn>
       </section>
 
       <section className={cardClass(24)}>

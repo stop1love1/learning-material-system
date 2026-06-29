@@ -61,6 +61,12 @@ function HomeSection({
 
 export function UserHome({ p, t, setRoute, go }) {
   useLMS();
+  const router = useRouter();
+  const [heroQ, setHeroQ] = React.useState('');
+  const submitHeroSearch = () => {
+    const query = heroQ.trim();
+    router.push(query ? `/kho-hoc-lieu?q=${encodeURIComponent(query)}` : '/kho-hoc-lieu');
+  };
   const [hp, setHp] = React.useState<any>(null);
   React.useEffect(() => { settingsApi.get().then((s) => setHp(s?.homepage)).catch(() => {}); }, []);
   const featured = DB.DOCS.slice(0, 6);
@@ -84,9 +90,9 @@ export function UserHome({ p, t, setRoute, go }) {
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
             {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
-          <form onSubmit={(e) => { e.preventDefault(); setRoute('s-docs'); }} className="flex max-w-[540px] flex-wrap gap-2.5">
-            <Field p={p} icon="search" value="" onChange={() => {}} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
-            <Btn p={p} size="lg" icon="arrowRight" onClick={() => setRoute('s-docs')} className="rounded-xl!">{hp?.ctaLabel || 'Khám phá'}</Btn>
+          <form onSubmit={(e) => { e.preventDefault(); submitHeroSearch(); }} className="flex max-w-[540px] flex-wrap gap-2.5">
+            <Field p={p} icon="search" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
+            <Btn p={p} size="lg" icon="arrowRight" onClick={submitHeroSearch} className="rounded-xl!">{hp?.ctaLabel || 'Khám phá'}</Btn>
           </form>
         </div>
         <div className="col-4 reveal bento-tile hovlift flex cursor-default flex-col gap-3.5 border border-lms-line bg-lms-surface p-6 text-lms-ink">
@@ -400,23 +406,35 @@ function mapApiQuestion(link: any): any {
   };
 }
 
-// Turn the QuestionView "do"-mode answer ({ choices } | { text }) into the
-// attempts submit payload entry, scoring choice/fill types client-side against
-// the mapped `answer` (essay/match left for teacher grading).
+// Turn the QuestionView "do"-mode answer ({ choices } | { text } | { map }) into the
+// attempts submit payload entry. The server auto-grades from its STORED answers, so we
+// send ONLY the student's raw selection — never a client-computed isCorrect. Each entry
+// maps to the `answer` shape AttemptsService.gradeObjective expects per question type.
 function buildSubmitAnswer(q: any, raw: any): any {
   const out: any = { questionId: q.questionId || q.id };
-  if (q.type === 'single' || q.type === 'multi' || q.type === 'truefalse') {
-    const choices = (raw && raw.choices) || [];
+  const choices = (raw && raw.choices) || [];
+  if (q.type === 'single') {
+    // single → selected option index (number) | null when nothing picked.
+    out.answer = choices.length ? choices[0] : null;
+  } else if (q.type === 'multi') {
+    // multi → array of selected option indices.
     out.answer = choices;
-    const correct = q.answer || [];
-    out.isCorrect = choices.length === correct.length && correct.every((c: any) => choices.includes(c));
+  } else if (q.type === 'truefalse') {
+    // truefalse → boolean (option 0 = "Đúng"/true, 1 = "Sai"/false).
+    out.answer = choices.length ? choices[0] === 0 : null;
   } else if (q.type === 'fill') {
-    const text = (raw && raw.text) || '';
-    out.answer = text;
-    const ok = (q.answer || []).map((s: any) => String(s).trim().toLowerCase());
-    out.isCorrect = ok.length > 0 && ok.includes(String(text).trim().toLowerCase());
+    // fill → the typed string.
+    out.answer = (raw && raw.text) || '';
+  } else if (q.type === 'match') {
+    // match → [{left,right}] using the actual left text of each pair (q.pairs[i][0])
+    // and the value the student dropped onto it. Backend compares against stored pairs.
+    const map = (raw && raw.map) || {};
+    out.answer = Object.keys(map).map((k) => ({
+      left: (q.pairs && q.pairs[Number(k)] && q.pairs[Number(k)][0]) ?? k,
+      right: map[k],
+    }));
   } else {
-    // essay / match / other → submit the raw answer, leave grading to the teacher.
+    // essay / other → submit the raw text, leave grading to the teacher.
     out.answer = raw && raw.text != null ? raw.text : raw;
   }
   return out;
@@ -430,25 +448,54 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   const [answers, setAnswers] = React.useState({});
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState(null);
+  const [submitError, setSubmitError] = React.useState(null);
   const [ws, setWs] = React.useState(null);
+  // Đếm ngược thời gian làm bài (giây) khi bài tập có durationMinutes; null = không giới hạn.
+  const [remaining, setRemaining] = React.useState<number | null>(null);
+  // Tránh nộp lặp khi hết giờ; ref giữ submitNow mới nhất để effect đếm ngược không phụ thuộc nó.
+  const autoSubmittedRef = React.useRef(false);
+  const submitNowRef = React.useRef<() => void>(() => {});
 
   // Live questions: GET /exercises/:id and map the polymorphic details. Best-effort —
   // on 404/down/logged-out we fall back to the mock bank so the player still renders.
   React.useEffect(() => {
     if (!task) return;
     let alive = true;
-    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null);
+    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null); setSubmitError(null); setRemaining(null);
+    autoSubmittedRef.current = false;
     (async () => {
       try {
         const ex = await exercisesApi.get(task.id);
         if (!alive || !ex) return;
         const mapped = (ex.questions || []).map(mapApiQuestion).filter(Boolean);
         setExType(ex.type ?? null);
+        const mins = Number(ex.durationMinutes);
+        if (Number.isFinite(mins) && mins > 0) setRemaining(mins * 60);
         if (mapped.length) setLiveQs(mapped);
       } catch { /* keep null → mock fallback below */ }
     })();
     return () => { alive = false; };
   }, [task?.id]);
+
+  // Đồng hồ đếm ngược: chỉ chạy khi có giới hạn thời gian và bài chưa nộp xong.
+  // Khi về 00:00 → tự nộp một lần (qua ref) và dừng đồng hồ.
+  React.useEffect(() => {
+    if (remaining == null || result) return;
+    if (remaining <= 0) return;
+    const id = setInterval(() => setRemaining((s) => {
+      if (s == null) return s;
+      const next = Math.max(0, s - 1);
+      if (next === 0) {
+        clearInterval(id);
+        if (!autoSubmittedRef.current) {
+          autoSubmittedRef.current = true;
+          submitNowRef.current();
+        }
+      }
+      return next;
+    }), 1000);
+    return () => clearInterval(id);
+  }, [remaining == null, result]);
 
   // Chưa đăng nhập → tự bật LoginModal (không hiện trang gate riêng).
   React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
@@ -477,50 +524,50 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   const q = qs[cur2];
   const answered = Object.keys(answers).length;
 
-  // start → submit → result against the attempt API. Best-effort: any failure
-  // (logged-out, offline, no questions) falls back to the mock submit + exit.
+  // start → submit → result against the REAL attempt API. The server auto-grades from its
+  // stored answers, so we only send the student's raw answers. No fake-success fallback:
+  // a logged-out user is sent to login, a mock-only exercise (no live questions) shows an
+  // error, and any API failure surfaces an error instead of pretending the bài was nộp.
   async function submitNow() {
     if (submitting) return;
+    setSubmitError(null);
+    // Phải đăng nhập thật mới nộp được — không nộp giả.
+    if (auth && !auth.loggedIn) { auth.open(); return; }
+    // Không có câu hỏi thật (chỉ có dữ liệu mock) → dữ liệu chưa tải / bài là mock.
+    if (!liveQs || !liveQs.length) {
+      setSubmitError('Bài tập chưa tải được câu hỏi từ máy chủ nên chưa thể nộp. Hãy tải lại trang và thử lại.');
+      return;
+    }
     setSubmitting(true);
     try {
-      if (!liveQs || !liveQs.length) throw new Error('no-live-questions');
       const attempt = await attemptsApi.start(task.id);
       const attemptId = attempt?._id;
       if (!attemptId) throw new Error('no-attempt');
       const payload = liveQs.map((qq) => buildSubmitAnswer(qq, answers[qq.id]));
-      await attemptsApi.submit(attemptId, payload);
+      const submitted: any = await attemptsApi.submit(attemptId, payload);
       let res: any = null;
       try { res = await attemptsApi.result(attemptId); } catch { /* result optional */ }
-      const sub = res?.submission;
-      const correct = liveQs.reduce((n, qq) => {
-        const a = buildSubmitAnswer(qq, answers[qq.id]);
-        return n + (a.isCorrect ? 1 : 0);
-      }, 0);
-      const score = typeof sub?.totalScore === 'number'
-        ? sub.totalScore
-        : typeof sub?.totalGrades === 'number'
-        ? sub.totalGrades
-        : null;
+      // submit() trả về submission; result() lồng trong .submission. Dùng cái nào có.
+      const sub = res?.submission ?? submitted ?? {};
+      const score = typeof sub?.totalScore === 'number' ? sub.totalScore : null;
       setResult({
         score,
-        correct,
+        correct: typeof sub?.correct === 'number' ? sub.correct : 0,
         total: liveQs.length,
         percent: typeof sub?.percent === 'number' ? sub.percent : null,
         graded: !!sub?.isGraded,
         waiting: sub?.waitingGrades ?? sub?.numberOfEssays ?? 0,
       });
       try { await hydrateFor('s-task'); } catch { /* refresh DB best-effort */ }
-    } catch {
-      const txt = essay ? ((answers[q?.id] && answers[q.id].text) || '') : '';
-      LMS && LMS.submitAssignment(task.id, {
-        text: essay ? (txt || 'Bài tự luận đã nộp.') : 'Học viên đã hoàn thành bài trắc nghiệm.',
-        wordcount: txt ? txt.length : 0,
-      });
-      setRoute('s-tasks');
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Nộp bài thất bại. Vui lòng kiểm tra kết nối và thử lại.');
     } finally {
       setSubmitting(false);
     }
   }
+
+  // Giữ ref trỏ tới submitNow mới nhất cho đường tự-nộp khi hết giờ.
+  submitNowRef.current = submitNow;
 
   if (result) {
     const pct = result.percent != null
@@ -602,9 +649,14 @@ export function STask({ p, t, ctx, setRoute, auth }) {
           <div className="text-[15px] font-semibold text-lms-ink">{task.title}</div>
           <div className="text-xs text-lms-faint">{task.type} · {task.points} điểm</div>
         </div>
-        <div className="flex items-center gap-2 rounded-[10px] border border-lms-line bg-lms-surface px-[13px] py-[7px]">
-          <Icon name="clock" size={15} stroke={p.warn} /><span className="font-mono text-[13px] text-lms-ink">28:14</span>
-        </div>
+        {remaining != null && (
+          <div className="flex items-center gap-2 rounded-[10px] border border-lms-line bg-lms-surface px-[13px] py-[7px]">
+            <Icon name="clock" size={15} stroke={remaining <= 60 ? p.danger : p.warn} />
+            <span className={`font-mono text-[13px] ${remaining <= 60 ? 'text-lms-danger' : 'text-lms-ink'}`}>
+              {String(Math.floor(remaining / 60)).padStart(2, '0')}:{String(remaining % 60).padStart(2, '0')}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="lms-scroll flex-1 overflow-y-auto p-[30px]">
@@ -654,6 +706,12 @@ export function STask({ p, t, ctx, setRoute, auth }) {
             <QuestionView q={q} p={p} mode="do" answer={answers[q.id]} onAnswer={(v) => setAnswers({ ...answers, [q.id]: v })} />
           </div>
 
+          {submitError && (
+            <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-lms-danger/30 bg-lms-danger/8 p-3.5">
+              <Icon name="x" size={18} stroke={p.danger} />
+              <div className="text-[13.5px] leading-normal text-lms-ink">{submitError}</div>
+            </div>
+          )}
           <div className="mt-6 flex items-center gap-3">
             {!essay && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setCur(Math.max(0, cur2 - 1))}>Câu trước</Btn>}
             <div className="flex-1 text-center font-mono text-[12.5px] text-lms-faint">
@@ -676,7 +734,7 @@ export function SDocs({ p, t, go }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [q, setQ] = React.useState('');
+  const [q, setQ] = React.useState(() => searchParams.get('q') || '');
   const rawTab = searchParams.get('activeTab');
   const folder = !rawTab || !DB.DOC_FOLDERS.includes(rawTab) ? 'Tất cả' : rawTab;
 
@@ -877,27 +935,56 @@ export function SSelfCheck({ p, t }) {
   const [note, setNote] = React.useState('');
   const [savingSelf, setSavingSelf] = React.useState(false);
   const [savedSelf, setSavedSelf] = React.useState(false);
+  const [saveError, setSaveError] = React.useState(null);
   const selfScore = React.useMemo(() => {
     if (!rubric) return null;
     let sum = 0, any = false;
     rubric.criteria.forEach((c, ci) => { if (sel[ci] != null) { any = true; sum += c.weight * rubric.scale[sel[ci]].pct / 100; } });
     return any ? Math.round((sum / 10) * 10) / 10 : null;
   }, [sel, rubric]);
-  React.useEffect(() => { setSel({}); setNote(''); setSavedSelf(false); }, [workId]);
+  React.useEffect(() => { setSel({}); setNote(''); setSavedSelf(false); setSaveError(null); }, [workId]);
 
   async function saveSelf() {
     if (savingSelf || !rubric) return;
     setSavingSelf(true);
+    setSaveError(null);
     try {
+      // Build the per-criterion matrix the user clicked (`sel` = {criterionIndex: levelIndex})
+      // into the backend `scores` shape: {criterionId, levelId?, percent}. The criterion/level
+      // ids come from the loaded rubric; only emit `scores` when real ids are present so we
+      // never POST invalid (non-MongoId) refs.
+      const scores = Object.keys(sel)
+        .map((k) => {
+          const ci = Number(k);
+          const si = sel[ci];
+          const crit = rubric.criteria[ci] || {};
+          const lvl = (rubric.scale && rubric.scale[si]) || {};
+          const criterionId = crit.id ?? crit.criterionId ?? crit._id;
+          if (!criterionId) return null;
+          const levelId = lvl.levelId ?? lvl.id ?? lvl._id;
+          return {
+            criterionId,
+            ...(levelId ? { levelId } : {}),
+            percent: typeof lvl.pct === 'number' ? lvl.pct : 0,
+          };
+        })
+        .filter(Boolean);
+
       await selfAssessmentsApi.create({
         rubricId: rubric.id,
         source: 'text',
         totalPercent: selfScore != null ? Math.round(selfScore * 10) : undefined,
+        ...(scores.length ? { scores } : {}),
         note,
         text: note,
       });
-    } catch { /* best-effort: keep the local reflection even if the save fails */ }
-    finally { setSavingSelf(false); setSavedSelf(true); }
+      setSavedSelf(true);
+    } catch (err: any) {
+      // Don't claim success on 401/network failure — surface an error and keep editing.
+      setSaveError(err?.message || 'Lưu tự đánh giá thất bại. Vui lòng đăng nhập và thử lại.');
+    } finally {
+      setSavingSelf(false);
+    }
   }
 
   if (!rubric) return <EmptyState p={p} icon="rubric" label="Chưa có tiêu chí đánh giá" sub="Chưa có rubric." />;
@@ -924,7 +1011,7 @@ export function SSelfCheck({ p, t }) {
             <Tag p={p} color={p.accent}>{Object.keys(sel).length}/{rubric.criteria.length} tiêu chí</Tag>
           </div>
           <div className="lms-scrollx">
-            <RubricMatrix rubric={rubric} p={p} mode="grade" selected={sel} onSelect={(ci, si) => setSel({ ...sel, [ci]: si })} />
+            <RubricMatrix rubric={rubric} p={p} mode="grade" selected={sel} onSelect={(ci, si) => { setSel({ ...sel, [ci]: si }); setSavedSelf(false); }} />
           </div>
         </section>
 
@@ -940,8 +1027,14 @@ export function SSelfCheck({ p, t }) {
           </div>
           <div className={cardClass(20)}>
             <label className={lblClass()}>GHI CHÚ RÚT KINH NGHIỆM</label>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Mình cần cải thiện điều gì cho lần sau…"
+            <textarea value={note} onChange={(e) => { setNote(e.target.value); setSavedSelf(false); }} placeholder="Mình cần cải thiện điều gì cho lần sau…"
               className="mt-2 box-border min-h-24 w-full resize-y rounded-lg border border-lms-line bg-lms-surface p-3 font-sans text-[13.5px] leading-relaxed text-lms-ink outline-none" />
+            {saveError && (
+              <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-lms-danger/30 bg-lms-danger/8 p-3">
+                <Icon name="x" size={16} stroke={p.danger} />
+                <div className="text-[12.5px] leading-normal text-lms-ink">{saveError}</div>
+              </div>
+            )}
             <Btn p={p} icon="check" full className="mt-3" onClick={saveSelf}>
               {savingSelf ? 'Đang lưu…' : savedSelf ? 'Đã lưu ✓' : 'Lưu tự đánh giá'}
             </Btn>

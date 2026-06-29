@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsMongoId,
   IsNumber,
   IsOptional,
   IsString,
@@ -75,6 +76,36 @@ export class CreateExerciseDto {
   @IsOptional()
   @IsBoolean()
   showAnswer?: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Rubric gắn cho bài tập' })
+  @IsOptional()
+  @IsMongoId()
+  rubricId?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: 'Hướng dẫn / mô tả chi tiết cho học viên' })
+  @IsOptional()
+  @IsString()
+  instructions?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'Lớp 5A', description: 'Phạm vi giao bài (nhãn lớp/nhóm)' })
+  @IsOptional()
+  @IsString()
+  scope?: string;
+
+  @ApiPropertyOptional({ type: Boolean, default: false, description: 'Cho phép nộp muộn' })
+  @IsOptional()
+  @IsBoolean()
+  allowLateSubmit?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, default: true, description: 'Hiển thị điểm sau khi nộp' })
+  @IsOptional()
+  @IsBoolean()
+  showScoreAfter?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, default: false, description: 'Gửi thông báo khi giao bài' })
+  @IsOptional()
+  @IsBoolean()
+  notifyOnAssign?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

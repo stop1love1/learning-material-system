@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ExercisesService } from './exercises.service';
+import { JwtService } from '../../global/jwt.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -17,7 +18,23 @@ import { UserRole } from '../../enums';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('exercises')
 export class ExercisesController {
-  constructor(private readonly exercisesService: ExercisesService) {}
+  constructor(
+    private readonly exercisesService: ExercisesService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  // @Public bỏ qua JwtAuthGuard nên req.user luôn undefined. Tự giải mã token (nếu có)
+  // để chủ sở hữu / Admin vẫn thấy đáp án (cần để sửa bài); token hỏng / thiếu → khách,
+  // và service sẽ lược bỏ đáp án đúng trước khi trả về (chống xem trộm đáp án).
+  private resolveViewer(authorization?: string): { userId?: string; role?: UserRole } | undefined {
+    if (!authorization) return undefined;
+    try {
+      const payload = this.jwtService.verify(authorization);
+      return { userId: payload.sub, role: payload.role };
+    } catch {
+      return undefined;
+    }
+  }
 
   @Get()
   @Public()
@@ -29,8 +46,8 @@ export class ExercisesController {
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Chi tiết bài tập kèm danh sách câu hỏi' })
-  findOne(@Param('id') id: string) {
-    return this.exercisesService.findOne(id);
+  findOne(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    return this.exercisesService.findOne(id, this.resolveViewer(authorization));
   }
 
   @Post()

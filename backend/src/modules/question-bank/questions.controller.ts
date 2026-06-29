@@ -25,8 +25,12 @@ export class QuestionsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Chi tiết câu hỏi (gốc + chi tiết theo loại)' })
-  findOne(@Param('id') id: string) {
-    return this.questionsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.questionsService.findOne(id, userId, role);
   }
 
   @Post()

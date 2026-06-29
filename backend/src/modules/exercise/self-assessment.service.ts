@@ -15,10 +15,14 @@ export class SelfAssessmentService {
 
   async create(dto: CreateSelfAssessmentDto, userId: string) {
     const { rubricId, fileId, exerciseId, scores, ...rest } = dto;
+    const rubricObjectId = convertStringToObjectId(rubricId);
+    // Validate rubric tồn tại trước khi tạo — tránh ref treo + $inc usedCount no-op.
+    const rubricExists = await this.rubricModel.exists({ _id: rubricObjectId });
+    if (!rubricExists) throw new NotFoundException('Không tìm thấy rubric');
     const selfAssessment = await this.selfAssessmentModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
-      rubricId: convertStringToObjectId(rubricId),
+      rubricId: rubricObjectId,
       ...(fileId ? { fileId: convertStringToObjectId(fileId) } : {}),
       ...(exerciseId ? { exerciseId: convertStringToObjectId(exerciseId) } : {}),
       ...(scores
@@ -32,7 +36,7 @@ export class SelfAssessmentService {
         : {}),
     });
     await this.rubricModel.updateOne(
-      { _id: convertStringToObjectId(rubricId) },
+      { _id: rubricObjectId },
       { $inc: { usedCount: 1 } },
     );
     return selfAssessment.toObject();

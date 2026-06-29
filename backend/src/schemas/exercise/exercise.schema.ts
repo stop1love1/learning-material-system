@@ -62,6 +62,36 @@ export class Exercise {
   @ApiProperty({ type: Boolean })
   showAnswer: boolean;
 
+  /** Rubric gắn cho bài tập (dùng khi chấm tự luận theo rubric). */
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Rubric', default: null, index: true })
+  @ApiProperty({ type: String, nullable: true })
+  rubricId: Types.ObjectId | null;
+
+  /** Hướng dẫn / mô tả chi tiết hiển thị cho học viên khi làm bài. */
+  @Prop({ type: String, default: null })
+  @ApiProperty({ type: String, nullable: true })
+  instructions: string | null;
+
+  /** Phạm vi giao bài (nhãn lớp / nhóm tự do, ví dụ "Lớp 5A"). */
+  @Prop({ type: String, default: null, trim: true })
+  @ApiProperty({ type: String, nullable: true, example: 'Lớp 5A' })
+  scope: string | null;
+
+  /** Cho phép nộp muộn sau dueDate. */
+  @Prop({ type: Boolean, default: false })
+  @ApiProperty({ type: Boolean })
+  allowLateSubmit: boolean;
+
+  /** Hiển thị điểm cho học viên ngay sau khi nộp. */
+  @Prop({ type: Boolean, default: true })
+  @ApiProperty({ type: Boolean })
+  showScoreAfter: boolean;
+
+  /** Gửi thông báo khi giao bài. */
+  @Prop({ type: Boolean, default: false })
+  @ApiProperty({ type: Boolean })
+  notifyOnAssign: boolean;
+
   @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'FileItem', default: [] })
   @ApiProperty({ type: [String] })
   materialIds: Types.ObjectId[];

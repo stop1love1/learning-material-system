@@ -8,7 +8,7 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
@@ -29,8 +29,9 @@ export class ExercisesService {
 
   async list(dto: ListExercisesDto) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
-      ...(keyword ? { title: { $regex: keyword, $options: 'i' } } : {}),
+      ...(safeKeyword ? { title: { $regex: safeKeyword, $options: 'i' } } : {}),
       ...(dto.type ? { type: dto.type } : {}),
       ...(dto.status ? { status: dto.status } : {}),
       ...(dto.subject ? { subject: dto.subject } : {}),
@@ -72,10 +73,16 @@ export class ExercisesService {
     return buildPagination(withCount, total, page, pageSize);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: { userId?: string; role?: UserRole }) {
     const exerciseId = convertStringToObjectId(id);
     const exercise = await this.exerciseModel.findById(exerciseId).lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
+
+    // Chủ bài tập (hoặc Admin) được xem đáp án đúng để biên tập. Khách / học viên / chủ
+    // khác → lược bỏ field đáp án đúng trong từng câu để không lộ đáp án trước khi nộp.
+    const isOwner =
+      viewer?.role === UserRole.Admin ||
+      (viewer?.userId != null && exercise.userId?.toString() === viewer.userId);
 
     const links = await this.exerciseQuestionModel.find({ exerciseId }).sort({ order: 1 }).lean();
     const questionIds = links.map((l) => l.questionId);
@@ -86,6 +93,9 @@ export class ExercisesService {
       .find({ _id: { $in: questionIds } })
       .populate('questionDetail')
       .lean();
+    if (!isOwner) {
+      for (const q of questions as any[]) this.sanitizeDetailForViewer(q?.questionDetail);
+    }
     const questionMap = new Map(questions.map((q: any) => [q._id.toString(), q]));
 
     const items = links.map((link) => ({
@@ -96,16 +106,47 @@ export class ExercisesService {
     return { ...exercise, questions: items };
   }
 
+  /**
+   * Xóa các field ĐÁP ÁN ĐÚNG khỏi bản ghi chi tiết câu hỏi (đã populate, dạng lean)
+   * trước khi trả cho người KHÔNG phải chủ bài tập. Giữ lại mọi thứ học viên cần để
+   * LÀM bài: đề/options/labels/statements/thứ tự hiển thị... Bao phủ cả 9 loại câu.
+   */
+  private sanitizeDetailForViewer(detail: any): void {
+    if (!detail || typeof detail !== 'object') return;
+    // Single / Multiple choice
+    delete detail.correctOptionIndex;
+    delete detail.correctOptionIndices;
+    // True/False
+    delete detail.isCorrect;
+    // ShortAnswer / Number (mảng đáp án chấp nhận)
+    delete detail.answers;
+    // Sort (thứ tự đúng)
+    delete detail.correctOrder;
+    // TableSelection (mảng boolean đúng/sai)
+    delete detail.correctAnswers;
+    // Essay (đáp án mẫu / gợi ý chấm)
+    delete detail.guideAnswer;
+    // Match: giữ left + tập right có thể chọn, nhưng KHÔNG lộ cặp ghép đúng.
+    if (Array.isArray(detail.pairs)) {
+      const rights = detail.pairs.map((p: any) => p?.right).filter((r: any) => r != null);
+      detail.lefts = detail.pairs.map((p: any) => p?.left);
+      detail.rightOptions = rights;
+      delete detail.pairs;
+    }
+  }
+
   async create(dto: CreateExerciseDto, userId: string) {
-    const { materialIds, dueDate, folderId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
     const exercise = await this.exerciseModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
       ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
       ...(materialIds ? { materialIds: materialIds.map((m) => convertStringToObjectId(m)) } : {}),
       ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
+      ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
     });
-    return this.findOne(exercise._id.toString());
+    // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
+    return this.findOne(exercise._id.toString(), { userId });
   }
 
   private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
@@ -114,11 +155,12 @@ export class ExercisesService {
   }
 
   async update(id: string, dto: UpdateExerciseDto, userId: string, role?: UserRole) {
-    const { materialIds, dueDate, folderId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
     const patch: Record<string, unknown> = { ...rest };
     if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null;
     if (materialIds !== undefined) patch.materialIds = materialIds.map((m) => convertStringToObjectId(m));
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
+    if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();

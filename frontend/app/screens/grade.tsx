@@ -4,7 +4,7 @@ import { Icon, Tag, Avatar, Btn, Progress, Ring, EmptyState } from '@/app/compon
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { attemptsApi } from '@/app/lib/api';
-import { loadSubmissions } from '@/app/lib/sync/load-submissions';
+import { loadSubmissions, loadSubmissionDetail } from '@/app/lib/sync/load-submissions';
 import { cardClass } from '@/app/helpers/shared';
 import { RubricMatrix } from '@/app/screens/resources';
 
@@ -74,7 +74,17 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const [score, setScore] = React.useState('');
   const [fb, setFb] = React.useState('');
   const [draftSaved, setDraftSaved] = React.useState(false);
+  const [, bump] = React.useReducer((n) => n + 1, 0);
   const rubricStyle = t.rubricStyle || 'matrix';
+
+  // Lấy bài làm THẬT của lượt nộp đang mở (GET /attempts/:id/result) — list endpoint
+  // chỉ có meta, không có nội dung trả lời. Tải xong thì ép render lại để hiện bài làm.
+  React.useEffect(() => {
+    if (!sub || !sub.attemptId || sub.loaded) return;
+    let alive = true;
+    loadSubmissionDetail(sub.attemptId).then(() => { if (alive) bump(); });
+    return () => { alive = false; };
+  }, [sub?.attemptId, sub?.loaded]);
 
   const draftKey = (id) => `lms-grade-draft-${id}`;
   // Khôi phục bản nháp đã lưu khi mở từng bài nộp.
@@ -116,11 +126,30 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   // Persist a grade: best-effort hit the teacher grade endpoint, then refresh the
   // queue from the API; always update the local store so the UI reflects it even
   // when the backend is down / not authorised (mock fallback).
+  // Tóm tắt breakdown rubric (tiêu chí → mức đã chọn) thành text để lưu kèm câu tự
+  // luận — backend không có chỗ lưu từng tiêu chí, nên ghi vào feedback của câu.
+  const rubricBreakdownText = () => {
+    if (!rubric) return '';
+    const lines = rubric.criteria
+      .map((c, ci) => (sel[ci] != null ? `${c.name}: ${rubric.scale[sel[ci]]?.label ?? ''}` : null))
+      .filter(Boolean);
+    return lines.length ? `[Rubric] ${lines.join(' · ')}` : '';
+  };
+
   const persistGrade = async (s, finalScore, feedback) => {
     if (s && s.attemptId) {
       try {
+        // Điểm tổng do GV nhập gửi qua totalScore (backend ưu tiên dùng nó), nên KHÔNG
+        // nhồi điểm cuối vào grades của từng câu (sai thang điểm). Chỉ đính kèm breakdown
+        // rubric vào feedback câu đầu để lưu lại chi tiết từng tiêu chí.
+        const breakdown = rubricBreakdownText();
+        const qs: any[] = Array.isArray(s.questions) ? s.questions : [];
+        const answers = qs.map((q, i) => ({
+          questionId: q.questionId,
+          ...(i === 0 && breakdown ? { feedback: breakdown } : {}),
+        })).filter((q) => q.questionId);
         await attemptsApi.grade(s.attemptId, {
-          answers: [],
+          answers,
           totalScore: Number(finalScore) || 0,
           feedback: feedback || '',
         });

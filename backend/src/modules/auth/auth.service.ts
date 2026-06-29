@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { createHash, randomBytes, randomInt } from 'crypto';
+import { createHash, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
@@ -30,13 +30,24 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 giờ
 const OTP_TTL_MS = 5 * 60 * 1000; // 5 phút
 const EMAIL_SEND_COOLDOWN_MS = 60 * 1000; // 60s chống gửi lặp
+const OTP_MAX_ATTEMPTS = 5; // số lần nhập sai OTP tối đa trong một cửa sổ
+const OTP_ATTEMPT_WINDOW_MS = OTP_TTL_MS; // cửa sổ đếm = thời hạn OTP (5 phút)
 
 /**
- * In-memory cooldown for outbound transactional emails (forgot-password /
- * resend-verification), keyed by lowercased email → last-send epoch ms.
- * Acceptable for this single-instance app.
+ * In-memory cooldown for outbound transactional emails, keyed by lowercased
+ * email → last-send epoch ms. Split per-flow so forgot-password and
+ * resend-verification don't block each other. Acceptable for this
+ * single-instance app.
  */
-const emailSendCooldown = new Map<string, number>();
+const forgotPasswordCooldown = new Map<string, number>();
+const resendVerificationCooldown = new Map<string, number>();
+
+/**
+ * In-memory brute-force guard for the 2FA OTP step, keyed by lowercased email.
+ * Counts wrong-code attempts inside a rolling window and locks the OTP step out
+ * once the threshold is hit. Single-instance app only.
+ */
+const otpAttempts = new Map<string, { count: number; firstAt: number }>();
 
 @Injectable()
 export class AuthService {
@@ -162,9 +173,18 @@ export class AuthService {
 
   /** Step 2 of email-OTP 2FA: verify the 6-digit code and issue a token. */
   async verify2fa(dto: Verify2faDto) {
+    const email = dto.email.toLowerCase();
+
+    // Chống dò mã: khoá bước OTP khi nhập sai quá nhiều lần trong cửa sổ.
+    if (this.isOtpLocked(email)) {
+      throw new UnauthorizedException(
+        'Nhập sai mã quá nhiều lần. Vui lòng đăng nhập lại để nhận mã mới.',
+      );
+    }
+
     const user = await this.userModel
-      .findOne({ email: dto.email.toLowerCase() })
-      .select('+otpCode +otpExpires');
+      .findOne({ email })
+      .select('+otpCode +otpExpires +lockUntil');
 
     if (!user) {
       throw new UnauthorizedException('Mã không hợp lệ');
@@ -172,10 +192,27 @@ export class AuthService {
     if (!user.otpExpires || user.otpExpires.getTime() < Date.now()) {
       throw new UnauthorizedException('Mã đã hết hạn');
     }
-    if (this.hashToken(dto.code) !== user.otpCode) {
+    if (!user.otpCode || !this.otpMatches(dto.code, user.otpCode)) {
+      // Mã sai: tăng bộ đếm. Khi chạm ngưỡng thì xoá OTP để mã đã gửi vô hiệu.
+      if (this.registerOtpFailure(email) >= OTP_MAX_ATTEMPTS) {
+        user.otpCode = null;
+        user.otpExpires = null;
+        await user.save();
+      }
       throw new UnauthorizedException('Mã không đúng');
     }
 
+    // Mã đúng: kiểm tra lại trạng thái tài khoản trước khi cấp token (mirror login).
+    if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+      throw new UnauthorizedException(
+        'Tài khoản tạm khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau ít phút.',
+      );
+    }
+    if (user.status !== UserStatus.Active) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
+    }
+
+    otpAttempts.delete(email);
     user.otpCode = null;
     user.otpExpires = null;
     user.lastActiveAt = new Date();
@@ -248,7 +285,7 @@ export class AuthService {
     }
 
     // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
-    const last = emailSendCooldown.get(email);
+    const last = forgotPasswordCooldown.get(email);
     if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
       return { ok: true };
     }
@@ -262,7 +299,7 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/dat-lai-mat-khau?token=${rawToken}`;
     const delivered = await this.mail.sendPasswordReset(email, resetLink);
-    emailSendCooldown.set(email, Date.now());
+    forgotPasswordCooldown.set(email, Date.now());
 
     // Khi email không gửi được (SMTP chưa cấu hình / lỗi) thì lộ link dev để token
     // đặt lại không bị mất.
@@ -319,6 +356,9 @@ export class AuthService {
     if (!user.verifyExpires || user.verifyExpires.getTime() < Date.now()) {
       throw new UnauthorizedException('Liên kết xác thực đã hết hạn');
     }
+    if (user.status !== UserStatus.Active) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
+    }
 
     user.emailVerified = true;
     user.verifyToken = null;
@@ -340,7 +380,7 @@ export class AuthService {
     }
 
     // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
-    const last = emailSendCooldown.get(email);
+    const last = resendVerificationCooldown.get(email);
     if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
       return { ok: true };
     }
@@ -353,7 +393,7 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
     const delivered = await this.mail.sendVerification(email, verifyLink);
-    emailSendCooldown.set(email, Date.now());
+    resendVerificationCooldown.set(email, Date.now());
 
     return { ok: true, ...(delivered ? {} : { devVerifyLink: verifyLink }) };
   }
@@ -412,6 +452,40 @@ export class AuthService {
 
   private hashToken(raw: string): string {
     return createHash('sha256').update(raw).digest('hex');
+  }
+
+  /**
+   * Constant-time comparison of a raw OTP against its stored SHA-256 hash.
+   * Hashing first guarantees equal-length hex buffers for timingSafeEqual.
+   */
+  private otpMatches(raw: string, storedHash: string): boolean {
+    const a = Buffer.from(this.hashToken(raw), 'hex');
+    const b = Buffer.from(storedHash, 'hex');
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
+  /** True if the OTP step is currently locked out for this email (and the window is live). */
+  private isOtpLocked(email: string): boolean {
+    const entry = otpAttempts.get(email);
+    if (!entry) return false;
+    if (Date.now() - entry.firstAt >= OTP_ATTEMPT_WINDOW_MS) {
+      otpAttempts.delete(email);
+      return false;
+    }
+    return entry.count >= OTP_MAX_ATTEMPTS;
+  }
+
+  /** Record a wrong-OTP attempt and return the running count within the current window. */
+  private registerOtpFailure(email: string): number {
+    const now = Date.now();
+    const entry = otpAttempts.get(email);
+    if (!entry || now - entry.firstAt >= OTP_ATTEMPT_WINDOW_MS) {
+      otpAttempts.set(email, { count: 1, firstAt: now });
+      return 1;
+    }
+    entry.count += 1;
+    return entry.count;
   }
 
   /** Read the `security` group from the `system` settings doc, defensively. */

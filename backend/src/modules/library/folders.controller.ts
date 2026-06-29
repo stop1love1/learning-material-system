@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FoldersService } from './folders.service';
+import { JwtService } from '../../global/jwt.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateFolderDto } from './dto/update-folder.dto';
 import { ListFoldersDto } from './dto/list-folders.dto';
@@ -16,13 +17,28 @@ import { UserRole } from '../../enums';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('folders')
 export class FoldersController {
-  constructor(private readonly foldersService: FoldersService) {}
+  constructor(
+    private readonly foldersService: FoldersService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  // @Public bỏ qua JwtAuthGuard nên req.user luôn undefined. Tự giải mã token (nếu có)
+  // để chủ sở hữu đã đăng nhập vẫn thấy nội dung riêng tư của mình; token hỏng → khách.
+  private resolveViewer(authorization?: string): { userId?: string; role?: UserRole } | undefined {
+    if (!authorization) return undefined;
+    try {
+      const payload = this.jwtService.verify(authorization);
+      return { userId: payload.sub, role: payload.role };
+    } catch {
+      return undefined;
+    }
+  }
 
   @Get()
   @Public()
   @ApiOperation({ summary: 'Danh sách thư mục theo parentId (null = thư mục gốc)' })
-  list(@Query() dto: ListFoldersDto) {
-    return this.foldersService.list(dto);
+  list(@Query() dto: ListFoldersDto, @Headers('authorization') authorization?: string) {
+    return this.foldersService.list(dto, this.resolveViewer(authorization));
   }
 
   @Post()

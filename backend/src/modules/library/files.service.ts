@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FileItem } from '../../schemas/library/file.schema';
 import { Download } from '../../schemas/library/download.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { DownloadKind, UserRole } from '../../enums';
 import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
@@ -16,17 +16,32 @@ export class FilesService {
     @InjectModel(Download.name) private readonly downloadModel: Model<Download>,
   ) {}
 
-  async list(dto: ListFilesDto) {
+  // Giới hạn hiển thị cho route @Public: khách (không token) chỉ thấy isPublic:true;
+  // người dùng đã đăng nhập thấy thêm tài liệu của chính mình; Admin thấy tất cả.
+  private visibilityFilter(viewer?: { userId?: string; role?: UserRole }): Record<string, any> {
+    if (!viewer?.userId) return { isPublic: true };
+    if (viewer.role === UserRole.Admin) return {};
+    return { $or: [{ isPublic: true }, { userId: convertStringToObjectId(viewer.userId) }] };
+  }
+
+  async list(dto: ListFilesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    // parseKeyword escapes regex metachars — an unescaped keyword can 500 / cause backtracking.
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
-      ...(keyword
-        ? { $or: [{ name: { $regex: keyword, $options: 'i' } }, { tags: { $regex: keyword, $options: 'i' } }] }
-        : {}),
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
       ...(dto.category ? { tags: dto.category } : {}),
       ...(dto.subject ? { subject: dto.subject } : {}),
       ...(dto.grade ? { grade: dto.grade } : {}),
     };
+    // Visibility and keyword each use $or; combine via $and so they don't overwrite each other.
+    const and: Record<string, any>[] = [this.visibilityFilter(viewer)];
+    if (safeKeyword) {
+      and.push({
+        $or: [{ name: { $regex: safeKeyword, $options: 'i' } }, { tags: { $regex: safeKeyword, $options: 'i' } }],
+      });
+    }
+    query.$and = and;
     const [rawRecords, total] = await Promise.all([
       this.fileModel
         .find(query)
@@ -46,9 +61,15 @@ export class FilesService {
     return buildPagination(records, total, page, pageSize);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: { userId?: string; role?: UserRole }) {
+    // Only match (and increment viewCount on) a doc the viewer is allowed to see; a private
+    // file therefore returns 404 to anonymous/non-owner callers instead of leaking content.
     const file = await this.fileModel
-      .findByIdAndUpdate(convertStringToObjectId(id), { $inc: { viewCount: 1 } }, { new: true })
+      .findOneAndUpdate(
+        { _id: convertStringToObjectId(id), ...this.visibilityFilter(viewer) },
+        { $inc: { viewCount: 1 } },
+        { new: true },
+      )
       .populate({ path: 'userId', select: 'name avatar' })
       .populate({ path: 'folderId', select: 'name' })
       .lean();
@@ -96,9 +117,18 @@ export class FilesService {
     return { deleted: true };
   }
 
-  async download(id: string, userId: string) {
+  async download(id: string, viewer: { userId: string; role?: UserRole }) {
+    const userId = viewer.userId;
     const fileId = convertStringToObjectId(id);
-    const file = await this.fileModel.findByIdAndUpdate(fileId, { $inc: { downloadCount: 1 } }, { new: true }).lean();
+    // Chỉ ghi nhận tải khi tài liệu hiển thị với người xem; tài liệu riêng tư của
+    // người khác → 404 thay vì tăng downloadCount / tạo Download row.
+    const file = await this.fileModel
+      .findOneAndUpdate(
+        { _id: fileId, ...this.visibilityFilter(viewer) },
+        { $inc: { downloadCount: 1 } },
+        { new: true },
+      )
+      .lean();
     if (!file) throw new NotFoundException('Không tìm thấy tài liệu');
     await this.downloadModel.updateOne(
       { userId: convertStringToObjectId(userId), fileId, kind: DownloadKind.Download },
@@ -114,6 +144,9 @@ export class FilesService {
       .sort({ createdAt: -1 })
       .lean();
     const fileIds = downloads.map((d) => d.fileId);
-    return this.fileModel.find({ _id: { $in: fileIds } }).lean();
+    const files = await this.fileModel.find({ _id: { $in: fileIds } }).lean();
+    // The $in find returns DB order; re-sort to preserve the downloads' createdAt-desc order.
+    const byId = new Map(files.map((f: Record<string, any>) => [f._id.toString(), f]));
+    return fileIds.map((fid) => byId.get(fid.toString())).filter((f): f is Record<string, any> => Boolean(f));
   }
 }
