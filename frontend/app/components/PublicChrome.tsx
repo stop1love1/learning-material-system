@@ -3,27 +3,32 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Icon, IconBtn } from '@/app/components/ui';
+import { Popover } from 'antd';
+import { Icon, IconBtn, Tag } from '@/app/components/ui';
 import { NAV_BY_ROLE } from '@/app/configs/nav.config';
 import { ROUTES, routeToHref, resolvePath } from '@/app/configs/routes.config';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { DB, useLMS } from '@/app/store/store';
 
+const ROLE_LABEL_VI: Record<string, string> = { admin: 'Quản trị viên', teacher: 'Giáo viên', student: 'Học viên' };
+
 function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => void; topics: Array<{ label: string; to?: string }> }) {
   const col = (title: string, links: Array<{ label: string; to?: string }>) => (
     <div>
       <div className="mb-3 text-[12.5px] font-bold tracking-[0.2px] text-lms-ink">{title}</div>
       <div className="flex flex-col gap-[9px]">
-        {links.map((l, i) => (
-          <span
-            key={i}
-            onClick={l.to ? () => push(routeToHref(l.to!)) : undefined}
-            className={`lms-foot-link text-[13px] text-lms-sub ${l.to ? 'cursor-pointer' : 'cursor-default'}`}
-          >
-            {l.label}
-          </span>
-        ))}
+        {links.map((l, i) =>
+          l.to ? (
+            <Link key={i} href={routeToHref(l.to)} className="lms-foot-link cursor-pointer text-[13px] text-lms-sub no-underline">
+              {l.label}
+            </Link>
+          ) : (
+            <span key={i} className="lms-foot-link cursor-default text-[13px] text-lms-sub">
+              {l.label}
+            </span>
+          ),
+        )}
       </div>
     </div>
   );
@@ -113,7 +118,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-lms-bg font-sans text-lms-ink">
       <header className="z-30 shrink-0 border-b border-lms-line-soft bg-(--lms-surface-glass) backdrop-blur-md backdrop-saturate-[1.4]">
         <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
-          <div onClick={() => push(ROUTES.home)} className="flex shrink-0 cursor-pointer items-center gap-[11px]">
+          <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline">
             <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">
               V
             </div>
@@ -121,7 +126,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">Vườn Văn</div>
               <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NGỮ VĂN TIỂU HỌC</div>
             </div>
-          </div>
+          </Link>
           <nav className="lms-hide-sm ml-3.5 flex items-center gap-1">
             {items.map((it) => navLink(it, false))}
           </nav>
@@ -129,17 +134,55 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           <IconBtn name="search" p={p} onClick={() => push(ROUTES.library)} title="Tìm kiếm" />
           <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Sáng/tối" />
           {auth && auth.loggedIn ? (
-            <div className="lms-hide-sm flex items-center gap-[9px]">
-              <div
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              content={
+                <div className="w-[244px]">
+                  <div className="flex items-center gap-3 px-1 pb-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft font-lms-heading text-base font-bold text-lms-accent">
+                      {auth.initials}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[14px] font-semibold text-lms-ink">{auth.name}</div>
+                      {auth.email && <div className="truncate text-[12px] text-lms-sub">{auth.email}</div>}
+                      <div className="mt-1.5">
+                        <Tag p={p} color={auth.role === 'admin' ? p.warn : p.accent}>
+                          {ROLE_LABEL_VI[auth.role] || 'Người dùng'}
+                        </Tag>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="my-1 h-px bg-lms-line-soft" />
+                  {auth.isStaff && (
+                    <>
+                      <Link href={ROUTES.dashboard} className="lms-row flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] text-lms-ink no-underline">
+                        <Icon name="settings" size={16} stroke={p.sub} /> Khu vực quản trị
+                      </Link>
+                      <Link href={ROUTES.account} className="lms-row flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] text-lms-ink no-underline">
+                        <Icon name="users" size={16} stroke={p.sub} /> Tài khoản & hồ sơ
+                      </Link>
+                    </>
+                  )}
+                  <button
+                    onClick={() => auth.logout()}
+                    className="lms-row flex h-9 w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-2 text-left text-[13px] text-lms-danger"
+                  >
+                    <Icon name="logout" size={16} stroke={p.danger} /> Đăng xuất
+                  </button>
+                </div>
+              }
+            >
+              <button
                 title={auth.name}
-                className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
+                aria-label="Tài khoản"
+                className="lms-btn lms-hide-sm flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-lms-accent-soft font-lms-heading text-xs font-bold text-lms-accent">
                   {auth.initials}
                 </div>
-              </div>
-              <IconBtn name="logout" p={p} onClick={() => auth.logout()} title="Đăng xuất" />
-            </div>
+              </button>
+            </Popover>
           ) : (
             <button
               onClick={(e) => {
@@ -151,13 +194,15 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <Icon name="logout" size={15} stroke="#fff" /> Đăng nhập
             </button>
           )}
-          <button
-            onClick={() => push(ROUTES.dashboard)}
-            className="lms-btn lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface text-lms-sub"
-            title="Khu vực quản trị"
-          >
-            <Icon name="settings" size={16} stroke={p.sub} />
-          </button>
+          {auth?.isStaff && (
+            <button
+              onClick={() => push(ROUTES.dashboard)}
+              className="lms-btn lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface text-lms-sub"
+              title="Khu vực quản trị"
+            >
+              <Icon name="settings" size={16} stroke={p.sub} />
+            </button>
+          )}
           <button
             className="lms-hamburger lms-btn hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
             onClick={() => setMenuOpen((o) => !o)}
@@ -170,12 +215,14 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           <div className="flex flex-col gap-1 border-t border-lms-line-soft bg-lms-surface px-4 pt-2.5 pb-3.5">
             {items.map((it) => navLink(it, true))}
             <div className="my-1.5 h-px bg-lms-line-soft" />
-            <button
-              onClick={() => push(ROUTES.dashboard)}
-              className="lms-btn flex h-11 cursor-pointer items-center gap-2 rounded-[9px] border-0 bg-transparent px-3.5 font-sans text-sm font-medium text-lms-sub"
-            >
-              <Icon name="settings" size={17} stroke={p.faint} /> Khu vực quản trị
-            </button>
+            {auth?.isStaff && (
+              <button
+                onClick={() => push(ROUTES.dashboard)}
+                className="lms-btn flex h-11 cursor-pointer items-center gap-2 rounded-[9px] border-0 bg-transparent px-3.5 font-sans text-sm font-medium text-lms-sub"
+              >
+                <Icon name="settings" size={17} stroke={p.faint} /> Khu vực quản trị
+              </button>
+            )}
             {auth &&
               (auth.loggedIn ? (
                 <button

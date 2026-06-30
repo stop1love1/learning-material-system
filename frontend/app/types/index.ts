@@ -47,6 +47,7 @@ export interface Auth {
   loggedIn: boolean;
   ready: boolean; // true sau khi khôi phục phiên (tránh nháy gate khi đang xác thực)
   name: string;
+  email: string; // '' khi chưa đăng nhập
   initials: string;
   role: Role | ''; // '' khi chưa đăng nhập
   isStaff: boolean; // true khi role là 'teacher' hoặc 'admin'

@@ -178,6 +178,14 @@ function RoleSwitcher({ p }: { p: any }) {
         <>
           <div onClick={() => setOpen(false)} className="fixed inset-0 z-40" />
           <div className="absolute top-full right-0 z-50 mt-2 w-60 rounded-lg border border-lms-line bg-lms-surface p-2 shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
+            <div className="flex items-center gap-2.5 px-2.5 pt-1.5 pb-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-lms-accent-soft font-lms-heading text-[14px] font-semibold text-lms-accent">{initials}</div>
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-semibold text-lms-ink">{displayName}</div>
+                {auth.loggedIn && auth.email && <div className="truncate text-[11.5px] text-lms-sub">{auth.email}</div>}
+              </div>
+            </div>
+            <div className="mx-1 mb-1.5 h-px bg-lms-line-soft" />
             <Link href={ROUTES.account} onClick={() => setOpen(false)} className="lms-nav-item flex cursor-pointer items-center gap-2.5 rounded-[9px] px-2.5 py-[9px] no-underline">
               <Icon name="user" size={16} stroke={p.sub} /><span className="text-[13px] font-semibold text-lms-ink">Hồ sơ cá nhân</span>
             </Link>

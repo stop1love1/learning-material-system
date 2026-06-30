@@ -23,7 +23,7 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-type SessionUser = { name: string; role: Role | '' };
+type SessionUser = { name: string; role: Role | ''; email: string };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { p, t } = useLmsTheme();
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!getToken()) { setReady(true); return; }
     authApi
       .me()
-      .then((u) => setUser({ name: u.name, role: u.role ?? '' }))
+      .then((u) => setUser({ name: u.name, role: u.role ?? '', email: u.email ?? '' }))
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = React.useCallback(async (email: string, password: string) => {
     const res = (await authApi.login(email, password)) as {
       accessToken?: string;
-      user?: { name?: string; role?: Role | '' };
+      user?: { name?: string; role?: Role | ''; email?: string };
       needs2fa?: boolean;
       email?: string;
       devOtp?: string;
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { needs2fa: true, email: res.email, devOtp: res.devOtp };
     }
     setToken(res.accessToken!);
-    setUser({ name: res.user?.name ?? email, role: res.user?.role ?? '' });
+    setUser({ name: res.user?.name ?? email, role: res.user?.role ?? '', email: res.user?.email ?? email });
     setOpen(false);
     return {};
   }, []);
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verify2fa = React.useCallback(async (email: string, code: string) => {
     const res = await authApi.verify2fa(email, code);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '' });
+    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '', email: res.user?.email ?? email });
     setOpen(false);
   }, []);
 
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const googleLogin = React.useCallback(async (idToken: string) => {
     const res = await authApi.google(idToken);
     setToken(res.accessToken);
-    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '' });
+    setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '', email: res.user?.email ?? '' });
     setOpen(false);
   }, []);
 
@@ -104,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loggedIn: !!user,
     ready,
     name: user?.name ?? '',
+    email: user?.email ?? '',
     initials: user ? initialsOf(user.name) : '',
     role,
     isStaff: role === 'teacher' || role === 'admin',
