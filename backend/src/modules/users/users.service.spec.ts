@@ -128,7 +128,7 @@ describe('UsersService', () => {
         name: 'New',
         email: 'UP@X.COM',
         password: 'newpass',
-        // @ts-expect-error extraneous field must be dropped by the whitelist
+        // extraneous field must be dropped by the whitelist (cast via `as any` below)
         hacker: 'nope',
       } as any);
 

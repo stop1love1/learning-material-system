@@ -11,7 +11,8 @@ import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { Enrollment } from '../../schemas/class/enrollment.schema';
-import { EnrollmentStatus, UserRole } from '../../enums';
+import { Notification } from '../../schemas/notification.schema';
+import { EnrollmentStatus, ExerciseStatus, UserRole } from '../../enums';
 
 /**
  * Unit tests for ExercisesService — focused on list() viewer filtering (the
@@ -44,6 +45,7 @@ describe('ExercisesService', () => {
   let submissionModel: any;
   let studentQuestionModel: any;
   let enrollmentModel: any;
+  let notificationModel: any;
 
   beforeEach(async () => {
     exerciseModel = {
@@ -69,6 +71,10 @@ describe('ExercisesService', () => {
     submissionModel = { deleteMany: jest.fn() };
     studentQuestionModel = { deleteMany: jest.fn() };
     enrollmentModel = { find: jest.fn() };
+    notificationModel = { insertMany: jest.fn().mockResolvedValue([]) };
+    // update() now reads the prior status via findOne(...).select('status').lean()
+    // before patching; default to a no-prior-doc chain so existing tests keep working.
+    exerciseModel.findOne.mockReturnValue(leanChain(null));
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
@@ -81,6 +87,7 @@ describe('ExercisesService', () => {
         { provide: getModelToken(Submission.name), useValue: submissionModel },
         { provide: getModelToken(StudentQuestion.name), useValue: studentQuestionModel },
         { provide: getModelToken(Enrollment.name), useValue: enrollmentModel },
+        { provide: getModelToken(Notification.name), useValue: notificationModel },
       ],
     }).compile();
 
@@ -256,6 +263,153 @@ describe('ExercisesService', () => {
 
       const arg = exerciseModel.create.mock.calls[0][0];
       expect('classId' in arg).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // create — notifyOnAssign emits per-student Notifications
+  // ---------------------------------------------------------------------------
+  describe('create notifies enrolled students on assign', () => {
+    const stubFindOnePipeline = (newId: any, userId: string) => {
+      exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
+      exerciseQuestionModel.find.mockReturnValue(leanChain([]));
+      questionModel.find.mockReturnValue(leanChain([]));
+    };
+
+    it('open + notifyOnAssign + classId → insertMany one Notification per ACTIVE student', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const newId = oid();
+      const s1 = oid();
+      const s2 = oid();
+      exerciseModel.create.mockResolvedValue({
+        _id: newId,
+        title: 'Bài mới',
+        status: ExerciseStatus.Open,
+        notifyOnAssign: true,
+        classId,
+      });
+      stubFindOnePipeline(newId, userId);
+      enrollmentModel.find.mockReturnValue(leanChain([{ studentId: s1 }, { studentId: s2 }]));
+
+      await service.create(
+        { title: 'Bài mới', status: ExerciseStatus.Open, notifyOnAssign: true, classId: classId.toString() } as any,
+        userId,
+      );
+
+      // Enrollment lookup is scoped to the class + Active.
+      const enrollQuery = enrollmentModel.find.mock.calls[0][0];
+      expect(enrollQuery.classId).toBe(classId);
+      expect(enrollQuery.status).toBe(EnrollmentStatus.Active);
+
+      expect(notificationModel.insertMany).toHaveBeenCalledTimes(1);
+      const docs = notificationModel.insertMany.mock.calls[0][0];
+      expect(docs).toHaveLength(2);
+      expect(docs[0]).toMatchObject({
+        userId: s1,
+        title: 'Bài tập mới: Bài mới',
+        tag: 'Bài tập',
+        icon: 'assign',
+        link: `/luyen-tap/${newId}`,
+        refId: newId,
+        refType: 'exercise',
+      });
+      expect(docs[1].userId).toBe(s2);
+    });
+
+    it('does NOT notify when notifyOnAssign is false (even if open + classId)', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const newId = oid();
+      exerciseModel.create.mockResolvedValue({
+        _id: newId,
+        title: 'Bài',
+        status: ExerciseStatus.Open,
+        notifyOnAssign: false,
+        classId,
+      });
+      stubFindOnePipeline(newId, userId);
+
+      await service.create({ title: 'Bài', classId: classId.toString() } as any, userId);
+
+      expect(enrollmentModel.find).not.toHaveBeenCalled();
+      expect(notificationModel.insertMany).not.toHaveBeenCalled();
+    });
+
+    it('does NOT notify when status is not open (draft) even with notifyOnAssign + classId', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const newId = oid();
+      exerciseModel.create.mockResolvedValue({
+        _id: newId,
+        title: 'Bài',
+        status: ExerciseStatus.Draft,
+        notifyOnAssign: true,
+        classId,
+      });
+      stubFindOnePipeline(newId, userId);
+
+      await service.create({ title: 'Bài', classId: classId.toString() } as any, userId);
+
+      expect(notificationModel.insertMany).not.toHaveBeenCalled();
+    });
+
+    it('open + notifyOnAssign but NO students → no throw, no insertMany', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const newId = oid();
+      exerciseModel.create.mockResolvedValue({
+        _id: newId,
+        title: 'Bài',
+        status: ExerciseStatus.Open,
+        notifyOnAssign: true,
+        classId,
+      });
+      stubFindOnePipeline(newId, userId);
+      enrollmentModel.find.mockReturnValue(leanChain([]));
+
+      await expect(
+        service.create({ title: 'Bài', classId: classId.toString() } as any, userId),
+      ).resolves.toBeDefined();
+      expect(notificationModel.insertMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // update — notify only on transition INTO open
+  // ---------------------------------------------------------------------------
+  describe('update notifies only on transition into open', () => {
+    it('draft → open with notifyOnAssign + classId → notifies', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const exId = oid();
+      const s1 = oid();
+      exerciseModel.findOne.mockReturnValue(leanChain({ status: ExerciseStatus.Draft }));
+      exerciseModel.findOneAndUpdate.mockReturnValue(
+        leanChain({ _id: exId, title: 'Bài', status: ExerciseStatus.Open, notifyOnAssign: true, classId }),
+      );
+      enrollmentModel.find.mockReturnValue(leanChain([{ studentId: s1 }]));
+
+      await service.update(exId.toString(), { status: ExerciseStatus.Open } as any, userId, UserRole.Admin);
+
+      expect(notificationModel.insertMany).toHaveBeenCalledTimes(1);
+      const docs = notificationModel.insertMany.mock.calls[0][0];
+      expect(docs).toHaveLength(1);
+      expect(docs[0].userId).toBe(s1);
+    });
+
+    it('already open → open (unrelated PATCH) → does NOT re-notify', async () => {
+      const userId = new Types.ObjectId().toString();
+      const classId = oid();
+      const exId = oid();
+      exerciseModel.findOne.mockReturnValue(leanChain({ status: ExerciseStatus.Open }));
+      exerciseModel.findOneAndUpdate.mockReturnValue(
+        leanChain({ _id: exId, title: 'Bài', status: ExerciseStatus.Open, notifyOnAssign: true, classId }),
+      );
+
+      await service.update(exId.toString(), { title: 'rename' } as any, userId, UserRole.Admin);
+
+      expect(notificationModel.insertMany).not.toHaveBeenCalled();
     });
   });
 

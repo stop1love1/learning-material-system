@@ -28,5 +28,6 @@ export * from './exercise/self-assessment.schema';
 export * from './class/class.schema';
 export * from './class/enrollment.schema';
 export * from './article.schema';
+export * from './notification.schema';
 export * from './settings.schema';
 export * from './schedule.schema';

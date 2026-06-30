@@ -244,25 +244,44 @@ export function UserHome({ p, t, setRoute, go }) {
 
 export function SOverview({ p, t, setRoute, go }) {
   const auth = useLmsAuth();
+  const attempts = useMyAttempts();
   const todo = DB.STUDENT_TASKS.filter((x) => x.status === 'todo');
   const graded = DB.STUDENT_TASKS.filter((x) => x.status === 'graded' || (x.status === 'done' && x.score));
+
+  // Số liệu THẬT từ các lượt làm của học viên (mine()): điểm trung bình các bài đã chấm.
+  const gradedAttempts = attempts.filter((a) => a.status === 'graded' && a.score != null);
+  const avgScore = gradedAttempts.length
+    ? Math.round((gradedAttempts.reduce((s, a) => s + a.score, 0) / gradedAttempts.length) * 10) / 10
+    : null;
+  const avgPctList = gradedAttempts
+    .map((a) => (a.percent != null ? a.percent : a.points ? Math.round((a.score / a.points) * 100) : null))
+    .filter((x): x is number => x != null);
+  const avgPct = avgPctList.length ? Math.round(avgPctList.reduce((s, x) => s + x, 0) / avgPctList.length) : 0;
+  const dueToday = todo.filter((x) => x.dueIn === 'Hôm nay').length;
+
   return (
     <div className="mx-auto max-w-[1480px] px-[30px] pt-[30px] pb-10">
       <div className="mb-[26px] flex flex-wrap items-end justify-between gap-5">
         <div>
-          <div className="mb-2.5 font-mono text-[11.5px] tracking-[1px] text-lms-faint">THỨ HAI · 22 THÁNG 6, 2026</div>
+          <div className="mb-2.5 font-mono text-[11.5px] tracking-[1px] text-lms-faint">KHÔNG GIAN HỌC TẬP</div>
           <h2 className="m-0 font-lms-heading text-4xl font-medium leading-[1.05] tracking-[-0.6px] text-lms-ink">
             Chào bạn, <span className="text-lms-accent">{auth.name || 'bạn'}.</span>
           </h2>
           <p className="mt-3 mb-0 max-w-[480px] text-[14.5px] leading-normal text-lms-sub">
-            Bạn có <strong className="text-lms-ink">3 bài tập</strong> cần hoàn thành, trong đó <strong className="text-lms-ink">1 bài đến hạn hôm nay</strong>.
+            {todo.length > 0 ? (
+              <>Bạn có <strong className="text-lms-ink">{todo.length} bài tập</strong> cần hoàn thành{dueToday > 0 ? <>, trong đó <strong className="text-lms-ink">{dueToday} bài đến hạn hôm nay</strong></> : null}.</>
+            ) : (
+              <>Bạn đã hoàn thành hết bài tập được giao. Khám phá thêm học liệu để ôn tập nhé.</>
+            )}
           </p>
         </div>
-        <div className={`${cardClass(20)} flex items-center gap-4`}>
-          <Ring value={84} size={64} thickness={7} p={p} color={p.accent} label="8,4" />
-          <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div>
-            <div className="mt-0.5 font-lms-heading text-base font-semibold text-lms-ink">Xếp hạng 3/28</div></div>
-        </div>
+        {avgScore != null && (
+          <div className={`${cardClass(20)} flex items-center gap-4`}>
+            <Ring value={avgPct} size={64} thickness={7} p={p} color={p.accent} label={avgScore.toFixed(1)} />
+            <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div>
+              <div className="mt-0.5 font-lms-heading text-base font-semibold text-lms-ink">{gradedAttempts.length} bài đã chấm</div></div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 items-start gap-[22px] min-[961px]:grid-cols-[1.5fr_1fr]">
@@ -450,6 +469,8 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   const [result, setResult] = React.useState(null);
   const [submitError, setSubmitError] = React.useState(null);
   const [ws, setWs] = React.useState(null);
+  // Phiếu học tập THẬT của bài (từ materialIds). [] = không có đính kèm → ẩn mục phiếu.
+  const [materials, setMaterials] = React.useState<any[]>([]);
   // Đếm ngược thời gian làm bài (giây) khi bài tập có durationMinutes; null = không giới hạn.
   const [remaining, setRemaining] = React.useState<number | null>(null);
   // Tránh nộp lặp khi hết giờ; ref giữ submitNow mới nhất để effect đếm ngược không phụ thuộc nó.
@@ -461,7 +482,7 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   React.useEffect(() => {
     if (!task) return;
     let alive = true;
-    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null); setSubmitError(null); setRemaining(null);
+    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null); setSubmitError(null); setRemaining(null); setMaterials([]); setWs(null);
     autoSubmittedRef.current = false;
     (async () => {
       try {
@@ -472,6 +493,16 @@ export function STask({ p, t, ctx, setRoute, auth }) {
         const mins = Number(ex.durationMinutes);
         if (Number.isFinite(mins) && mins > 0) setRemaining(mins * 60);
         if (mapped.length) setLiveQs(mapped);
+        // Phiếu học tập THẬT = các tệp đính kèm (materialIds) của bài tập. Tra tên/đường
+        // dẫn từ kho học liệu đã nạp (DB.DOCS). Không có đính kèm → ẩn mục phiếu.
+        const matIds: string[] = (ex.materialIds || []).map((m: any) => String(m?._id ?? m));
+        const docs = matIds
+          .map((id) => {
+            const f = (DB.DOCS || []).find((d: any) => String(d.id) === id);
+            return f ? { id, name: f.name, url: f.url || '' } : null;
+          })
+          .filter(Boolean);
+        setMaterials(docs as any[]);
       } catch { /* keep null → mock fallback below */ }
     })();
     return () => { alive = false; };
@@ -604,25 +635,13 @@ export function STask({ p, t, ctx, setRoute, auth }) {
       </div>
     );
   }
-  const worksheets = [
-    { id: 'ws1', name: 'Phiếu học tập — Đọc hiểu “Dế Mèn bênh vực kẻ yếu”' },
-    { id: 'ws2', name: 'Phiếu luyện viết đoạn văn tả con vật' },
-  ];
+  // Phiếu học tập = các tệp đính kèm THẬT của bài (materialIds → DB.DOCS). Rỗng → ẩn mục.
+  const worksheets = materials;
 
-  // Tải phiếu: nếu có liên kết thì mở; nếu không, xuất nội dung phiếu ra tệp .txt.
+  // Tải phiếu: mở liên kết thật của tệp đính kèm (học liệu external-link-first).
   const downloadWorksheet = (w: any) => {
     if (typeof window === 'undefined') return;
-    if (w?.url) { window.open(w.url, '_blank', 'noopener'); return; }
-    try {
-      const content = `${w.name}\n\n${DOC_BODY.join('\n\n')}`;
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${(w.name || 'phieu-hoc-tap').replace(/[^\wÀ-ỹ .-]/g, '').trim().slice(0, 60)}.txt`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch {}
+    if (w?.url) window.open(w.url, '_blank', 'noopener');
   };
 
   if (!q) {
@@ -661,6 +680,7 @@ export function STask({ p, t, ctx, setRoute, auth }) {
 
       <div className="lms-scroll flex-1 overflow-y-auto p-[30px]">
         <div className="mx-auto max-w-[680px]">
+          {worksheets.length > 0 && (
           <div className={`${cardClass(16)} mb-5`}>
             <div className={`flex items-center gap-2.5 ${ws ? 'mb-3.5' : ''}`}>
               <Icon name="docs" size={17} stroke={p.accent} />
@@ -680,13 +700,14 @@ export function STask({ p, t, ctx, setRoute, auth }) {
             {ws && (
               <div className="rounded-lg border border-lms-line bg-lms-raise p-[18px]">
                 <div className="mb-2.5 text-sm font-semibold text-lms-ink">{ws.name}</div>
-                {DOC_BODY.slice(0, 3).map((para, i) => (
-                  <p key={i} className="mb-2.5 mt-0 text-[13.5px] leading-[1.8] text-pretty text-lms-sub">{para}</p>
-                ))}
-                <Btn p={p} variant="ghost" size="sm" icon="download" onClick={() => downloadWorksheet(ws)}>Tải phiếu</Btn>
+                <p className="mb-2.5 mt-0 text-[13.5px] leading-[1.8] text-pretty text-lms-sub">Tệp đính kèm của bài tập. Mở để xem hoặc tải về tham khảo khi làm bài.</p>
+                {ws.url
+                  ? <Btn p={p} variant="ghost" size="sm" icon="download" onClick={() => downloadWorksheet(ws)}>Mở phiếu</Btn>
+                  : <div className="text-[12.5px] text-lms-faint">Tệp này chưa có liên kết để mở.</div>}
               </div>
             )}
           </div>
+          )}
           {!essay && (
             <div className="mb-6 flex flex-wrap gap-1.5">
               {qs.map((_, i) => (
@@ -924,13 +945,19 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
 }
 
 export function SSelfCheck({ p, t }) {
-  const works = [
-    { id: 'w1', title: 'Tập làm văn — Tả con vật nuôi em yêu thích', rubric: 'r1' },
-    { id: 'w2', title: 'Kể chuyện — Một việc tốt em đã làm', rubric: 'r2' },
-  ];
-  const [workId, setWorkId] = React.useState('w1');
+  useLMS();
+  // "Bài để tự đánh giá" lấy từ các bài tập THẬT của học viên (DB.STUDENT_TASKS,
+  // nạp từ /exercises + /attempts/me). Không có bài nào → fallback dùng chính rubric
+  // có sẵn làm mục để luyện tự chấm (vẫn là dữ liệu thật, không bịa tiêu đề bài).
+  const works = React.useMemo(() => {
+    const tasks = (DB.STUDENT_TASKS || []).map((x: any) => ({ id: x.id, title: x.title }));
+    if (tasks.length) return tasks;
+    return (DB.RUBRICS || []).map((r: any) => ({ id: r.id, title: r.name }));
+  }, [DB.STUDENT_TASKS, DB.RUBRICS]);
+  const [workId, setWorkId] = React.useState<string>('');
   const work = works.find((w) => w.id === workId) || works[0];
-  const rubric = DB.RUBRICS.find((r) => r.id === work.rubric) || DB.RUBRICS[0];
+  // Rubric tự chấm: dùng rubric đầu tiên có sẵn (nguồn rubric thật của hệ thống).
+  const rubric = DB.RUBRICS[0];
   const [sel, setSel] = React.useState({});
   const [note, setNote] = React.useState('');
   const [savingSelf, setSavingSelf] = React.useState(false);
@@ -1000,7 +1027,7 @@ export function SSelfCheck({ p, t }) {
 
       <div className="mb-[18px]">
         <label className={lblClass()}>CHỌN BÀI ĐỂ TỰ ĐÁNH GIÁ</label>
-        <Select p={p} value={workId} onChange={setWorkId} className="mt-2 max-w-[460px]"
+        <Select p={p} value={work?.id ?? ''} onChange={setWorkId} className="mt-2 max-w-[460px]"
           options={works.map((w) => ({ value: w.id, label: w.title }))} />
       </div>
 
@@ -1045,46 +1072,107 @@ export function SSelfCheck({ p, t }) {
   );
 }
 
+// Lượt làm THẬT của học viên hiện tại (GET /attempts/me). Trả về mảng đã chuẩn hoá
+// kèm tiêu đề/điểm bài tập (tiêu đề tra từ DB.STUDENT_TASKS / DB.ASSIGNMENTS theo
+// exerciseId). Best-effort: chưa đăng nhập / API lỗi → mảng rỗng (không bịa số liệu).
+function useMyAttempts() {
+  useLMS(); // re-render khi DB (tiêu đề bài tập) được hydrate
+  const [rows, setRows] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const mine: any[] = await attemptsApi.mine();
+        if (!alive) return;
+        setRows(Array.isArray(mine) ? mine : []);
+      } catch {
+        if (alive) setRows([]); // không bịa kết quả khi chưa đăng nhập / API lỗi
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+  // exerciseId chưa populate → tra tiêu đề/điểm tối đa từ các bài tập đã nạp.
+  return React.useMemo(() => rows.map((a) => {
+    const exId = String(a?.exerciseId?._id ?? a?.exerciseId ?? '');
+    const ex = DB.STUDENT_TASKS.find((x) => x.id === exId)
+      || (DB as any).ASSIGNMENTS?.find((x: any) => x.id === exId)
+      || {};
+    return {
+      id: a._id,
+      exerciseId: exId,
+      title: ex.title || 'Bài tập',
+      type: ex.type || '',
+      points: ex.points ?? 10,
+      status: a.status, // 'graded' | 'submitted' | 'in-progress'
+      score: typeof a.totalScore === 'number' ? a.totalScore : null,
+      percent: typeof a.percent === 'number' ? a.percent : null,
+      submittedAt: a.submittedAt ?? null,
+    };
+  }), [rows]);
+}
+
 export function SResults({ p, t }) {
-  const rubric = DB.RUBRICS[0];
-  const liveGraded = DB.SUBMISSIONS.filter((s) => s.studentId === 's1' && s.status === 'graded').map((s) => {
-    const a = DB.ASSIGNMENTS.find((x) => x.id === s.assignmentId) || {};
-    return { title: a.title || 'Bài tập', class: a.class || 'TV5A1', score: s.score, fb: s.feedback || 'Đã chấm.', rubric: !!a.rubric };
-  });
-  const graded = [...liveGraded,
-    { title: 'Kiểm tra 15 phút — Chính tả & từ loại', class: 'TV5A1', score: 8.5, fb: 'Làm tốt, chú ý vài lỗi chính tả nhỏ.', rubric: false },
-    { title: 'Trắc nghiệm — Đọc hiểu “Hạt gạo làng ta”', class: 'TV5A1', score: 9.0, fb: 'Xuất sắc!', rubric: false },
-    { title: 'Tập làm văn — Kể về một việc tốt em đã làm', class: 'TV5A1', score: 7.8, fb: 'Ý hay, cần thêm chi tiết và cảm xúc cho bài sinh động hơn.', rubric: true },
-  ];
-  const [open, setOpen] = React.useState(2);
+  const attempts = useMyAttempts();
+  const [open, setOpen] = React.useState(0);
+
+  // Chỉ lấy các lượt ĐÃ CHẤM (graded) có điểm thật để tính trung bình + danh sách.
+  const graded = attempts.filter((a) => a.status === 'graded' && a.score != null);
+  // Trung bình % từ percent thật; nếu thiếu percent thì suy từ score/points.
+  const pcts = graded
+    .map((a) => (a.percent != null ? a.percent : a.points ? Math.round((a.score / a.points) * 100) : null))
+    .filter((x): x is number => x != null);
+  const avgPct = pcts.length ? Math.round(pcts.reduce((s, x) => s + x, 0) / pcts.length) : null;
+  const avgScore = graded.length
+    ? Math.round((graded.reduce((s, a) => s + a.score, 0) / graded.length) * 10) / 10
+    : null;
+  // Xu hướng: điểm các lượt đã chấm theo thứ tự CŨ → MỚI (mine() trả mới nhất trước).
+  const trend = [...graded].reverse().map((a) => a.score).slice(-6);
+
+  if (graded.length === 0) {
+    return (
+      <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+        <EmptyState p={p} icon="award" label="Chưa có kết quả đã chấm" sub="Khi bài của bạn được chấm, điểm và nhận xét sẽ hiện ở đây." />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="mb-6 flex gap-4">
-        <div className={`${cardClass(20)} flex flex-1 items-center gap-4 p-[22px]`}>
-          <Ring value={84} size={62} thickness={7} p={p} color={p.accent} label="8,4" />
-          <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div><div className="font-lms-heading text-[22px] font-semibold text-lms-ink">Khá tốt</div></div>
-        </div>
-        <div className={`${cardClass(20)} flex-1 p-[22px]`}>
-          <div className="mb-2.5 text-[12.5px] text-lms-sub">Tiến triển 6 bài gần nhất</div>
-          <Spark data={[7, 7.5, 8, 7.8, 8.5, 9]} w={200} h={40} stroke={p.accent} fill={p.accentSoft} sw={2.2} />
-        </div>
+      <div className="mb-6 flex flex-wrap gap-4">
+        {avgScore != null && (
+          <div className={`${cardClass(20)} flex flex-1 items-center gap-4 p-[22px]`}>
+            <Ring value={avgPct ?? 0} size={62} thickness={7} p={p} color={p.accent} label={avgScore.toFixed(1)} />
+            <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div>
+              <div className="font-lms-heading text-[22px] font-semibold text-lms-ink">
+                {avgScore >= 8 ? 'Rất tốt' : avgScore >= 6.5 ? 'Khá tốt' : 'Cần cố gắng'}
+              </div></div>
+          </div>
+        )}
+        {trend.length >= 2 && (
+          <div className={`${cardClass(20)} flex-1 p-[22px]`}>
+            <div className="mb-2.5 text-[12.5px] text-lms-sub">Tiến triển {trend.length} bài gần nhất</div>
+            <Spark data={trend} w={200} h={40} stroke={p.accent} fill={p.accentSoft} sw={2.2} />
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-3">
         {graded.map((g, i) => (
-          <div key={i} className={`${cardClass(20)} overflow-hidden p-0`}>
+          <div key={g.id} className={`${cardClass(20)} overflow-hidden p-0`}>
             <div onClick={() => setOpen(open === i ? -1 : i)} className="lms-row flex cursor-pointer items-center gap-4 px-5 py-4">
               <div className="flex-1"><div className="text-[14.5px] font-semibold text-lms-ink">{g.title}</div>
-                <div className="mt-[3px] text-xs text-lms-faint">{g.class}{g.rubric ? ' · chấm theo rubric' : ''}</div></div>
+                <div className="mt-[3px] text-xs text-lms-faint">{[g.type, g.percent != null ? `${g.percent}% đúng` : null].filter(Boolean).join(' · ')}</div></div>
               <span className={`font-lms-heading text-[26px] font-semibold ${g.score >= 8 ? 'text-lms-ok' : 'text-lms-ink'}`}>{g.score}</span>
               <Icon name={open === i ? 'chevronDown' : 'chevronRight'} size={18} stroke={p.faint} />
             </div>
             {open === i && (
               <div className="border-t border-lms-line px-5 pb-5">
-                {g.rubric && rubric && <div className="my-4"><RubricMatrix rubric={rubric} p={p} mode="grade" selected={{ 0: 0, 1: 1, 2: 1, 3: 0 }} /></div>}
                 <div className="mt-4 flex gap-3 rounded-xl border border-lms-line bg-lms-raise p-3.5">
-                  <Avatar name="Cô Phương Thanh" p={p} size={36} accent />
-                  <div><div className="mb-[3px] text-xs font-semibold text-lms-ink">Nhận xét của giáo viên</div>
-                    <div className="text-[13px] leading-normal text-lms-sub">{g.fb}</div></div>
+                  <Icon name="checkCircle" size={20} stroke={p.ok} />
+                  <div><div className="mb-[3px] text-xs font-semibold text-lms-ink">Kết quả</div>
+                    <div className="text-[13px] leading-normal text-lms-sub">
+                      Bạn đạt <strong className="text-lms-ink">{g.score}</strong>/{g.points} điểm
+                      {g.percent != null ? ` (${g.percent}% câu đúng).` : '.'}
+                    </div></div>
                 </div>
               </div>
             )}

@@ -9,8 +9,9 @@ import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { Enrollment } from '../../schemas/class/enrollment.schema';
+import { Notification } from '../../schemas/notification.schema';
 import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
-import { EnrollmentStatus, UserRole } from '../../enums';
+import { EnrollmentStatus, ExerciseStatus, UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -27,7 +28,32 @@ export class ExercisesService {
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
     @InjectModel(Enrollment.name) private readonly enrollmentModel: Model<Enrollment>,
+    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
   ) {}
+
+  /**
+   * Gửi thông báo "Bài tập mới" tới mọi học viên đang ghi danh Active của lớp.
+   * Best-effort: không có lớp / không có học viên → không làm gì, không ném lỗi.
+   */
+  private async notifyClassOnAssign(exercise: { _id: any; title?: string; classId?: any }): Promise<void> {
+    if (!exercise?.classId) return;
+    const enrollments = await this.enrollmentModel
+      .find({ classId: exercise.classId, status: EnrollmentStatus.Active })
+      .select('studentId')
+      .lean();
+    if (!enrollments.length) return;
+    const exerciseId = exercise._id;
+    const docs = enrollments.map((e: any) => ({
+      userId: e.studentId,
+      title: `Bài tập mới: ${exercise.title ?? ''}`,
+      tag: 'Bài tập',
+      icon: 'assign',
+      link: `/luyen-tap/${exerciseId}`,
+      refId: exerciseId,
+      refType: 'exercise',
+    }));
+    await this.notificationModel.insertMany(docs);
+  }
 
   async list(dto: ListExercisesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
@@ -168,6 +194,10 @@ export class ExercisesService {
       ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
       ...(classId !== undefined ? { classId: classId ? convertStringToObjectId(classId) : null } : {}),
     });
+    // No-spam: thông báo khi TẠO bài ở trạng thái open + bật notifyOnAssign + có lớp.
+    if (exercise.status === ExerciseStatus.Open && exercise.notifyOnAssign === true && exercise.classId) {
+      await this.notifyClassOnAssign(exercise);
+    }
     // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
     return this.findOne(exercise._id.toString(), { userId });
   }
@@ -185,10 +215,23 @@ export class ExercisesService {
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
     if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
     if (classId !== undefined) patch.classId = classId ? convertStringToObjectId(classId) : null;
+    // Đọc trạng thái cũ TRƯỚC khi cập nhật để phát hiện chuyển tiếp sang "open".
+    const prev = await this.exerciseModel.findOne(this.ownerFilter(id, userId, role)).select('status').lean();
+    const wasOpen = (prev as any)?.status === ExerciseStatus.Open;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
+    // No-spam: chỉ thông báo khi bài CHUYỂN TIẾP sang open (trước đó chưa open),
+    // đồng thời bật notifyOnAssign + có lớp. PATCH không đổi trạng thái → không gửi.
+    if (
+      !wasOpen &&
+      (exercise as any).status === ExerciseStatus.Open &&
+      (exercise as any).notifyOnAssign === true &&
+      (exercise as any).classId
+    ) {
+      await this.notifyClassOnAssign(exercise as any);
+    }
     return exercise;
   }
 

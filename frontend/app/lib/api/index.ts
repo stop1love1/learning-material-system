@@ -159,7 +159,12 @@ export const statsApi = {
 };
 
 export const notificationsApi = {
+  // Teacher/Admin derived feed (existing).
   list: (limit = 20) => api.get<any[]>(`/notifications${qs({ limit })}`),
+  // Personal stored notifications for the current authed user (any role), newest first.
+  me: (limit = 20) => api.get<any[]>(`/notifications/me${qs({ limit })}`),
+  markRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.post('/notifications/read-all'),
 };
 
 export const scheduleApi = {

@@ -61,6 +61,8 @@ import {
   EnrollmentSchema,
   Article,
   ArticleSchema,
+  Notification,
+  NotificationSchema,
   Settings,
   SettingsSchema,
   Schedule,
@@ -100,6 +102,7 @@ const MODELS: ModelDefinition[] = [
   { name: Class.name, schema: ClassSchema },
   { name: Enrollment.name, schema: EnrollmentSchema },
   { name: Article.name, schema: ArticleSchema },
+  { name: Notification.name, schema: NotificationSchema },
   { name: Settings.name, schema: SettingsSchema },
   { name: Schedule.name, schema: ScheduleSchema },
 ];
