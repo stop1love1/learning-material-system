@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Question } from '../../schemas/question-bank/question.schema';
@@ -12,7 +12,7 @@ import { MatchQuestion } from '../../schemas/question-bank/match-question.schema
 import { NumberQuestion } from '../../schemas/question-bank/number-question.schema';
 import { SortQuestion } from '../../schemas/question-bank/sort-question.schema';
 import { TableSelectionQuestion } from '../../schemas/question-bank/table-selection-question.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { QuestionModel, QuestionType, UserRole } from '../../enums';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -55,7 +55,7 @@ export class QuestionsService {
       case QuestionType.TableSelection:
         return { model: this.tableSelectionModel, questionModel: QuestionModel.TableSelection };
       default:
-        throw new NotFoundException('Loại câu hỏi không hợp lệ');
+        throw new BadRequestException('Loại câu hỏi không hợp lệ');
     }
   }
 
@@ -80,19 +80,20 @@ export class QuestionsService {
       case QuestionModel.TableSelection:
         return this.tableSelectionModel;
       default:
-        throw new NotFoundException('Loại câu hỏi không hợp lệ');
+        throw new BadRequestException('Loại câu hỏi không hợp lệ');
     }
   }
 
   async list(userId: string, dto: ListQuestionsDto) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
       userId: convertStringToObjectId(userId),
-      ...(keyword
+      ...(safeKeyword
         ? {
             $or: [
-              { title: { $regex: keyword, $options: 'i' } },
-              { content: { $regex: keyword, $options: 'i' } },
+              { title: { $regex: safeKeyword, $options: 'i' } },
+              { content: { $regex: safeKeyword, $options: 'i' } },
             ],
           }
         : {}),
@@ -113,8 +114,10 @@ export class QuestionsService {
     return buildPagination(records, total, page, pageSize);
   }
 
-  async findOne(id: string) {
-    const question = await this.questionModel.findById(convertStringToObjectId(id)).lean();
+  async findOne(id: string, userId: string, role?: UserRole) {
+    // Scope to owner (Admin sees all) so students can't read other teachers'
+    // questions including correct answers — mirrors update()/remove().
+    const question = await this.questionModel.findOne(this.ownerFilter(id, userId, role)).lean();
     if (!question) throw new NotFoundException('Không tìm thấy câu hỏi');
     let detail: any = null;
     if (question.questionModel && question.questionDetail) {
@@ -139,7 +142,15 @@ export class QuestionsService {
 
     const { model: detailModel, questionModel } = this.resolveDetail(dto.type);
 
-    const detail = await detailModel.create({ questionId: base._id, ...dto.detail });
+    let detail: any;
+    try {
+      // Not transactional (standalone Mongo has no sessions). If detail
+      // validation fails after the base row is saved, delete the orphan.
+      detail = await detailModel.create({ questionId: base._id, ...dto.detail });
+    } catch (err) {
+      await this.questionModel.deleteOne({ _id: base._id });
+      throw err;
+    }
 
     base.questionDetail = detail._id;
     base.questionModel = questionModel;
@@ -154,10 +165,24 @@ export class QuestionsService {
     return { _id: convertStringToObjectId(id), ...owner };
   }
 
+  // Restrict a $set to the detail schema's own fields so arbitrary client keys
+  // can't be blind-merged into the polymorphic detail row.
+  private pickDetailFields(model: Model<any>, source: Record<string, any>): Record<string, any> {
+    const out: Record<string, any> = {};
+    for (const path of Object.keys(model.schema.paths)) {
+      if (path === '_id' || path === 'questionId' || path === 'createdAt' || path === 'updatedAt') continue;
+      if (source[path] !== undefined) out[path] = source[path];
+    }
+    return out;
+  }
+
   async update(id: string, dto: UpdateQuestionDto, userId: string, role?: UserRole) {
     const base = await this.questionModel.findOne(this.ownerFilter(id, userId, role));
     if (!base) throw new NotFoundException('Không tìm thấy câu hỏi');
 
+    const typeChanged = dto.type !== undefined && dto.type !== base.type;
+
+    if (dto.type !== undefined) base.type = dto.type;
     if (dto.level !== undefined) base.level = dto.level;
     if (dto.topicId !== undefined) base.topicId = dto.topicId ? convertStringToObjectId(dto.topicId) : null;
     if (dto.title !== undefined) base.title = dto.title;
@@ -165,16 +190,44 @@ export class QuestionsService {
     if (dto.tags !== undefined) base.tags = dto.tags;
     if (dto.subject !== undefined) base.subject = dto.subject;
     if (dto.grade !== undefined) base.grade = dto.grade;
-    await base.save();
 
     let detail: any = null;
-    if (base.questionModel && base.questionDetail) {
-      const detailModel = this.modelByQuestionModel(base.questionModel);
-      detail = await detailModel.findById(base.questionDetail).lean();
-      if (dto.detail) {
-        detail = await detailModel
-          .findByIdAndUpdate(base.questionDetail, { $set: dto.detail }, { new: true })
-          .lean();
+
+    if (typeChanged) {
+      // Type changed → migrate the detail to the correct collection, mirroring
+      // create(): drop the old detail row, create a new one in the new model,
+      // re-link questionModel/questionDetail. dto.detail must hold the new-type
+      // fields (validated on create()).
+      const oldQuestionModel = base.questionModel;
+      const oldQuestionDetail = base.questionDetail;
+      const { model: newDetailModel, questionModel: newQuestionModel } = this.resolveDetail(dto.type as QuestionType);
+
+      const created = await newDetailModel.create({ questionId: base._id, ...(dto.detail ?? {}) });
+
+      if (oldQuestionModel && oldQuestionDetail) {
+        const oldDetailModel = this.modelByQuestionModel(oldQuestionModel);
+        await oldDetailModel.deleteOne({ _id: oldQuestionDetail });
+      }
+
+      base.questionDetail = created._id;
+      base.questionModel = newQuestionModel;
+      await base.save();
+      detail = created.toObject();
+    } else {
+      await base.save();
+
+      if (base.questionModel && base.questionDetail) {
+        const detailModel = this.modelByQuestionModel(base.questionModel);
+        detail = await detailModel.findById(base.questionDetail).lean();
+        if (dto.detail) {
+          // runValidators so per-type validators (option-index ranges,
+          // statements/correctAnswers length, essay percent totals) still fire;
+          // restrict $set to the detail's own fields.
+          const $set = this.pickDetailFields(detailModel, dto.detail);
+          detail = await detailModel
+            .findByIdAndUpdate(base.questionDetail, { $set }, { new: true, runValidators: true })
+            .lean();
+        }
       }
     }
 

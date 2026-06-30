@@ -8,8 +8,10 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
-import { UserRole } from '../../enums';
+import { Enrollment } from '../../schemas/class/enrollment.schema';
+import { Notification } from '../../schemas/notification.schema';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
+import { EnrollmentStatus, ExerciseStatus, UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -25,18 +27,65 @@ export class ExercisesService {
     @InjectModel(Participant.name) private readonly participantModel: Model<Participant>,
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
+    @InjectModel(Enrollment.name) private readonly enrollmentModel: Model<Enrollment>,
+    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
   ) {}
 
-  async list(dto: ListExercisesDto) {
+  /**
+   * Gửi thông báo "Bài tập mới" tới mọi học viên đang ghi danh Active của lớp.
+   * Best-effort: không có lớp / không có học viên → không làm gì, không ném lỗi.
+   */
+  private async notifyClassOnAssign(exercise: { _id: any; title?: string; classId?: any }): Promise<void> {
+    if (!exercise?.classId) return;
+    const enrollments = await this.enrollmentModel
+      .find({ classId: exercise.classId, status: EnrollmentStatus.Active })
+      .select('studentId')
+      .lean();
+    if (!enrollments.length) return;
+    const exerciseId = exercise._id;
+    const docs = enrollments.map((e: any) => ({
+      userId: e.studentId,
+      title: `Bài tập mới: ${exercise.title ?? ''}`,
+      tag: 'Bài tập',
+      icon: 'assign',
+      link: `/luyen-tap/${exerciseId}`,
+      refId: exerciseId,
+      refType: 'exercise',
+    }));
+    await this.notificationModel.insertMany(docs);
+  }
+
+  async list(dto: ListExercisesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
-      ...(keyword ? { title: { $regex: keyword, $options: 'i' } } : {}),
+      ...(safeKeyword ? { title: { $regex: safeKeyword, $options: 'i' } } : {}),
       ...(dto.type ? { type: dto.type } : {}),
       ...(dto.status ? { status: dto.status } : {}),
       ...(dto.subject ? { subject: dto.subject } : {}),
       ...(dto.grade ? { grade: dto.grade } : {}),
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
+
+    // Phạm vi lớp:
+    //  · Admin → thấy tất cả (không thêm điều kiện).
+    //  · Teacher → thấy tất cả (giữ nguyên hành vi: chủ xem được bài mình giao).
+    //  · Student → chỉ bài công khai (classId null) HOẶC thuộc lớp đang ghi danh Active.
+    //  · Khách (không đăng nhập) → chỉ bài công khai (classId null).
+    const role = viewer?.role;
+    if (role === UserRole.Admin || role === UserRole.Teacher) {
+      // không giới hạn theo lớp
+    } else if (viewer?.userId) {
+      const enrolled = await this.enrollmentModel
+        .find({ studentId: convertStringToObjectId(viewer.userId), status: EnrollmentStatus.Active })
+        .select('classId')
+        .lean();
+      const classIds = enrolled.map((e) => e.classId);
+      query.$or = [{ classId: null }, { classId: { $in: classIds } }];
+    } else {
+      query.classId = null;
+    }
+
     const [records, total] = await Promise.all([
       this.exerciseModel
         .find(query)
@@ -72,10 +121,16 @@ export class ExercisesService {
     return buildPagination(withCount, total, page, pageSize);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: { userId?: string; role?: UserRole }) {
     const exerciseId = convertStringToObjectId(id);
     const exercise = await this.exerciseModel.findById(exerciseId).lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
+
+    // Chủ bài tập (hoặc Admin) được xem đáp án đúng để biên tập. Khách / học viên / chủ
+    // khác → lược bỏ field đáp án đúng trong từng câu để không lộ đáp án trước khi nộp.
+    const isOwner =
+      viewer?.role === UserRole.Admin ||
+      (viewer?.userId != null && exercise.userId?.toString() === viewer.userId);
 
     const links = await this.exerciseQuestionModel.find({ exerciseId }).sort({ order: 1 }).lean();
     const questionIds = links.map((l) => l.questionId);
@@ -86,6 +141,9 @@ export class ExercisesService {
       .find({ _id: { $in: questionIds } })
       .populate('questionDetail')
       .lean();
+    if (!isOwner) {
+      for (const q of questions as any[]) this.sanitizeDetailForViewer(q?.questionDetail);
+    }
     const questionMap = new Map(questions.map((q: any) => [q._id.toString(), q]));
 
     const items = links.map((link) => ({
@@ -96,16 +154,52 @@ export class ExercisesService {
     return { ...exercise, questions: items };
   }
 
+  /**
+   * Xóa các field ĐÁP ÁN ĐÚNG khỏi bản ghi chi tiết câu hỏi (đã populate, dạng lean)
+   * trước khi trả cho người KHÔNG phải chủ bài tập. Giữ lại mọi thứ học viên cần để
+   * LÀM bài: đề/options/labels/statements/thứ tự hiển thị... Bao phủ cả 9 loại câu.
+   */
+  private sanitizeDetailForViewer(detail: any): void {
+    if (!detail || typeof detail !== 'object') return;
+    // Single / Multiple choice
+    delete detail.correctOptionIndex;
+    delete detail.correctOptionIndices;
+    // True/False
+    delete detail.isCorrect;
+    // ShortAnswer / Number (mảng đáp án chấp nhận)
+    delete detail.answers;
+    // Sort (thứ tự đúng)
+    delete detail.correctOrder;
+    // TableSelection (mảng boolean đúng/sai)
+    delete detail.correctAnswers;
+    // Essay (đáp án mẫu / gợi ý chấm)
+    delete detail.guideAnswer;
+    // Match: giữ left + tập right có thể chọn, nhưng KHÔNG lộ cặp ghép đúng.
+    if (Array.isArray(detail.pairs)) {
+      const rights = detail.pairs.map((p: any) => p?.right).filter((r: any) => r != null);
+      detail.lefts = detail.pairs.map((p: any) => p?.left);
+      detail.rightOptions = rights;
+      delete detail.pairs;
+    }
+  }
+
   async create(dto: CreateExerciseDto, userId: string) {
-    const { materialIds, dueDate, folderId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
     const exercise = await this.exerciseModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
       ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
       ...(materialIds ? { materialIds: materialIds.map((m) => convertStringToObjectId(m)) } : {}),
       ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
+      ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
+      ...(classId !== undefined ? { classId: classId ? convertStringToObjectId(classId) : null } : {}),
     });
-    return this.findOne(exercise._id.toString());
+    // No-spam: thông báo khi TẠO bài ở trạng thái open + bật notifyOnAssign + có lớp.
+    if (exercise.status === ExerciseStatus.Open && exercise.notifyOnAssign === true && exercise.classId) {
+      await this.notifyClassOnAssign(exercise);
+    }
+    // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
+    return this.findOne(exercise._id.toString(), { userId });
   }
 
   private ownerFilter(id: string, userId: string, role?: UserRole): Record<string, any> {
@@ -114,15 +208,30 @@ export class ExercisesService {
   }
 
   async update(id: string, dto: UpdateExerciseDto, userId: string, role?: UserRole) {
-    const { materialIds, dueDate, folderId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
     const patch: Record<string, unknown> = { ...rest };
     if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null;
     if (materialIds !== undefined) patch.materialIds = materialIds.map((m) => convertStringToObjectId(m));
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
+    if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
+    if (classId !== undefined) patch.classId = classId ? convertStringToObjectId(classId) : null;
+    // Đọc trạng thái cũ TRƯỚC khi cập nhật để phát hiện chuyển tiếp sang "open".
+    const prev = await this.exerciseModel.findOne(this.ownerFilter(id, userId, role)).select('status').lean();
+    const wasOpen = (prev as any)?.status === ExerciseStatus.Open;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
+    // No-spam: chỉ thông báo khi bài CHUYỂN TIẾP sang open (trước đó chưa open),
+    // đồng thời bật notifyOnAssign + có lớp. PATCH không đổi trạng thái → không gửi.
+    if (
+      !wasOpen &&
+      (exercise as any).status === ExerciseStatus.Open &&
+      (exercise as any).notifyOnAssign === true &&
+      (exercise as any).classId
+    ) {
+      await this.notifyClassOnAssign(exercise as any);
+    }
     return exercise;
   }
 

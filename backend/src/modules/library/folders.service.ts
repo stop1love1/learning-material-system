@@ -21,9 +21,18 @@ export class FoldersService {
     @InjectModel(FileItem.name) private readonly fileModel: Model<FileItem>,
   ) {}
 
-  async list(dto: ListFoldersDto) {
+  // Giới hạn hiển thị cho route @Public: khách (không token) chỉ thấy isPublic:true;
+  // người dùng đã đăng nhập thấy thêm thư mục của chính mình; Admin thấy tất cả.
+  private visibilityFilter(viewer?: { userId?: string; role?: UserRole }): Record<string, any> {
+    if (!viewer?.userId) return { isPublic: true };
+    if (viewer.role === UserRole.Admin) return {};
+    return { $or: [{ isPublic: true }, { userId: convertStringToObjectId(viewer.userId) }] };
+  }
+
+  async list(dto: ListFoldersDto, viewer?: { userId?: string; role?: UserRole }) {
     const query: Record<string, any> = {
       parentId: dto.parentId ? convertStringToObjectId(dto.parentId) : null,
+      ...this.visibilityFilter(viewer),
     };
     return this.folderModel.find(query).sort({ name: 1 }).lean();
   }

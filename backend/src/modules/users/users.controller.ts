@@ -7,6 +7,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../enums';
 
 @ApiTags('users')
@@ -37,13 +38,13 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Cập nhật người dùng / phân quyền' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser('sub') currentUserId: string) {
+    return this.usersService.update(id, dto, currentUserId);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa người dùng' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('sub') currentUserId: string) {
+    return this.usersService.remove(id, currentUserId);
   }
 }

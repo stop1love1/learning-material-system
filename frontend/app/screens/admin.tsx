@@ -95,14 +95,17 @@ export function AOverview({ p, t }) {
 
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-xl font-medium text-lms-ink">Học liệu nổi bật</h3>
-          {DB.DOCS.slice(0, 5).map((d, i) => (
-            <div key={d.id} className={`flex items-center gap-3 py-[11px] ${i ? 'border-t border-lms-line' : ''}`}>
+          {(Array.isArray(s.topFiles) && s.topFiles.length
+            ? s.topFiles.map((f, i) => ({ key: f._id || f.id || i, name: f.name, meta: `${f.fileType || 'tài liệu'} · 👁 ${f.viewCount ?? 0} · ↓ ${f.downloadCount ?? 0}` }))
+            : DB.DOCS.slice(0, 5).map((d) => ({ key: d.id, name: d.name, meta: `${d.folder} · ↓ ${d.downloads}` }))
+          ).map((d, i) => (
+            <div key={d.key} className={`flex items-center gap-3 py-[11px] ${i ? 'border-t border-lms-line' : ''}`}>
               <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-lms-accent-soft">
                 <Icon name="docs" size={16} stroke={p.accent} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-semibold text-lms-ink">{d.name}</div>
-                <div className="font-mono text-[11px] text-lms-faint">{d.folder} · ↓ {d.downloads}</div>
+                <div className="font-mono text-[11px] text-lms-faint">{d.meta}</div>
               </div>
             </div>
           ))}
@@ -304,22 +307,31 @@ export function AReports({ p, t }) {
     finally { setExporting(''); }
   };
 
-  // Each card maps to a slice of the reports payload + CSV column set.
+  // Each card maps to a slice of the /stats/reports payload + CSV column set.
+  // The payload only returns: distribution, perExercise, weeklySeries, avgScore,
+  // submissionRate, gradedCount, totalSubmissions — so every export below pulls
+  // from a field that actually exists.
   const REPORT_CARDS = [
     {
-      key: 'users', label: 'Báo cáo người dùng', file: 'bao-cao-nguoi-dung',
-      pick: (d) => d?.users?.records ?? d?.users ?? [],
-      cols: [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'createdAt', label: 'Tham gia' }],
+      key: 'distribution', label: 'Phân bố điểm bài nộp', file: 'phan-bo-diem',
+      pick: (d) => d?.distribution ?? [],
+      cols: [{ key: 'label', label: 'Khoảng điểm' }, { key: 'count', label: 'Số bài' }],
     },
     {
-      key: 'downloads', label: 'Lượt tải học liệu', file: 'luot-tai-hoc-lieu',
-      pick: (d) => d?.downloads?.records ?? d?.downloads ?? d?.topDocs ?? [],
-      cols: [{ key: 'name', label: 'Học liệu' }, { key: 'folder', label: 'Thư mục' }, { key: 'downloads', label: 'Lượt tải' }],
+      key: 'perExercise', label: 'Lượt làm theo bài tập', file: 'luot-lam-theo-bai-tap',
+      pick: (d) => d?.perExercise ?? [],
+      cols: [{ key: 'title', label: 'Bài tập' }, { key: 'attempts', label: 'Lượt làm' }],
     },
     {
-      key: 'articles', label: 'Bài viết phổ biến', file: 'bai-viet-pho-bien',
-      pick: (d) => d?.articles?.records ?? d?.popularArticles ?? d?.articles ?? [],
-      cols: [{ key: 'title', label: 'Tiêu đề' }, { key: 'author', label: 'Tác giả' }, { key: 'views', label: 'Lượt xem' }],
+      key: 'summary', label: 'Tổng quan chấm bài', file: 'tong-quan-cham-bai',
+      // Scalar metrics → a single summary row (key/value) so the CSV is non-empty.
+      pick: (d) => [
+        { metric: 'Tổng bài nộp', value: d?.totalSubmissions ?? 0 },
+        { metric: 'Đã chấm', value: d?.gradedCount ?? 0 },
+        { metric: 'Tỉ lệ chấm (%)', value: d?.submissionRate ?? 0 },
+        { metric: 'Điểm trung bình', value: d?.avgScore ?? '—' },
+      ],
+      cols: [{ key: 'metric', label: 'Chỉ số' }, { key: 'value', label: 'Giá trị' }],
     },
     {
       key: 'practice', label: 'Hoạt động luyện tập', file: 'hoat-dong-luyen-tap',
@@ -758,10 +770,10 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
             </div>
             <label className={lblClass()}>API KEY</label>
             <div className="mt-2 flex gap-2.5">
-              <Field p={p} value={integration.apiKey || '(chưa tạo)'} onChange={() => {}} mono className="flex-1" />
+              <Field p={p} value={integration.apiKey || ''} onChange={(v) => setIntegration((o) => ({ ...o, apiKey: v }))} placeholder="(chưa tạo)" mono className="flex-1" />
               <Btn p={p} variant="ghost" icon="copy" onClick={regenApiKey}>Tạo lại</Btn>
             </div>
-            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider } })} />
+            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, apiKey: integration.apiKey } })} />
           </section>
         )}
 

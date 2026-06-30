@@ -8,6 +8,103 @@ import { NAV_BY_ROLE, PAGE_TITLES, ROLE_META } from '@/app/configs/nav.config';
 import { ROUTES, routeToHref, resolvePath } from '@/app/configs/routes.config';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
+import { notificationsApi } from '@/app/lib/api';
+
+// Khoảng thời gian tương đối ngắn gọn cho thông báo (vd: "5 phút trước").
+function timeAgoVi(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const diff = Math.round((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return 'vừa xong';
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} ngày trước`;
+  return d.toLocaleDateString('vi-VN');
+}
+
+// Chuông thông báo cá nhân: nạp /notifications/me khi mở khu vực quản trị, badge = số
+// chưa đọc THẬT. Best-effort — chưa đăng nhập / API lỗi → 0 + danh sách rỗng (im lặng).
+function NotifyBell({ p }: { p: any }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [items, setItems] = React.useState<any[]>([]);
+
+  const refresh = React.useCallback(async () => {
+    try {
+      const res: any = await notificationsApi.me(20);
+      const list: any[] = Array.isArray(res) ? res : res?.records ?? [];
+      setItems(list);
+    } catch {
+      setItems([]); // logged-out / API down → empty, no error surfaced
+    }
+  }, []);
+
+  React.useEffect(() => { refresh(); }, [refresh]);
+
+  const unread = items.filter((n) => !n.isRead).length;
+
+  const onItemClick = async (n: any) => {
+    if (!n.isRead) {
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+      try { await notificationsApi.markRead(n.id); } catch { /* best-effort */ }
+    }
+    if (n.link) { setOpen(false); router.push(n.link); }
+  };
+
+  const onMarkAll = async () => {
+    if (!unread) return;
+    setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
+    try { await notificationsApi.markAllRead(); } catch { /* best-effort */ }
+  };
+
+  return (
+    <div className="relative">
+      <IconBtn name="notify" p={p} badge={unread > 0 ? unread : null} onClick={() => setOpen((o) => !o)} title="Thông báo" />
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} className="fixed inset-0 z-40" />
+          <div className="absolute top-full right-0 z-50 mt-2 w-[340px] overflow-hidden rounded-lg border border-lms-line bg-lms-surface shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
+            <div className="flex items-center justify-between border-b border-lms-line-soft px-4 py-3">
+              <div className="text-[13px] font-semibold text-lms-ink">Thông báo</div>
+              {unread > 0 && (
+                <span onClick={onMarkAll} className="cursor-pointer text-[12px] font-semibold text-lms-accent">Đánh dấu đã đọc</span>
+              )}
+            </div>
+            <div className="lms-scroll max-h-[360px] overflow-y-auto">
+              {items.length === 0 ? (
+                <div className="px-4 py-8 text-center text-[13px] text-lms-faint">Chưa có thông báo nào.</div>
+              ) : (
+                items.map((n, i) => (
+                  <div
+                    key={n.id ?? i}
+                    onClick={() => onItemClick(n)}
+                    className={`lms-nav-item flex cursor-pointer items-start gap-3 px-4 py-3 ${i ? 'border-t border-lms-line-soft' : ''} ${n.isRead ? '' : 'bg-lms-active-bg'}`}
+                  >
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-lms-accent-soft">
+                      <Icon name={n.icon || 'notify'} size={15} stroke={p.accent} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 truncate text-[13px] font-semibold text-lms-ink">{n.title}</div>
+                        {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-lms-accent" />}
+                      </div>
+                      {n.body && <div className="mt-0.5 text-[12px] leading-snug text-lms-sub">{n.body}</div>}
+                      <div className="mt-1 flex items-center gap-2 font-mono text-[10.5px] text-lms-faint">
+                        {n.tag && <span>{n.tag}</span>}
+                        <span>{timeAgoVi(n.at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: string; onNavigate: () => void }) {
   const nav = NAV_BY_ROLE.admin;
@@ -199,7 +296,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           </div>
           <div className="flex gap-2">
             <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Chế độ sáng/tối" />
-            <IconBtn name="notify" p={p} badge={3} onClick={() => push(ROUTES.notifications)} />
+            <NotifyBell p={p} />
           </div>
           <div className="lms-hide-sm h-7 w-px bg-lms-line-soft" />
           <RoleSwitcher p={p} />

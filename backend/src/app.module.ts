@@ -14,6 +14,7 @@ import { LibraryModule } from './modules/library/library.module';
 import { QuestionBankModule } from './modules/question-bank/question-bank.module';
 import { RubricModule } from './modules/rubric/rubric.module';
 import { ExerciseModule } from './modules/exercise/exercise.module';
+import { ClassesModule } from './modules/classes/classes.module';
 import { ArticleModule } from './modules/article/article.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StatsModule } from './modules/stats/stats.module';
@@ -39,6 +40,7 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     QuestionBankModule,
     RubricModule,
     ExerciseModule,
+    ClassesModule,
     ArticleModule,
     SettingsModule,
     StatsModule,

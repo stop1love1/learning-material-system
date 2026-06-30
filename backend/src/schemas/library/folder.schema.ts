@@ -49,6 +49,8 @@ export const FolderSchema = SchemaFactory.createForClass(Folder);
 
 // Cập nhật ancestors/depth từ parentId khi lưu.
 FolderSchema.pre('save', async function (this: FolderDocument) {
+  // Ghi nhận để post('save') biết có cần cascade tính lại cây con hay không.
+  this.$locals.parentChanged = this.isModified('parentId');
   if (!this.isModified('parentId')) return;
   if (!this.parentId) {
     this.ancestors = [];
@@ -62,10 +64,31 @@ FolderSchema.pre('save', async function (this: FolderDocument) {
   const model = this.constructor as Model<FolderDocument>;
   const parent = await model.findById(this.parentId).select('_id ancestors depth').lean();
   if (!parent) throw new BadRequestException('Không tìm thấy thư mục cha');
-  // Chống chu trình: cha mới không được nằm trong cây con (ancestors của cha chứa node này).
-  if ((parent.ancestors || []).some((a) => a.equals(this._id))) {
+  // Chống chu trình: cha mới không được nằm trong cây con. Kiểm tra trực tiếp trên DB
+  // (ancestors của cha chứa node này) để bắt cả các cây con sâu / chuỗi ancestor cũ.
+  if ((parent.ancestors || []).some((a) => a.equals(this._id)) || parent._id.equals(this._id)) {
+    throw new BadRequestException('Không thể di chuyển thư mục vào trong thư mục con của nó');
+  }
+  const descendant = await model.exists({ ancestors: this._id, _id: this.parentId });
+  if (descendant) {
     throw new BadRequestException('Không thể di chuyển thư mục vào trong thư mục con của nó');
   }
   this.ancestors = [...(parent.ancestors || []), parent._id];
   this.depth = (parent.depth || 0) + 1;
+});
+
+// Sau khi parentId đổi, ancestors/depth của toàn bộ cây con đã lỗi thời. Tính lại cho
+// từng descendant dựa trên ancestors mới của node này (giữ phần đuôi đường dẫn nội bộ).
+FolderSchema.post('save', async function (this: FolderDocument) {
+  if (!this.$locals.parentChanged) return;
+  const model = this.constructor as Model<FolderDocument>;
+  const descendants = await model.find({ ancestors: this._id }).select('_id ancestors').lean();
+  const baseAncestors = [...(this.ancestors || []), this._id];
+  for (const d of descendants) {
+    const idx = (d.ancestors || []).findIndex((a) => a.equals(this._id));
+    // Phần đường dẫn nằm dưới node này (sau vị trí của node trong chuỗi ancestors cũ).
+    const tail = idx >= 0 ? (d.ancestors || []).slice(idx + 1) : [];
+    const newAncestors = [...baseAncestors, ...tail];
+    await model.updateOne({ _id: d._id }, { ancestors: newAncestors, depth: newAncestors.length });
+  }
 });

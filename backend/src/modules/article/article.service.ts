@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Article } from '../../schemas/article.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { UserRole } from '../../enums';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -14,10 +14,16 @@ export class ArticleService {
 
   async list(dto: ListArticlesDto) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
       isPublished: true,
-      ...(keyword
-        ? { $or: [{ title: { $regex: keyword, $options: 'i' } }, { excerpt: { $regex: keyword, $options: 'i' } }] }
+      ...(safeKeyword
+        ? {
+            $or: [
+              { title: { $regex: safeKeyword, $options: 'i' } },
+              { excerpt: { $regex: safeKeyword, $options: 'i' } },
+            ],
+          }
         : {}),
       ...(dto.category ? { category: dto.category } : {}),
     };
@@ -63,9 +69,30 @@ export class ArticleService {
     return { _id: convertStringToObjectId(id), ...owner };
   }
 
+  // Whitelist of fields a client may patch. Ownership (userId) and counters
+  // (viewCount) are intentionally excluded so they can never be reassigned via
+  // the request body, even if the DTO were widened later.
+  private static readonly UPDATABLE_FIELDS = [
+    'title',
+    'slug',
+    'excerpt',
+    'content',
+    'images',
+    'category',
+    'cover',
+    'tags',
+    'isPublished',
+    'isFeatured',
+    'readMinutes',
+  ] as const;
+
   async update(id: string, dto: UpdateArticleDto, userId: string, role?: UserRole) {
+    const patch: Record<string, any> = {};
+    for (const key of ArticleService.UPDATABLE_FIELDS) {
+      if (dto[key] !== undefined) patch[key] = dto[key];
+    }
     const article = await this.articleModel
-      .findOneAndUpdate(this.ownerFilter(id, userId, role), { ...dto }, { new: true })
+      .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();
     if (!article) throw new NotFoundException('Không tìm thấy bài viết');
     return article;

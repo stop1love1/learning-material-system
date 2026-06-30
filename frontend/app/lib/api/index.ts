@@ -141,13 +141,30 @@ export const usersApi = {
   remove: (id: string) => api.del(`/users/${id}`),
 };
 
+export const classesApi = {
+  list: (q: Record<string, unknown> = {}) => api.get<any>(`/classes${qs(q)}`),
+  get: (id: string) => api.get<any>(`/classes/${id}`),
+  create: (body: any) => api.post('/classes', body),
+  update: (id: string, body: any) => api.patch(`/classes/${id}`, body),
+  remove: (id: string) => api.del(`/classes/${id}`),
+  students: (id: string) => api.get<any>(`/classes/${id}/students`),
+  addStudents: (id: string, studentIds: string[]) => api.post(`/classes/${id}/students`, { studentIds }),
+  removeStudent: (id: string, studentId: string) => api.del(`/classes/${id}/students/${studentId}`),
+  join: (code: string) => api.post('/classes/join', { code }),
+};
+
 export const statsApi = {
   overview: () => api.get<any>('/stats/overview'),
   reports: () => api.get<any>('/stats/reports'),
 };
 
 export const notificationsApi = {
+  // Teacher/Admin derived feed (existing).
   list: (limit = 20) => api.get<any[]>(`/notifications${qs({ limit })}`),
+  // Personal stored notifications for the current authed user (any role), newest first.
+  me: (limit = 20) => api.get<any[]>(`/notifications/me${qs({ limit })}`),
+  markRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.post('/notifications/read-all'),
 };
 
 export const scheduleApi = {

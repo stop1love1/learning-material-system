@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FilesService } from './files.service';
+import { JwtService } from '../../global/jwt.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
 import { ListFilesDto } from './dto/list-files.dto';
@@ -16,13 +17,28 @@ import { UserRole } from '../../enums';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  // @Public bỏ qua JwtAuthGuard nên req.user luôn undefined. Tự giải mã token (nếu có)
+  // để chủ sở hữu đã đăng nhập vẫn thấy tài liệu riêng tư của mình; token hỏng → khách.
+  private resolveViewer(authorization?: string): { userId?: string; role?: UserRole } | undefined {
+    if (!authorization) return undefined;
+    try {
+      const payload = this.jwtService.verify(authorization);
+      return { userId: payload.sub, role: payload.role };
+    } catch {
+      return undefined;
+    }
+  }
 
   @Get()
   @Public()
   @ApiOperation({ summary: 'Danh sách tài liệu (phân trang, lọc folder/subject/grade)' })
-  list(@Query() dto: ListFilesDto) {
-    return this.filesService.list(dto);
+  list(@Query() dto: ListFilesDto, @Headers('authorization') authorization?: string) {
+    return this.filesService.list(dto, this.resolveViewer(authorization));
   }
 
   @Get('me/downloads')
@@ -34,8 +50,8 @@ export class FilesController {
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Chi tiết tài liệu (tăng lượt xem)' })
-  findOne(@Param('id') id: string) {
-    return this.filesService.findOne(id);
+  findOne(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    return this.filesService.findOne(id, this.resolveViewer(authorization));
   }
 
   @Post()
@@ -66,7 +82,7 @@ export class FilesController {
 
   @Post(':id/download')
   @ApiOperation({ summary: 'Ghi nhận tải tài liệu' })
-  download(@Param('id') id: string, @CurrentUser('sub') userId: string) {
-    return this.filesService.download(id, userId);
+  download(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
+    return this.filesService.download(id, { userId, role });
   }
 }

@@ -11,6 +11,7 @@ import { loadStats } from './load-stats';
 import { loadReports } from './load-reports';
 import { loadNotifications } from './load-notifications';
 import { loadSchedule } from './load-schedule';
+import { loadClasses } from './load-classes';
 
 type Loader = () => Promise<void>;
 
@@ -37,6 +38,7 @@ const BY_ROUTE: Record<string, Loader[]> = {
   'a-users': [loadUsers],
   'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers, loadSchedule],
   'a-reports': [loadReports],
+  'a-classes': [loadClasses],
   notify: [loadNotifications],
 };
 

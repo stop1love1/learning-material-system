@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Exercise } from '../../schemas/exercise/exercise.schema';
@@ -6,6 +6,8 @@ import { Article } from '../../schemas/article.schema';
 import { FileItem } from '../../schemas/library/file.schema';
 import { User } from '../../schemas/user.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
+import { Notification } from '../../schemas/notification.schema';
+import { convertStringToObjectId } from '../../common/utils';
 
 type Feed = { id: string; title: string; time: string; at: string; tag: string; icon: string };
 
@@ -30,7 +32,52 @@ export class NotificationsService {
     @InjectModel(FileItem.name) private readonly fileModel: Model<FileItem>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
+    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
   ) {}
+
+  /**
+   * Thông báo cá nhân (đã lưu) của một người dùng — mới nhất trước.
+   * Trả về { records, unreadCount } để chuông thông báo hiển thị số chưa đọc.
+   */
+  async listForUser(userId: string, limit = 20) {
+    const owner = convertStringToObjectId(userId);
+    const safeLimit = Math.min(50, Math.max(1, limit));
+    const [docs, unreadCount] = await Promise.all([
+      this.notificationModel.find({ userId: owner }).sort({ createdAt: -1 }).limit(safeLimit).lean(),
+      this.notificationModel.countDocuments({ userId: owner, isRead: false }),
+    ]);
+    const records = docs.map((n: any) => ({
+      id: String(n._id),
+      title: n.title,
+      body: n.body ?? undefined,
+      tag: n.tag ?? '',
+      icon: n.icon ?? '',
+      link: n.link ?? undefined,
+      isRead: !!n.isRead,
+      at: (n.createdAt ?? new Date()).toISOString(),
+    }));
+    return { records, unreadCount };
+  }
+
+  /** Đánh dấu một thông báo đã đọc (chỉ chủ sở hữu). */
+  async markRead(id: string, userId: string) {
+    const res = await this.notificationModel.findOneAndUpdate(
+      { _id: convertStringToObjectId(id), userId: convertStringToObjectId(userId) },
+      { isRead: true },
+      { new: true },
+    );
+    if (!res) throw new NotFoundException('Không tìm thấy thông báo');
+    return { id: String(res._id), isRead: true };
+  }
+
+  /** Đánh dấu tất cả thông báo của người dùng đã đọc. */
+  async markAllRead(userId: string) {
+    const res = await this.notificationModel.updateMany(
+      { userId: convertStringToObjectId(userId), isRead: false },
+      { isRead: true },
+    );
+    return { updated: res.modifiedCount ?? 0 };
+  }
 
   async feed(limit = 20): Promise<Feed[]> {
     const [exercises, articles, files, users, ungraded] = await Promise.all([

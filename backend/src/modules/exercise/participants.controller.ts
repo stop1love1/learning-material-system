@@ -6,6 +6,7 @@ import { UpdateParticipantDto } from './dto/update-participant.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../enums';
 
 @ApiTags('exercise - participants')
@@ -18,19 +19,32 @@ export class ParticipantsController {
 
   @Get()
   @ApiOperation({ summary: 'Danh sách thí sinh tham gia (phân trang, lọc theo exerciseId)' })
-  list(@Query() dto: ListParticipantsDto) {
-    return this.participantsService.list(dto);
+  list(
+    @Query() dto: ListParticipantsDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.participantsService.list(dto, userId, role);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Chi tiết thí sinh tham gia' })
-  findOne(@Param('id') id: string) {
-    return this.participantsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.participantsService.findOne(id, userId, role);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Cập nhật thí sinh (cấm/bỏ cấm, đánh dấu hoàn thành)' })
-  update(@Param('id') id: string, @Body() dto: UpdateParticipantDto) {
-    return this.participantsService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateParticipantDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.participantsService.update(id, dto, userId, role);
   }
 }

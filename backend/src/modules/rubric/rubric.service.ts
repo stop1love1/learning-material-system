@@ -5,7 +5,7 @@ import { Rubric } from '../../schemas/rubric/rubric.schema';
 import { RubricGroup } from '../../schemas/rubric/rubric-group.schema';
 import { RubricLevel } from '../../schemas/rubric/rubric-level.schema';
 import { RubricCriterion } from '../../schemas/rubric/rubric-criterion.schema';
-import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
 import { RubricDto } from './dto/rubric.dto';
 import { RubricGroupDto } from './dto/rubric-group.dto';
 
@@ -20,9 +20,10 @@ export class RubricService {
 
   async listRubrics(userId: string, dto: { keyword?: string; page?: number; pageSize?: number; groupId?: string }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
+    const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
       userId: convertStringToObjectId(userId),
-      ...(keyword ? { name: { $regex: keyword, $options: 'i' } } : {}),
+      ...(safeKeyword ? { name: { $regex: safeKeyword, $options: 'i' } } : {}),
       ...(dto.groupId ? { groupId: convertStringToObjectId(dto.groupId) } : {}),
     };
     // Embed levels + criterions per row via an aggregation so the frontend list
@@ -154,12 +155,19 @@ export class RubricService {
       ...updatedLevels.map(({ _id, ...level }) =>
         this.rubricLevelModel.updateOne({ _id: convertStringToObjectId(_id as string), rubricId }, { $set: level }),
       ),
-      ...updatedCriterions.map(({ _id, levelId, ...criterion }) =>
-        this.rubricCriterionModel.updateOne(
+      ...updatedCriterions.map((criterionDto) => {
+        const { _id, levelId, ...criterion } = criterionDto;
+        const set: Record<string, any> = { ...criterion };
+        // Distinguish "omitted" (leave levelId untouched) from an explicit value
+        // — including null, which detaches the criterion from its level.
+        if ('levelId' in criterionDto) {
+          set.levelId = levelId ? convertStringToObjectId(levelId) : null;
+        }
+        return this.rubricCriterionModel.updateOne(
           { _id: convertStringToObjectId(_id as string), rubricId },
-          { $set: { ...criterion, ...(levelId ? { levelId: convertStringToObjectId(levelId) } : {}) } },
-        ),
-      ),
+          { $set: set },
+        );
+      }),
       this.rubricLevelModel.deleteMany({ _id: { $in: deletedLevels.map((l) => l._id) } }),
       this.rubricCriterionModel.deleteMany({ _id: { $in: deletedCriterions.map((c) => c._id) } }),
     ]);

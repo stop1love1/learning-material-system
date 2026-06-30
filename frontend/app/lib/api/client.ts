@@ -49,7 +49,17 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
   setServerOnline(true);
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  // Success bodies are usually JSON, but a 2xx may return an empty body or
+  // non-JSON (e.g. an HTML error page from a proxy). Never let a raw
+  // SyntaxError escape — fall back to null so the ApiError envelope stays consistent.
+  let data: any = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
   if (!res.ok) {
     // Auto-logout on 401 — but only when a token was actually sent. A 401 from an
     // unauthenticated endpoint (login/forgot/reset use { auth:false }) is just a
