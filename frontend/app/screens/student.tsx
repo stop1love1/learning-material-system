@@ -15,6 +15,7 @@ import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapExercise } from '@/app/lib/sync/load-exercises';
+import { mapFile } from '@/app/lib/sync/load-library';
 import { EX_TYPE_OPTS, EX_STATUS_OPTS } from '@/app/screens/assign';
 
 function taskTone(p, s) { return { todo: p.accent, done: p.info, graded: p.ok }[s] || p.sub; }
@@ -766,23 +767,20 @@ const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&
 
 export function SDocs({ p, t, go }) {
   useLMS();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [q, setQ] = React.useState(() => searchParams.get('q') || '');
-  const rawTab = searchParams.get('activeTab');
-  const folder = !rawTab || !DB.DOC_FOLDERS.includes(rawTab) ? 'Tất cả' : rawTab;
+  // Server-side paged (matches admin Kho tài liệu + the other list screens).
+  const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
+  const { records: list, loading, error } = paged;
+  const [folderName, setFolderName] = React.useState('Tất cả');
 
-  const setFolder = React.useCallback((f: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (f === 'Tất cả') params.delete('activeTab');
-    else params.set('activeTab', f);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+  // Folder pills carry names; the /files API filters by folderId → resolve via the
+  // (loader-fed) folder tree. "Tất cả" clears the filter.
+  const pickFolder = React.useCallback((f: string) => {
+    setFolderName(f);
+    const tree: any[] = (DB as any).DOC_FOLDER_TREE || [];
+    const id = f === 'Tất cả' ? '' : (tree.find((x: any) => x.name === f)?.id || '');
+    paged.setFilter('folderId', id);
+  }, [paged]);
 
-  const list = DB.DOCS.filter((d) => (folder === 'Tất cả' || d.folder === folder)
-    && (!q || (d.name + ' ' + d.folder).toLowerCase().includes(q.toLowerCase())));
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px]">
@@ -793,24 +791,22 @@ export function SDocs({ p, t, go }) {
           Tìm tài liệu, đề thi, sơ đồ tư duy và bài giảng để đọc, ôn tập và làm bài.
         </p>
         <div className="max-w-[560px]">
-          <Field p={p} icon="search" value={q} onChange={setQ} placeholder="Tìm theo tên tài liệu, chủ đề…" className="h-[46px]" />
+          <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm theo tên tài liệu, chủ đề…" className="h-[46px]" />
         </div>
       </div>
       <div className="mb-5 flex flex-wrap gap-2">
         {DB.DOC_FOLDERS.map((f) => {
           const n = f === 'Tất cả' ? DB.DOCS.length : DB.DOCS.filter((d) => d.folder === f).length;
-          return <Pill key={f} p={p} active={f === folder} onClick={() => setFolder(f)}>{f}{f !== 'Tất cả' ? ` · ${n}` : ` · ${n}`}</Pill>;
+          return <Pill key={f} p={p} active={f === folderName} onClick={() => pickFolder(f)}>{f} · {n}</Pill>;
         })}
       </div>
 
-      {list.length === 0 ? (
+      {loading ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
+      ) : list.length === 0 ? (
         <div className="rounded-xl border border-lms-line bg-lms-surface py-10">
           <Empty
-            description={
-              DB.DOCS.length === 0
-                ? 'Chưa có học liệu'
-                : 'Không tìm thấy học liệu — thử từ khóa hoặc chủ đề khác'
-            }
+            description={error ? 'Không tải được dữ liệu' : 'Không tìm thấy học liệu — thử từ khóa hoặc chủ đề khác'}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </div>
@@ -839,6 +835,7 @@ export function SDocs({ p, t, go }) {
           })}
         </div>
       )}
+      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
     </div>
   );
 }

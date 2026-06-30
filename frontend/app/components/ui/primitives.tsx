@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { Input, Select as AntSelect, Segmented as AntSegmented, Button as AntButton } from 'antd';
 import type { Palette } from '@/app/types';
 import { hexA } from '@/app/theme/palette';
 import { ICONS } from '@/app/theme/icons';
@@ -82,15 +83,23 @@ export function Pill({
   icon?: string;
 }) {
   return (
-    <button
+    <AntButton
       onClick={onClick}
-      className={`lms-btn inline-flex h-[34px] cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[10px] px-[15px] font-sans text-[13px] ${
-        active ? 'border border-lms-accent bg-lms-accent-soft font-semibold text-lms-accent' : 'border border-lms-line bg-lms-surface font-medium text-lms-sub'
-      }`}
+      icon={icon ? <Icon name={icon} size={15} stroke={active ? p.accent : p.faint} /> : undefined}
+      style={{
+        height: 34,
+        borderRadius: 10,
+        paddingInline: 15,
+        fontSize: 13,
+        fontWeight: active ? 600 : 500,
+        whiteSpace: 'nowrap',
+        ...(active
+          ? { background: p.accentSoft, borderColor: p.accent, color: p.accent }
+          : { color: p.sub }),
+      }}
     >
-      {icon && <Icon name={icon} size={15} stroke={active ? p.accent : p.faint} />}
       {children}
-    </button>
+    </AntButton>
   );
 }
 
@@ -254,20 +263,30 @@ export function Field({
   type?: string;
   mono?: boolean;
 }) {
-  return (
-    <div
-      className={`flex h-10 items-center gap-[9px] rounded-[10px] border border-lms-line bg-lms-surface px-[13px] ${className || ''}`}
-      style={style}
-    >
-      {icon && <Icon name={icon} size={16} stroke={p.faint} />}
-      <input
-        value={value}
+  const prefix = icon ? <Icon name={icon} size={16} stroke={p.faint} /> : undefined;
+  const inputStyle: CSSProperties = mono ? { fontFamily: "var(--font-dmmono), monospace" } : {};
+  const common = {
+    value: value ?? '',
+    placeholder,
+    prefix,
+    className,
+    style,
+    styles: { input: inputStyle },
+  } as const;
+  if (type === 'password') {
+    return (
+      <Input.Password
+        {...common}
         onChange={(e) => onChange && onChange(e.target.value)}
-        placeholder={placeholder}
-        type={type}
-        className={`min-w-0 flex-1 border-0 bg-transparent text-[13.5px] text-lms-ink outline-none ${mono ? 'font-mono' : 'font-sans'}`}
       />
-    </div>
+    );
+  }
+  return (
+    <Input
+      {...common}
+      type={type}
+      onChange={(e) => onChange && onChange(e.target.value)}
+    />
   );
 }
 
@@ -286,24 +305,18 @@ export function Select({
   className?: string;
   style?: CSSProperties;
 }) {
+  const normalized = options.map((o) => {
+    if (typeof o === 'object') return { value: o.value, label: o.label ?? String(o.value) };
+    return { value: o, label: o };
+  });
   return (
-    <div className={`relative ${className || ''}`} style={style}>
-      <select
-        value={value}
-        onChange={(e) => onChange && onChange(e.target.value)}
-        className="h-10 w-full cursor-pointer appearance-none rounded-lg border border-lms-line bg-lms-surface pr-9 pl-[13px] font-sans text-[13.5px] text-lms-ink"
-      >
-        {options.map((o, i) => {
-          const opt = o as { value?: string | number; label?: ReactNode };
-          return (
-            <option key={i} value={(typeof o === 'object' ? opt.value : o) as string | number}>
-              {(typeof o === 'object' ? opt.label : o) as ReactNode}
-            </option>
-          );
-        })}
-      </select>
-      <Icon name="chevronDown" size={15} stroke={p.faint} className="pointer-events-none absolute top-3 right-3" />
-    </div>
+    <AntSelect
+      value={value as any}
+      onChange={(v) => onChange && onChange(String(v))}
+      options={normalized as any}
+      className={`w-full ${className || ''}`}
+      style={style}
+    />
   );
 }
 
@@ -484,28 +497,33 @@ export function Segmented({
   value: any;
   onChange: (value: any) => void;
 }) {
+  // antd Segmented only allows string|number values, but the LMS passes booleans
+  // (e.g. dark on/off). Encode each option's real value to a stable string key,
+  // decode on change so callers still receive their original value/type.
+  const enc = (v: any) => (typeof v === 'boolean' ? `b:${v}` : `v:${String(v)}`);
+  const map = new Map<string, any>();
+  const antOptions = options.map((o) => {
+    const opt = o as { value?: any; label?: ReactNode; icon?: string };
+    const v = typeof o === 'object' ? opt.value : o;
+    const key = enc(v);
+    map.set(key, v);
+    const ic = typeof o === 'object' ? opt.icon : undefined;
+    const lab = typeof o === 'object' ? (opt.label != null ? opt.label : opt.icon ? null : o) : o;
+    const active = v === value;
+    const node = (
+      <span className="inline-flex items-center gap-1.5">
+        {ic && <Icon name={ic} size={15} stroke={active ? p.accent : p.faint} />}
+        {lab as ReactNode}
+      </span>
+    );
+    return { value: key, label: node };
+  });
   return (
-    <div className="inline-flex gap-[3px] rounded-[10px] border border-lms-line bg-lms-sink p-[3px]">
-      {options.map((o) => {
-        const opt = o as { value?: any; label?: ReactNode; icon?: string };
-        const v = typeof o === 'object' ? opt.value : o;
-        const lab = typeof o === 'object' ? (opt.label != null ? opt.label : opt.icon ? null : o) : o;
-        const ic = typeof o === 'object' ? opt.icon : undefined;
-        const on = v === value;
-        return (
-          <button
-            key={v}
-            onClick={() => onChange(v)}
-            className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[7px] border-0 font-sans text-[12.5px] ${
-              ic && !lab ? 'px-[9px]' : 'px-[13px]'
-            } ${on ? 'bg-lms-surface font-semibold text-lms-ink shadow-[0_1px_2px_rgba(15,23,38,0.12)]' : 'bg-transparent font-medium text-lms-sub'}`}
-          >
-            {ic && <Icon name={ic} size={15} stroke={on ? p.accent : p.faint} />}
-            {lab as ReactNode}
-          </button>
-        );
-      })}
-    </div>
+    <AntSegmented
+      options={antOptions as any}
+      value={enc(value)}
+      onChange={(key) => onChange(map.get(String(key)))}
+    />
   );
 }
 

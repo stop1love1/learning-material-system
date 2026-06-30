@@ -1,11 +1,13 @@
 'use client';
 import React from 'react';
-import { Icon } from '@/app/components/ui';
+import { Select } from 'antd';
 
 /**
- * A small labelled dropdown for enum filters, styled inline to match the existing
- * Field/Select primitives. Always prepends an "Tất cả" option (value '') that
- * clears the filter. `value === ''`/undefined selects "Tất cả".
+ * A small labelled dropdown for enum filters. Reimplemented on antd `Select`
+ * (themed via AntdThemeBridge) while keeping the bespoke labelled-pill look: a
+ * bordered wrapper with a mono label on the left and the antd Select (borderless,
+ * height 40) on the right. `allowClear` clears to onChange('') — matching the old
+ * "Tất cả" behaviour. `value === ''`/undefined shows the placeholder.
  */
 export function FilterSelect({
   label,
@@ -25,23 +27,17 @@ export function FilterSelect({
   className?: string;
 }) {
   return (
-    <label className={`flex h-10 items-center gap-2 rounded-[10px] border border-lms-line bg-lms-surface pl-[13px] pr-2 ${className || ''}`}>
+    <label className={`flex h-10 items-center gap-2 rounded-[10px] border border-lms-line bg-lms-surface pl-[13px] pr-1 ${className || ''}`}>
       {label && <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">{label}</span>}
-      <div className="relative flex items-center">
-        <select
-          value={value ?? ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 cursor-pointer appearance-none border-0 bg-transparent pr-6 font-sans text-[13px] font-medium text-lms-ink outline-none"
-        >
-          <option value="">{placeholder}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label as any}
-            </option>
-          ))}
-        </select>
-        <Icon name="chevronDown" size={14} stroke={p?.faint} className="pointer-events-none absolute right-1" />
-      </div>
+      <Select
+        value={value ? value : undefined}
+        onChange={(v) => onChange(v == null ? '' : String(v))}
+        allowClear
+        placeholder={placeholder}
+        options={options as any}
+        variant="borderless"
+        style={{ minWidth: 130 }}
+      />
     </label>
   );
 }

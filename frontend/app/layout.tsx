@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Baloo_2, Plus_Jakarta_Sans, Sora, Be_Vietnam_Pro, DM_Mono } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { ConfigProvider } from "antd";
 import { LmsProviders } from "@/app/contexts/LmsProviders";
 import "./globals.css";
 
@@ -51,9 +50,7 @@ export default function RootLayout({
     >
       <body>
         <AntdRegistry>
-          <ConfigProvider theme={{ token: { colorPrimary: "#3f9d5c", fontFamily: "var(--font-bvp)" } }}>
-            <LmsProviders>{children}</LmsProviders>
-          </ConfigProvider>
+          <LmsProviders>{children}</LmsProviders>
         </AntdRegistry>
       </body>
     </html>

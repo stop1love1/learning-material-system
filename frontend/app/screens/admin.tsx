@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Table } from 'antd';
 import { Icon, Tag, Pill, Avatar, Btn, Field, Select, Progress, Bars, Segmented, Stat, fmt } from '@/app/components/ui';
 import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/store/store';
@@ -7,7 +8,6 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { downloadCsv, downloadJson } from '@/app/helpers/export';
-import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapUser } from '@/app/lib/sync/load-users';
@@ -207,44 +207,69 @@ export function AUsers({ p, t }) {
         <Btn p={p} icon="plus" onClick={() => setModal({ mode: 'create' })}>Thêm người dùng</Btn>
       </div>
       <div className={`lms-scrollx ${cardClass(20)} p-0!`}>
-        <div className="grid grid-cols-[2.2fr_1.3fr_1.2fr_1fr_86px] border-b border-lms-line px-[22px] py-3 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">
-          <span>NGƯỜI DÙNG</span><span>VAI TRÒ</span><span>THAM GIA</span><span>TRẠNG THÁI</span><span className="text-right">THAO TÁC</span>
-        </div>
-        {loading ? (
-          <div className="px-[22px] py-12 text-center text-[13px] text-lms-faint">Đang tải…</div>
-        ) : list.length === 0 ? (
-          <div className="px-[22px] py-12 text-center text-[13px] text-lms-faint">{error ? 'Không tải được dữ liệu' : 'Không có kết quả'}</div>
-        ) : list.map((u, i) => (
-          <div key={u.id || i} className={`lms-row grid grid-cols-[2.2fr_1.3fr_1.2fr_1fr_86px] items-center px-[22px] py-[13px] ${i ? 'border-t border-lms-line-soft' : ''}`}>
-            <div className="flex items-center gap-3">
-              <Avatar name={u.name} p={p} size={36} color={roleColor(u.role)} />
-              <div>
-                <div className="text-[13.5px] font-semibold text-lms-ink">{u.name}</div>
-                <div className="font-mono text-[11px] text-lms-faint">{u.email}</div>
-              </div>
-            </div>
-            <div><Tag p={p} color={roleColor(u.role)}>{u.role}</Tag></div>
-            <div className="text-[13px] text-lms-sub">{u.joined}</div>
-            <div>
-              <span className={`inline-flex items-center gap-1.5 text-[12.5px] ${u.status === 'active' ? 'text-lms-ok' : 'text-lms-faint'}`}>
-                <span className={`h-[7px] w-[7px] rounded ${u.status === 'active' ? 'bg-lms-ok' : 'bg-lms-faint'}`} />
-                {u.status === 'active' ? 'Hoạt động' : 'Tạm ngưng'}
-              </span>
-            </div>
-            <div className="flex justify-end gap-1.5">
-              <button title="Sửa" disabled={!u.id} onClick={() => u.id && setModal({ mode: 'edit', user: u })}
-                className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-lms-line bg-lms-surface ${u.id ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'}`}>
-                <Icon name="pen" size={15} stroke={p.sub} />
-              </button>
-              <button title="Xoá" disabled={!u.id || busy} onClick={() => handleDelete(u)}
-                className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-lms-danger/35 bg-lms-surface ${u.id ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'}`}>
-                <Icon name="trash" size={15} stroke={p.danger} />
-              </button>
-            </div>
-          </div>
-        ))}
+        <Table
+          rowKey={(u: any) => u.id || u.email}
+          dataSource={list}
+          loading={loading}
+          locale={{ emptyText: error ? 'Không tải được dữ liệu' : 'Không có kết quả' }}
+          pagination={{
+            current: paged.current,
+            pageSize: paged.pageSize,
+            total: paged.total,
+            onChange: paged.setPage,
+            showSizeChanger: false,
+            showTotal: (t) => `tổng ${t.toLocaleString('vi-VN')} người dùng`,
+          }}
+          columns={[
+            {
+              title: 'Tên',
+              dataIndex: 'name',
+              render: (_: any, u: any) => (
+                <div className="flex items-center gap-3">
+                  <Avatar name={u.name} p={p} size={36} color={roleColor(u.role)} />
+                  <div className="text-[13.5px] font-semibold text-lms-ink">{u.name}</div>
+                </div>
+              ),
+            },
+            {
+              title: 'Email',
+              dataIndex: 'email',
+              render: (v: any) => <span className="font-mono text-[12px] text-lms-sub">{v}</span>,
+            },
+            {
+              title: 'Vai trò',
+              dataIndex: 'role',
+              render: (v: any) => <Tag p={p} color={roleColor(v)}>{v}</Tag>,
+            },
+            {
+              title: 'Trạng thái',
+              dataIndex: 'status',
+              render: (v: any) => (
+                <Tag p={p} color={v === 'active' ? p.ok : p.faint}>
+                  {v === 'active' ? 'Hoạt động' : 'Tạm ngưng'}
+                </Tag>
+              ),
+            },
+            { title: 'Ngày tham gia', dataIndex: 'joined', render: (v: any) => <span className="text-[13px] text-lms-sub">{v}</span> },
+            {
+              title: 'Thao tác',
+              align: 'right' as const,
+              render: (_: any, u: any) => (
+                <div className="flex justify-end gap-1.5">
+                  <button title="Sửa" disabled={!u.id} onClick={() => u.id && setModal({ mode: 'edit', user: u })}
+                    className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-lms-line bg-lms-surface ${u.id ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'}`}>
+                    <Icon name="pen" size={15} stroke={p.sub} />
+                  </button>
+                  <button title="Xoá" disabled={!u.id || busy} onClick={() => handleDelete(u)}
+                    className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-lms-danger/35 bg-lms-surface ${u.id ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'}`}>
+                    <Icon name="trash" size={15} stroke={p.danger} />
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
-      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
 
       {modal && (
         <UserFormModal p={p} mode={modal.mode} user={modal.user} busy={busy}
