@@ -62,7 +62,7 @@ export function TOverview({ p, t, setRoute, go }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-lms-ink">{a.title}</div>
-                    <div className="mt-0.5 text-xs text-lms-faint">{a.class} · {a.type}</div>
+                    <div className="mt-0.5 text-xs text-lms-faint">{a.type}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-lms-heading text-[22px] font-semibold leading-none text-lms-accent">{ung(a.id)}</div>

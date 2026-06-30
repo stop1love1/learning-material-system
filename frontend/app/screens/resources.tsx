@@ -6,6 +6,9 @@ import { LMS, useLMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { filesApi, foldersApi, rubricsApi } from '@/app/lib/api';
 import { FolderTree } from '@/app/components/FolderTree';
+import { Pagination } from '@/app/components/Pagination';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapFile } from '@/app/lib/sync/load-library';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
 import GoogleDrivePicker from '@/app/components/GoogleDrivePicker';
@@ -36,12 +39,17 @@ export function TDocs({ p, t, auth }) {
   // selId === null → "Tất cả"; otherwise a real Folder _id (string).
   const [selId, setSelId] = React.useState<string | null>(null);
   const [view, setView] = React.useState('grid');
-  const [kw, setKw] = React.useState('');
   const tree: any[] = DB.DOC_FOLDER_TREE || [];
   const canManage = !!(auth && auth.isStaff);
-  const docs = (selId === null ? DB.DOCS : DB.DOCS.filter((d) => String(d.folderId) === selId))
-    .filter((d) => { const k = kw.trim().toLowerCase(); return !k || (d.name || '').toLowerCase().includes(k); });
-  // Per-folder doc counts for the tree badges.
+
+  // Server-side paginated docs list (keyword + folder filters).
+  const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
+  const { records: docs, loading, error } = paged;
+  const kw = paged.keyword;
+  const setKw = paged.setKeyword;
+  // Tree selection → server folderId filter.
+  const onSelectFolder = (id: string | null) => { setSelId(id); paged.setFilter('folderId', id); };
+  // The tree count badges still come from the (sidebar) DB.DOCS snapshot.
   const folderCounts = React.useMemo(() => {
     const m: Record<string, number> = {};
     for (const d of DB.DOCS) { if (d.folderId != null) m[String(d.folderId)] = (m[String(d.folderId)] || 0) + 1; }
@@ -71,6 +79,7 @@ export function TDocs({ p, t, auth }) {
     try {
       await filesApi.create({ name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: tag ? [tag] : [], description: form.desc });
       await hydrateFor('docs');
+      paged.reload();
       closeCompose();
     } catch {
       LMS && LMS.addDoc({ name: form.name.trim(), type: form.ftype, folder: tag ?? 'Tư liệu' });
@@ -101,8 +110,9 @@ export function TDocs({ p, t, auth }) {
     if (typeof window !== 'undefined' && !window.confirm(`Xoá thư mục “${node.name}”?`)) return;
     try {
       await foldersApi.remove(node.id);
-      if (selId === node.id) setSelId(null);
+      if (selId === node.id) onSelectFolder(null);
       await hydrateFor('docs');
+      paged.reload();
     } catch (e: any) {
       // Backend ConflictException (e.g. non-empty folder) → surface its message.
       if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được thư mục.');
@@ -120,6 +130,7 @@ export function TDocs({ p, t, auth }) {
       } catch {}
     }
     await hydrateFor('docs');
+    paged.reload();
   };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
 
@@ -135,7 +146,7 @@ export function TDocs({ p, t, auth }) {
   const copyLink = (d: any) => { try { navigator.clipboard?.writeText(d.url || ''); } catch {} };
   const deleteDoc = async (d: any) => {
     if (typeof window !== 'undefined' && !window.confirm(`Xoá tài liệu “${d.name}”?`)) return;
-    try { await filesApi.remove(d.id); await hydrateFor('docs'); }
+    try { await filesApi.remove(d.id); await hydrateFor('docs'); paged.reload(); }
     catch { DB.DOCS = DB.DOCS.filter((x) => x.id !== d.id); LMS && LMS.bump(); }
   };
   const DocMenu = ({ d, up }: { d: any; up?: boolean }) => (
@@ -189,10 +200,10 @@ export function TDocs({ p, t, auth }) {
         <FolderTree
           nodes={treeNodes}
           selectedId={selId}
-          onSelect={setSelId}
+          onSelect={onSelectFolder}
           p={p}
           allLabel="Tất cả"
-          allCount={DB.DOCS.length}
+          allCount={paged.total}
           {...(canManage ? {
             onAddRoot: addRootFolder,
             onAddChild: addChildFolder,
@@ -210,7 +221,11 @@ export function TDocs({ p, t, auth }) {
           <Segmented p={p} value={view} onChange={setView} options={[{ value: 'grid', icon: 'grid' }, { value: 'list', icon: 'list' }]} />
         </div>
 
-        {view === 'grid' ? (
+        {loading ? (
+          <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
+        ) : docs.length === 0 ? (
+          <div className="py-16 text-center text-[13px] text-lms-faint">{error ? 'Không tải được dữ liệu' : 'Không có kết quả'}</div>
+        ) : view === 'grid' ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
             {docs.map((d) => {
               const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
@@ -263,6 +278,7 @@ export function TDocs({ p, t, auth }) {
             })}
           </div>
         )}
+        <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
       </div>
       {addDocModal}
     </div>

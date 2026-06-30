@@ -8,6 +8,9 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { articlesApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
+import { Pagination } from '@/app/components/Pagination';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapArticle } from '@/app/lib/sync/load-articles';
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -23,9 +26,13 @@ export function SBlog({ p, t, go }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Categories come from the (loader-fed) DB snapshot; the list itself is server-paged.
   const cats = ['Tất cả', ...Array.from(new Set<string>(DB.ARTICLES.map((a: any) => a.cat)))];
   const rawTab = searchParams.get('activeTab');
-  const cat = !rawTab || !cats.includes(rawTab) ? 'Tất cả' : rawTab;
+  const cat = !rawTab ? 'Tất cả' : rawTab;
+
+  const paged = usePagedResource<any>({ fetcher: articlesApi.list, mapper: mapArticle });
+  const { records: list, loading, error } = paged;
 
   const setCat = React.useCallback((c: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -33,11 +40,19 @@ export function SBlog({ p, t, go }) {
     else params.set('activeTab', c);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+    paged.setFilter('category', c === 'Tất cả' ? '' : c);
+  }, [pathname, router, searchParams, paged]);
 
-  const list = cat === 'Tất cả' ? DB.ARTICLES : DB.ARTICLES.filter((a) => a.cat === cat);
-  const lead = list[0];
-  const rest = list.slice(1);
+  // Keep the hook's category filter in sync with the ?activeTab URL on first load / nav.
+  React.useEffect(() => {
+    paged.setFilter('category', cat === 'Tất cả' ? '' : cat);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat]);
+
+  // Only treat the first item as "featured" on page 1; later pages are a plain grid.
+  const onFirstPage = paged.current <= 1;
+  const lead = onFirstPage ? list[0] : undefined;
+  const rest = onFirstPage ? list.slice(1) : list;
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-9 pb-2">
       <div className="reveal mb-2">
@@ -48,10 +63,18 @@ export function SBlog({ p, t, go }) {
         </p>
       </div>
 
-      <div className="reveal my-6 flex flex-wrap gap-2">
+      <div className="reveal my-6 flex flex-wrap items-center gap-2">
         {cats.map((c) => <Pill key={c} p={p} active={c === cat} onClick={() => setCat(c)}>{c}</Pill>)}
+        <div className="flex-1" />
+        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm bài viết…" className="w-[240px]" />
       </div>
 
+      {loading ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
+      ) : list.length === 0 ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">{error ? 'Không tải được dữ liệu' : 'Không có kết quả'}</div>
+      ) : (
+      <>
       {lead && (
         <div onClick={() => go('article', { article: lead.id })} className="reveal bento-tile hovlift mb-[22px] grid cursor-pointer grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface">
           <div className="flex min-h-[240px] items-end p-[22px]" style={{ background: `linear-gradient(135deg, ${coverHue(p, lead.cover)}, ${hexA(coverHue(p, lead.cover), 0.55)})` }}>
@@ -86,6 +109,9 @@ export function SBlog({ p, t, go }) {
           </div>
         ))}
       </div>
+      </>
+      )}
+      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
     </div>
   );
 }

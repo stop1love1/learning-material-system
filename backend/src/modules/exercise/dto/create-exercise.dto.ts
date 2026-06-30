@@ -117,9 +117,4 @@ export class CreateExerciseDto {
   @IsOptional()
   @IsString()
   folderId?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lớp được giao bài (classId). null/bỏ trống = công khai.' })
-  @IsOptional()
-  @IsMongoId()
-  classId?: string | null;
 }

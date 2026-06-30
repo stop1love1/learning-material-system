@@ -7,6 +7,10 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { downloadCsv, downloadJson } from '@/app/helpers/export';
+import { Pagination } from '@/app/components/Pagination';
+import { FilterSelect } from '@/app/components/FilterSelect';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapUser } from '@/app/lib/sync/load-users';
 
 function AdminModal({ p, title, onClose, children }) {
   return (
@@ -123,38 +127,32 @@ const fmtJoined = (d) => {
   try { return new Date(d).toLocaleDateString('vi-VN'); } catch { return '—'; }
 };
 
+// Backend UserRole / UserStatus enum values → labels for the filter dropdowns.
+const ROLE_OPTS = [
+  { value: 'student', label: 'Học viên' },
+  { value: 'teacher', label: 'Giáo viên' },
+  { value: 'admin', label: 'Quản trị viên' },
+];
+const STATUS_OPTS = [
+  { value: 'active', label: 'Hoạt động' },
+  { value: 'inactive', label: 'Tạm ngưng' },
+];
+
 export function AUsers({ p, t }) {
-  const [role, setRole] = React.useState('all');
-  const [users, setUsers] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
   const [modal, setModal] = React.useState(null);
 
-  const refetch = React.useCallback(async () => {
-    try {
-      const res = await usersApi.list({ pageSize: 200 });
-      const records = res?.records ?? [];
-      setUsers(records.map((u) => ({
-        id: u._id || u.id,
-        name: u.name,
-        email: u.email,
-        rawRole: u.role || 'student',
-        role: ROLE_LABEL[u.role] || 'Người dùng',
-        joined: fmtJoined(u.createdAt),
-        status: u.status || 'active',
-      })));
-    } catch {
-      setUsers(null);
-    }
-  }, []);
+  // Server-side paginated users list (keyword + role + status filters).
+  const paged = usePagedResource<any>({ fetcher: usersApi.list, mapper: mapUser });
+  const { records: list, loading, error } = paged;
 
-  React.useEffect(() => { refetch(); }, [refetch]);
-
-  const all = users ?? DB.ADMIN_USERS.map((u) => ({ ...u, id: undefined, rawRole: u.role === 'Quản trị viên' ? 'admin' : 'student' }));
-  const list = role === 'all' ? all : all.filter((u) => u.role === role);
   const roleColor = (r) => ({ 'Người dùng': p.accent, 'Quản trị viên': p.warn }[r] || p.sub);
-  const nAdmin = all.filter((u) => u.role === 'Quản trị viên').length;
-  const total = users ? all.length : DB.ADMIN_STATS.users;
-  const counts = [['Người dùng', 'users', p.accent, fmt(total)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
+  // KPI cards: total comes from the list envelope; admin count from a dedicated query.
+  const [nAdmin, setNAdmin] = React.useState(0);
+  React.useEffect(() => {
+    usersApi.list({ role: 'admin', pageSize: 1 }).then((r: any) => setNAdmin(r?.total ?? 0)).catch(() => {});
+  }, []);
+  const counts = [['Người dùng', 'users', p.accent, fmt(paged.total)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
 
   const handleDelete = async (u) => {
     if (!u?.id) return;
@@ -162,7 +160,7 @@ export function AUsers({ p, t }) {
     setBusy(true);
     try { await usersApi.remove(u.id); } catch {}
     setBusy(false);
-    await refetch();
+    paged.reload();
     try { await hydrateFor('a-users'); } catch {}
   };
 
@@ -177,7 +175,7 @@ export function AUsers({ p, t }) {
         await usersApi.create({ name: form.name, email: form.email, password: form.password, role: form.role, status: form.status });
       }
       setModal(null);
-      await refetch();
+      paged.reload();
       try { await hydrateFor('a-users'); } catch {}
     } catch (e) {
       if (typeof window !== 'undefined') window.alert('Không thể lưu người dùng. Vui lòng kiểm tra dữ liệu hoặc quyền truy cập.');
@@ -200,19 +198,23 @@ export function AUsers({ p, t }) {
           </div>
         ))}
       </div>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <Pill p={p} active={role === 'all'} onClick={() => setRole('all')}>Tất cả · {all.length}</Pill>
-        <Pill p={p} active={role === 'Người dùng'} onClick={() => setRole('Người dùng')}>Người dùng</Pill>
-        <Pill p={p} active={role === 'Quản trị viên'} onClick={() => setRole('Quản trị viên')}>Quản trị</Pill>
+      <div className="mb-5 flex flex-wrap items-center gap-2.5">
+        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm theo tên, email…" className="w-[240px]" />
+        <FilterSelect label="VAI TRÒ" p={p} value={paged.filters.role} options={ROLE_OPTS} onChange={(v) => paged.setFilter('role', v)} />
+        <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
         <div className="flex-1" />
-        <Btn p={p} variant="ghost" icon="download" onClick={() => downloadCsv('nguoi-dung.csv', [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'joined', label: 'Tham gia' }], all)}>Xuất danh sách</Btn>
+        <Btn p={p} variant="ghost" icon="download" onClick={() => downloadCsv('nguoi-dung.csv', [{ key: 'name', label: 'Họ tên' }, { key: 'email', label: 'Email' }, { key: 'role', label: 'Vai trò' }, { key: 'status', label: 'Trạng thái' }, { key: 'joined', label: 'Tham gia' }], list)}>Xuất danh sách</Btn>
         <Btn p={p} icon="plus" onClick={() => setModal({ mode: 'create' })}>Thêm người dùng</Btn>
       </div>
       <div className={`lms-scrollx ${cardClass(20)} p-0!`}>
         <div className="grid grid-cols-[2.2fr_1.3fr_1.2fr_1fr_86px] border-b border-lms-line px-[22px] py-3 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">
           <span>NGƯỜI DÙNG</span><span>VAI TRÒ</span><span>THAM GIA</span><span>TRẠNG THÁI</span><span className="text-right">THAO TÁC</span>
         </div>
-        {list.map((u, i) => (
+        {loading ? (
+          <div className="px-[22px] py-12 text-center text-[13px] text-lms-faint">Đang tải…</div>
+        ) : list.length === 0 ? (
+          <div className="px-[22px] py-12 text-center text-[13px] text-lms-faint">{error ? 'Không tải được dữ liệu' : 'Không có kết quả'}</div>
+        ) : list.map((u, i) => (
           <div key={u.id || i} className={`lms-row grid grid-cols-[2.2fr_1.3fr_1.2fr_1fr_86px] items-center px-[22px] py-[13px] ${i ? 'border-t border-lms-line-soft' : ''}`}>
             <div className="flex items-center gap-3">
               <Avatar name={u.name} p={p} size={36} color={roleColor(u.role)} />
@@ -242,6 +244,7 @@ export function AUsers({ p, t }) {
           </div>
         ))}
       </div>
+      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
 
       {modal && (
         <UserFormModal p={p} mode={modal.mode} user={modal.user} busy={busy}

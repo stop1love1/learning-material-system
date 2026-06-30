@@ -17,7 +17,6 @@ import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { User } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
-import { Enrollment } from '../../schemas/class/enrollment.schema';
 import { MailService } from '../../global/mail.service';
 import { QuestionType } from '../../enums';
 
@@ -56,7 +55,6 @@ describe('AttemptsService', () => {
   let studentQuestionModel: any;
   let userModel: any;
   let settingsModel: any;
-  let enrollmentModel: any;
   let mail: any;
 
   // Captured upserted student-question docs and the final submission $set.
@@ -102,7 +100,6 @@ describe('AttemptsService', () => {
     };
     userModel = { findById: jest.fn(() => chain(null)) };
     settingsModel = { findOne: jest.fn(() => chain(null)) };
-    enrollmentModel = { exists: jest.fn() };
     mail = { sendMail: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -117,7 +114,6 @@ describe('AttemptsService', () => {
         { provide: getModelToken(StudentQuestion.name), useValue: studentQuestionModel },
         { provide: getModelToken(User.name), useValue: userModel },
         { provide: getModelToken(Settings.name), useValue: settingsModel },
-        { provide: getModelToken(Enrollment.name), useValue: enrollmentModel },
         { provide: MailService, useValue: mail },
       ],
     }).compile();
@@ -582,10 +578,9 @@ describe('AttemptsService', () => {
   // start()
   // =========================================================================
   describe('start', () => {
-    function wireStart(exercise: any, opts: { enrolled?: any; existing?: number } = {}) {
+    function wireStart(exercise: any, opts: { existing?: number } = {}) {
       exerciseModel.findById.mockReturnValue(chain(exercise));
       attemptModel.countDocuments.mockResolvedValue(opts.existing ?? 0);
-      enrollmentModel.exists.mockResolvedValue(opts.enrolled ?? null);
       const created = {
         _id: new Types.ObjectId(),
         toObject: () => ({ ok: true }),
@@ -601,57 +596,14 @@ describe('AttemptsService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('Forbidden when not enrolled in the exercise class (non-owner, non-privileged)', async () => {
-      wireStart(
-        {
-          _id: new Types.ObjectId(EXERCISE_ID),
-          classId: new Types.ObjectId(),
-          userId: new Types.ObjectId(OWNER_ID),
-          maxAttempts: 1,
-        },
-        { enrolled: null },
-      );
-      await expect(
-        service.start({ exerciseId: EXERCISE_ID } as any, STUDENT_ID),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-    });
-
-    it('allows enrolled student into a class exercise', async () => {
-      wireStart(
-        {
-          _id: new Types.ObjectId(EXERCISE_ID),
-          classId: new Types.ObjectId(),
-          userId: new Types.ObjectId(OWNER_ID),
-          maxAttempts: 1,
-        },
-        { enrolled: { _id: oid() } },
-      );
-      const res = await service.start({ exerciseId: EXERCISE_ID } as any, STUDENT_ID);
-      expect(res).toEqual({ ok: true });
-      expect(attemptModel.create).toHaveBeenCalled();
-    });
-
-    it('owner bypasses enrollment check on class exercise', async () => {
+    it('creates an attempt for any student (no class scoping)', async () => {
       wireStart({
         _id: new Types.ObjectId(EXERCISE_ID),
-        classId: new Types.ObjectId(),
-        userId: new Types.ObjectId(OWNER_ID),
-        maxAttempts: 1,
-      });
-      await service.start({ exerciseId: EXERCISE_ID } as any, OWNER_ID);
-      expect(enrollmentModel.exists).not.toHaveBeenCalled();
-      expect(attemptModel.create).toHaveBeenCalled();
-    });
-
-    it('public exercise (no classId) skips enrollment check', async () => {
-      wireStart({
-        _id: new Types.ObjectId(EXERCISE_ID),
-        classId: null,
         userId: new Types.ObjectId(OWNER_ID),
         maxAttempts: 2,
       });
-      await service.start({ exerciseId: EXERCISE_ID } as any, STUDENT_ID);
-      expect(enrollmentModel.exists).not.toHaveBeenCalled();
+      const res = await service.start({ exerciseId: EXERCISE_ID } as any, STUDENT_ID);
+      expect(res).toEqual({ ok: true });
       expect(attemptModel.create).toHaveBeenCalled();
     });
 
@@ -659,7 +611,6 @@ describe('AttemptsService', () => {
       wireStart(
         {
           _id: new Types.ObjectId(EXERCISE_ID),
-          classId: null,
           userId: new Types.ObjectId(OWNER_ID),
           maxAttempts: 1,
         },

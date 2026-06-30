@@ -63,7 +63,6 @@ export interface Auth {
 }
 
 export interface Ctx {
-  class: string;
   assignment: string;
   rubric: string;
   task: string;

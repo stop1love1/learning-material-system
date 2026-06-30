@@ -4,6 +4,42 @@ import { DB } from '@/app/store/store';
 import { authApi, questionsApi, topicsApi } from '@/app/lib/api';
 import { formatRelativeVi } from '@/app/helpers/format-date';
 
+/**
+ * Map one /questions BASE record into the list shape (no per-type detail fetch —
+ * that removes the old N+1). The list only needs stem/type/level/topic/meta;
+ * options/answer/pairs are filled lazily by the editor via questionsApi.get(id).
+ * `topicNameOf` resolves the topic id → display name (the hook/loader pass the
+ * topic map they fetched alongside the list).
+ */
+export function mapQuestion(
+  q: Record<string, any>,
+  topicNameOf?: (id: string) => string | undefined,
+  author = '—',
+): Record<string, any> {
+  // The Question's Topic ref may arrive as `topic` or `topicId` (raw id or populated object).
+  const topicRef = q.topic ?? q.topicId;
+  const topicId = topicRef ? String(topicRef?._id ?? topicRef) : '';
+  const topicName =
+    (topicRef && typeof topicRef === 'object' ? topicRef.title : undefined) ??
+    (topicId && topicNameOf ? topicNameOf(topicId) : undefined) ??
+    '';
+  return {
+    id: q._id,
+    type: q.type,
+    level: q.level,
+    topicId,
+    topic: topicName,
+    uses: q.uses ?? 0,
+    updated: formatRelativeVi(q.updatedAt),
+    author: q.userId?.name ?? author,
+    stem: q.content,
+    // List doesn't need these; the editor fetches detail lazily.
+    options: [],
+    answer: [],
+    pairs: [],
+  };
+}
+
 export async function loadQuestions(): Promise<void> {
   try {
     const res = (await questionsApi.list({ pageSize: 200 })) as any;
@@ -29,48 +65,7 @@ export async function loadQuestions(): Promise<void> {
       if (me?.name) author = me.name;
     } catch { /* keep '—' fallback */ }
 
-    DB.QUESTIONS = await Promise.all(
-      records.map(async (q: Record<string, any>) => {
-        let options: string[] = [];
-        let answer: any[] = [];
-        let pairs: [string, string][] = [];
-        try {
-          const { detail } = (await questionsApi.get(q._id)) as any;
-          if (detail) {
-            if (q.type === 'single') {
-              options = detail.options ?? [];
-              answer = detail.correctOptionIndex != null ? [detail.correctOptionIndex] : [];
-            } else if (q.type === 'multi') {
-              options = detail.options ?? [];
-              answer = detail.correctOptionIndices ?? [];
-            } else if (q.type === 'truefalse') {
-              answer = detail.isCorrect ? [0] : [1];
-            } else if (q.type === 'fill') {
-              answer = detail.answers ?? [];
-            } else if (q.type === 'match') {
-              pairs = (detail.pairs ?? []).map((pr: any) => [pr.left, pr.right] as [string, string]);
-            }
-          }
-        } catch { /* leave defaults — never let an undefined field crash the preview */ }
-        // The Question's Topic ref may arrive as `topic` or `topicId` (raw id or populated object).
-        const topicRef = q.topic ?? q.topicId;
-        const topicId = topicRef ? String(topicRef?._id ?? topicRef) : '';
-        return {
-          id: q._id,
-          type: q.type,
-          level: q.level,
-          topicId,
-          topic: (topicId && topicMap[topicId]) ?? '',
-          uses: q.uses ?? 0,
-          updated: formatRelativeVi(q.updatedAt),
-          author: q.userId?.name ?? author,
-          stem: q.content,
-          options,
-          answer,
-          pairs,
-        };
-      }),
-    );
+    DB.QUESTIONS = records.map((q) => mapQuestion(q, (id) => topicMap[id], author));
   } catch {
     DB.QUESTIONS = [];
   }

@@ -10,15 +10,13 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { Enrollment } from '../../schemas/class/enrollment.schema';
-import { Notification } from '../../schemas/notification.schema';
-import { EnrollmentStatus, ExerciseStatus, UserRole } from '../../enums';
+import { UserRole } from '../../enums';
 
 /**
- * Unit tests for ExercisesService — focused on list() viewer filtering (the
- * Class/Enrollment-driven scoping) plus create/update persisting classId.
- * No live MongoDB: every model is a jest.fn() bag; chainable query builders
- * are emulated with a thenable lean chain.
+ * Unit tests for ExercisesService — list() query building + enrichment counts
+ * (questionCount / attemptCount / learnerCount / submittedCount / gradedCount)
+ * plus create/update persistence. No live MongoDB: every model is a jest.fn()
+ * bag; chainable query builders are emulated with a thenable lean chain.
  */
 
 const oid = () => new Types.ObjectId();
@@ -44,8 +42,6 @@ describe('ExercisesService', () => {
   let participantModel: any;
   let submissionModel: any;
   let studentQuestionModel: any;
-  let enrollmentModel: any;
-  let notificationModel: any;
 
   beforeEach(async () => {
     exerciseModel = {
@@ -68,12 +64,8 @@ describe('ExercisesService', () => {
     questionModel = { find: jest.fn(), updateOne: jest.fn() };
     attemptModel = { find: jest.fn(), aggregate: jest.fn(), deleteMany: jest.fn() };
     participantModel = { deleteMany: jest.fn() };
-    submissionModel = { deleteMany: jest.fn() };
+    submissionModel = { deleteMany: jest.fn(), aggregate: jest.fn() };
     studentQuestionModel = { deleteMany: jest.fn() };
-    enrollmentModel = { find: jest.fn() };
-    notificationModel = { insertMany: jest.fn().mockResolvedValue([]) };
-    // update() now reads the prior status via findOne(...).select('status').lean()
-    // before patching; default to a no-prior-doc chain so existing tests keep working.
     exerciseModel.findOne.mockReturnValue(leanChain(null));
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -86,8 +78,6 @@ describe('ExercisesService', () => {
         { provide: getModelToken(Participant.name), useValue: participantModel },
         { provide: getModelToken(Submission.name), useValue: submissionModel },
         { provide: getModelToken(StudentQuestion.name), useValue: studentQuestionModel },
-        { provide: getModelToken(Enrollment.name), useValue: enrollmentModel },
-        { provide: getModelToken(Notification.name), useValue: notificationModel },
       ],
     }).compile();
 
@@ -103,93 +93,37 @@ describe('ExercisesService', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // list() viewer filtering
+  // list() query building
   // ---------------------------------------------------------------------------
-  describe('list viewer filtering', () => {
+  describe('list query building', () => {
     beforeEach(() => {
       exerciseModel.find.mockReturnValue(leanChain([]));
       exerciseModel.countDocuments.mockResolvedValue(0);
       exerciseQuestionModel.aggregate.mockResolvedValue([]);
       attemptModel.aggregate.mockResolvedValue([]);
+      submissionModel.aggregate.mockResolvedValue([]);
     });
 
-    it('anonymous (no viewer) → only public exercises (classId null)', async () => {
+    it('no longer applies any class/enrollment scoping (no classId in query)', async () => {
       await service.list({} as any, undefined);
 
       const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.classId).toBeNull();
-      expect(query.$or).toBeUndefined();
-      expect(enrollmentModel.find).not.toHaveBeenCalled();
-    });
-
-    it('anonymous (viewer present but no userId/role) → classId null', async () => {
-      await service.list({} as any, {} as any);
-
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.classId).toBeNull();
-      expect(enrollmentModel.find).not.toHaveBeenCalled();
-    });
-
-    it('student → classId null OR classId in Active-enrolled class ids', async () => {
-      const userId = new Types.ObjectId().toString();
-      const c1 = oid();
-      const c2 = oid();
-      enrollmentModel.find.mockReturnValue(leanChain([{ classId: c1 }, { classId: c2 }]));
-
-      await service.list({} as any, { userId, role: UserRole.Student });
-
-      // Enrollment lookup is scoped to this student + Active.
-      const enrollQuery = enrollmentModel.find.mock.calls[0][0];
-      expect(enrollQuery.studentId.toString()).toBe(userId);
-      expect(enrollQuery.status).toBe(EnrollmentStatus.Active);
-
-      // THE key assertion: the exercise query restricts to public OR enrolled class ids.
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.$or).toEqual([{ classId: null }, { classId: { $in: [c1, c2] } }]);
-      // Must NOT carry a bare classId:null alongside the $or.
       expect(query.classId).toBeUndefined();
+      expect(query.$or).toBeUndefined();
     });
 
-    it('student with no enrollments → public OR classId in [] (only public effectively)', async () => {
-      enrollmentModel.find.mockReturnValue(leanChain([]));
-
+    it('anonymous, student, teacher and admin all get the same unscoped query', async () => {
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Student });
-
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.$or).toEqual([{ classId: null }, { classId: { $in: [] } }]);
-    });
-
-    it('a viewer with a userId but undefined role is treated as a student (enrollment-scoped)', async () => {
-      const c1 = oid();
-      enrollmentModel.find.mockReturnValue(leanChain([{ classId: c1 }]));
-
-      await service.list({} as any, { userId: oid().toString() });
-
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.$or).toEqual([{ classId: null }, { classId: { $in: [c1] } }]);
-    });
-
-    it('teacher → no class restriction (sees all, including private)', async () => {
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Teacher });
-
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.classId).toBeUndefined();
-      expect(query.$or).toBeUndefined();
-      expect(enrollmentModel.find).not.toHaveBeenCalled();
-    });
-
-    it('admin → no class restriction', async () => {
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Admin });
 
-      const query = exerciseModel.find.mock.calls[0][0];
-      expect(query.classId).toBeUndefined();
-      expect(query.$or).toBeUndefined();
-      expect(enrollmentModel.find).not.toHaveBeenCalled();
+      for (const call of exerciseModel.find.mock.calls) {
+        expect(call[0].classId).toBeUndefined();
+        expect(call[0].$or).toBeUndefined();
+      }
     });
 
-    it('combines other filters (type/status/subject/grade) with the student class scope', async () => {
-      enrollmentModel.find.mockReturnValue(leanChain([]));
-
+    it('combines other filters (type/status/subject/grade)', async () => {
       await service.list(
         { type: 'quiz', status: 'open', subject: 'Văn', grade: '5' } as any,
         { userId: oid().toString(), role: UserRole.Student },
@@ -200,250 +134,88 @@ describe('ExercisesService', () => {
       expect(query.status).toBe('open');
       expect(query.subject).toBe('Văn');
       expect(query.grade).toBe('5');
-      expect(query.$or).toBeDefined();
     });
 
-    it('attaches questionCount / attemptCount / learnerCount from aggregations', async () => {
+    it('attaches questionCount / attemptCount / learnerCount / submittedCount / gradedCount', async () => {
       const e1 = oid();
-      exerciseModel.find.mockReturnValue(leanChain([{ _id: e1, classId: null }]));
+      exerciseModel.find.mockReturnValue(leanChain([{ _id: e1 }]));
       exerciseModel.countDocuments.mockResolvedValue(1);
       exerciseQuestionModel.aggregate.mockResolvedValue([{ _id: e1, n: 4 }]);
-      attemptModel.aggregate.mockResolvedValue([{ _id: e1, attempts: 9, learners: 3 }]);
+      // attemptModel.aggregate is called twice: first for attempt stats, then for
+      // the graded count (joined attempts → submissions, grouped by exerciseId).
+      attemptModel.aggregate
+        .mockResolvedValueOnce([{ _id: e1, attempts: 9, learners: 3, submitted: 6 }])
+        .mockResolvedValueOnce([{ _id: e1, graded: 2 }]);
 
       const res: any = await service.list({} as any, { userId: oid().toString(), role: UserRole.Admin });
 
-      expect(res.records[0]).toMatchObject({ questionCount: 4, attemptCount: 9, learnerCount: 3 });
+      expect(res.records[0]).toMatchObject({
+        questionCount: 4,
+        attemptCount: 9,
+        learnerCount: 3,
+        submittedCount: 6,
+        gradedCount: 2,
+      });
+    });
+
+    it('defaults submittedCount / gradedCount to 0 when there are no attempts/submissions', async () => {
+      const e1 = oid();
+      exerciseModel.find.mockReturnValue(leanChain([{ _id: e1 }]));
+      exerciseModel.countDocuments.mockResolvedValue(1);
+      exerciseQuestionModel.aggregate.mockResolvedValue([]);
+      attemptModel.aggregate.mockResolvedValue([]);
+      submissionModel.aggregate.mockResolvedValue([]);
+
+      const res: any = await service.list({} as any, { userId: oid().toString(), role: UserRole.Admin });
+
+      expect(res.records[0]).toMatchObject({
+        questionCount: 0,
+        attemptCount: 0,
+        learnerCount: 0,
+        submittedCount: 0,
+        gradedCount: 0,
+      });
     });
   });
 
   // ---------------------------------------------------------------------------
-  // create — persists classId
+  // create
   // ---------------------------------------------------------------------------
-  describe('create persists classId', () => {
-    it('converts a provided classId to an ObjectId', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = new Types.ObjectId().toString();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({ _id: newId });
-      // create() calls findOne() at the end (via findOne pipeline) → stub it.
-      exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
-      exerciseQuestionModel.find.mockReturnValue(leanChain([]));
-      questionModel.find.mockReturnValue(leanChain([]));
-
-      await service.create({ title: 'Bài 1', classId } as any, userId);
-
-      const arg = exerciseModel.create.mock.calls[0][0];
-      expect(arg.classId).toBeInstanceOf(Types.ObjectId);
-      expect(arg.classId.toString()).toBe(classId);
-    });
-
-    it('persists classId = null when explicitly cleared (empty string)', async () => {
-      const userId = new Types.ObjectId().toString();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({ _id: newId });
-      exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
-      exerciseQuestionModel.find.mockReturnValue(leanChain([]));
-      questionModel.find.mockReturnValue(leanChain([]));
-
-      await service.create({ title: 'Bài 2', classId: '' } as any, userId);
-
-      const arg = exerciseModel.create.mock.calls[0][0];
-      expect(arg.classId).toBeNull();
-    });
-
-    it('omits classId from the create payload when not provided', async () => {
-      const userId = new Types.ObjectId().toString();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({ _id: newId });
-      exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
-      exerciseQuestionModel.find.mockReturnValue(leanChain([]));
-      questionModel.find.mockReturnValue(leanChain([]));
-
-      await service.create({ title: 'Bài 3' } as any, userId);
-
-      const arg = exerciseModel.create.mock.calls[0][0];
-      expect('classId' in arg).toBe(false);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // create — notifyOnAssign emits per-student Notifications
-  // ---------------------------------------------------------------------------
-  describe('create notifies enrolled students on assign', () => {
+  describe('create', () => {
     const stubFindOnePipeline = (newId: any, userId: string) => {
       exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
       exerciseQuestionModel.find.mockReturnValue(leanChain([]));
       questionModel.find.mockReturnValue(leanChain([]));
     };
 
-    it('open + notifyOnAssign + classId → insertMany one Notification per ACTIVE student', async () => {
+    it('creates the exercise and returns it via findOne (owner view)', async () => {
       const userId = new Types.ObjectId().toString();
-      const classId = oid();
       const newId = oid();
-      const s1 = oid();
-      const s2 = oid();
-      exerciseModel.create.mockResolvedValue({
-        _id: newId,
-        title: 'Bài mới',
-        status: ExerciseStatus.Open,
-        notifyOnAssign: true,
-        classId,
-      });
-      stubFindOnePipeline(newId, userId);
-      enrollmentModel.find.mockReturnValue(leanChain([{ studentId: s1 }, { studentId: s2 }]));
-
-      await service.create(
-        { title: 'Bài mới', status: ExerciseStatus.Open, notifyOnAssign: true, classId: classId.toString() } as any,
-        userId,
-      );
-
-      // Enrollment lookup is scoped to the class + Active.
-      const enrollQuery = enrollmentModel.find.mock.calls[0][0];
-      expect(enrollQuery.classId).toBe(classId);
-      expect(enrollQuery.status).toBe(EnrollmentStatus.Active);
-
-      expect(notificationModel.insertMany).toHaveBeenCalledTimes(1);
-      const docs = notificationModel.insertMany.mock.calls[0][0];
-      expect(docs).toHaveLength(2);
-      expect(docs[0]).toMatchObject({
-        userId: s1,
-        title: 'Bài tập mới: Bài mới',
-        tag: 'Bài tập',
-        icon: 'assign',
-        link: `/luyen-tap/${newId}`,
-        refId: newId,
-        refType: 'exercise',
-      });
-      expect(docs[1].userId).toBe(s2);
-    });
-
-    it('does NOT notify when notifyOnAssign is false (even if open + classId)', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = oid();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({
-        _id: newId,
-        title: 'Bài',
-        status: ExerciseStatus.Open,
-        notifyOnAssign: false,
-        classId,
-      });
+      exerciseModel.create.mockResolvedValue({ _id: newId });
       stubFindOnePipeline(newId, userId);
 
-      await service.create({ title: 'Bài', classId: classId.toString() } as any, userId);
+      await service.create({ title: 'Bài 1' } as any, userId);
 
-      expect(enrollmentModel.find).not.toHaveBeenCalled();
-      expect(notificationModel.insertMany).not.toHaveBeenCalled();
-    });
-
-    it('does NOT notify when status is not open (draft) even with notifyOnAssign + classId', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = oid();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({
-        _id: newId,
-        title: 'Bài',
-        status: ExerciseStatus.Draft,
-        notifyOnAssign: true,
-        classId,
-      });
-      stubFindOnePipeline(newId, userId);
-
-      await service.create({ title: 'Bài', classId: classId.toString() } as any, userId);
-
-      expect(notificationModel.insertMany).not.toHaveBeenCalled();
-    });
-
-    it('open + notifyOnAssign but NO students → no throw, no insertMany', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = oid();
-      const newId = oid();
-      exerciseModel.create.mockResolvedValue({
-        _id: newId,
-        title: 'Bài',
-        status: ExerciseStatus.Open,
-        notifyOnAssign: true,
-        classId,
-      });
-      stubFindOnePipeline(newId, userId);
-      enrollmentModel.find.mockReturnValue(leanChain([]));
-
-      await expect(
-        service.create({ title: 'Bài', classId: classId.toString() } as any, userId),
-      ).resolves.toBeDefined();
-      expect(notificationModel.insertMany).not.toHaveBeenCalled();
+      const arg = exerciseModel.create.mock.calls[0][0];
+      expect(arg.title).toBe('Bài 1');
+      expect(arg.userId).toBeInstanceOf(Types.ObjectId);
+      expect('classId' in arg).toBe(false);
     });
   });
 
   // ---------------------------------------------------------------------------
-  // update — notify only on transition INTO open
+  // update
   // ---------------------------------------------------------------------------
-  describe('update notifies only on transition into open', () => {
-    it('draft → open with notifyOnAssign + classId → notifies', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = oid();
-      const exId = oid();
-      const s1 = oid();
-      exerciseModel.findOne.mockReturnValue(leanChain({ status: ExerciseStatus.Draft }));
-      exerciseModel.findOneAndUpdate.mockReturnValue(
-        leanChain({ _id: exId, title: 'Bài', status: ExerciseStatus.Open, notifyOnAssign: true, classId }),
-      );
-      enrollmentModel.find.mockReturnValue(leanChain([{ studentId: s1 }]));
+  describe('update', () => {
+    it('applies a simple patch and returns the updated doc', async () => {
+      exerciseModel.findOneAndUpdate.mockReturnValue(leanChain({ _id: oid(), title: 'renamed' }));
 
-      await service.update(exId.toString(), { status: ExerciseStatus.Open } as any, userId, UserRole.Admin);
-
-      expect(notificationModel.insertMany).toHaveBeenCalledTimes(1);
-      const docs = notificationModel.insertMany.mock.calls[0][0];
-      expect(docs).toHaveLength(1);
-      expect(docs[0].userId).toBe(s1);
-    });
-
-    it('already open → open (unrelated PATCH) → does NOT re-notify', async () => {
-      const userId = new Types.ObjectId().toString();
-      const classId = oid();
-      const exId = oid();
-      exerciseModel.findOne.mockReturnValue(leanChain({ status: ExerciseStatus.Open }));
-      exerciseModel.findOneAndUpdate.mockReturnValue(
-        leanChain({ _id: exId, title: 'Bài', status: ExerciseStatus.Open, notifyOnAssign: true, classId }),
-      );
-
-      await service.update(exId.toString(), { title: 'rename' } as any, userId, UserRole.Admin);
-
-      expect(notificationModel.insertMany).not.toHaveBeenCalled();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // update — persists classId
-  // ---------------------------------------------------------------------------
-  describe('update persists classId', () => {
-    it('converts a provided classId to an ObjectId in the patch', async () => {
-      const classId = new Types.ObjectId().toString();
-      exerciseModel.findOneAndUpdate.mockReturnValue(leanChain({ _id: oid() }));
-
-      await service.update(oid().toString(), { classId } as any, oid().toString(), UserRole.Admin);
+      const res: any = await service.update(oid().toString(), { title: 'renamed' } as any, oid().toString(), UserRole.Admin);
 
       const patch = exerciseModel.findOneAndUpdate.mock.calls[0][1];
-      expect(patch.classId).toBeInstanceOf(Types.ObjectId);
-      expect(patch.classId.toString()).toBe(classId);
-    });
-
-    it('sets patch.classId = null when cleared', async () => {
-      exerciseModel.findOneAndUpdate.mockReturnValue(leanChain({ _id: oid() }));
-
-      await service.update(oid().toString(), { classId: '' } as any, oid().toString(), UserRole.Admin);
-
-      const patch = exerciseModel.findOneAndUpdate.mock.calls[0][1];
-      expect(patch.classId).toBeNull();
-    });
-
-    it('leaves classId out of the patch when not in the dto', async () => {
-      exerciseModel.findOneAndUpdate.mockReturnValue(leanChain({ _id: oid() }));
-
-      await service.update(oid().toString(), { title: 'rename' } as any, oid().toString(), UserRole.Admin);
-
-      const patch = exerciseModel.findOneAndUpdate.mock.calls[0][1];
+      expect(patch.title).toBe('renamed');
       expect('classId' in patch).toBe(false);
+      expect(res.title).toBe('renamed');
     });
 
     it('scopes the update to ownerId for a teacher and throws NotFound when unmatched', async () => {

@@ -100,11 +100,6 @@ export class Exercise {
   @ApiProperty({ type: String, nullable: true })
   folderId: Types.ObjectId | null;
 
-  /** Lớp được giao bài (liên kết có cấu trúc). null = công khai, không gán lớp. */
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Class', default: null, index: true })
-  @ApiProperty({ type: String, nullable: true })
-  classId: Types.ObjectId | null;
-
   @ApiProperty({ type: Date })
   createdAt: Date;
 

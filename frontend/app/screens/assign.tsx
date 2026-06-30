@@ -3,34 +3,45 @@ import React from 'react';
 import { Icon, Tag, Pill, Btn, Field, Select, Progress } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
-import { exercisesApi, exerciseFoldersApi, classesApi } from '@/app/lib/api';
+import { exercisesApi, exerciseFoldersApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { FolderTree } from '@/app/components/FolderTree';
+import { Pagination } from '@/app/components/Pagination';
+import { FilterSelect } from '@/app/components/FilterSelect';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapExercise } from '@/app/lib/sync/load-exercises';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { typeMeta } from '@/app/screens/bank';
 import { DOC_TYPE_META } from '@/app/screens/resources';
 
+// Backend ExerciseType / ExerciseStatus enum values → Vietnamese labels for the filters.
+export const EX_TYPE_OPTS = [
+  { value: 'quiz', label: 'Trắc nghiệm' },
+  { value: 'essay', label: 'Tự luận' },
+  { value: 'file', label: 'Nộp tệp' },
+];
+export const EX_STATUS_OPTS = [
+  { value: 'draft', label: 'Bản nháp' },
+  { value: 'open', label: 'Đang mở' },
+  { value: 'closing', label: 'Sắp đóng' },
+  { value: 'closed', label: 'Đã đóng' },
+];
+
 export function TAssignments({ p, t, setRoute, go, auth }) {
-  const [status, setStatus] = React.useState('all');
   const [selFolder, setSelFolder] = React.useState<string | null>(null);
 
   const canManage = !!auth?.isStaff;
   const folders = (DB as any).EX_FOLDERS || [];
 
-  const refresh = () => hydrateFor('assignments');
+  // Server-side paginated exercises list (keyword + folder + type + status filters).
+  const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
+  const { records: list, loading, error } = paged;
 
-  const inFolder = (a) => selFolder === null || String(a.folderId ?? '') === selFolder;
-  const filt = { all: () => true, open: (a) => a.status === 'open' || a.status === 'closing',
-    grading: (a) => a.submitted > a.graded, done: (a) => a.status === 'done' };
-  // Scope status counts + the all-count to the selected folder so the numbers track the tree.
-  const scoped = DB.ASSIGNMENTS.filter(inFolder);
-  const list = scoped.filter(filt[status]);
-  const counts = {
-    open: scoped.filter(filt.open).length, grading: scoped.filter(filt.grading).length,
-    done: scoped.filter(filt.done).length,
-  };
+  const refresh = async () => { await hydrateFor('assignments'); paged.reload(); };
 
-  // Per-folder exercise tally (counts only direct members; null folderId → "all" root only).
+  const onSelectFolder = (id: string | null) => { setSelFolder(id); paged.setFilter('folderId', id); };
+
+  // Per-folder exercise tally for the tree badges (from the sidebar DB snapshot).
   const folderCounts: Record<string, number> = {};
   for (const a of DB.ASSIGNMENTS) {
     const fid = a.folderId ? String(a.folderId) : null;
@@ -60,7 +71,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
     if (!window.confirm(`Xoá thư mục "${node.name}"?`)) return;
     try {
       await exerciseFoldersApi.remove(node.id);
-      if (selFolder === node.id) setSelFolder(null);
+      if (selFolder === node.id) onSelectFolder(null);
       await refresh();
     } catch (e: any) { window.alert(e?.message || 'Không xoá được thư mục (thư mục có thể chưa rỗng).'); }
   };
@@ -71,10 +82,10 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
         <FolderTree
           nodes={treeNodes}
           selectedId={selFolder}
-          onSelect={setSelFolder}
+          onSelect={onSelectFolder}
           p={p}
           allLabel="Tất cả bài tập / đề thi"
-          allCount={DB.ASSIGNMENTS.length}
+          allCount={paged.total}
           onAddRoot={canManage ? onAddRoot : undefined}
           onAddChild={canManage ? onAddChild : undefined}
           onRename={canManage ? onRename : undefined}
@@ -82,20 +93,26 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
         />
       </aside>
       <div className="min-w-0 flex-1">
-      <div className="mb-[22px] flex flex-wrap items-center gap-2">
-        <Pill p={p} active={status === 'all'} onClick={() => setStatus('all')}>Tất cả · {scoped.length}</Pill>
-        <Pill p={p} active={status === 'open'} onClick={() => setStatus('open')}>Đang mở · {counts.open}</Pill>
-        <Pill p={p} active={status === 'grading'} onClick={() => setStatus('grading')}>Chờ chấm · {counts.grading}</Pill>
-        <Pill p={p} active={status === 'done'} onClick={() => setStatus('done')}>Đã đóng · {counts.done}</Pill>
+      <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
+        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm bài tập…" className="w-[240px]" />
+        <FilterSelect label="HÌNH THỨC" p={p} value={paged.filters.type} options={EX_TYPE_OPTS} onChange={(v) => paged.setFilter('type', v)} />
+        <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={EX_STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
         <div className="flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('assign-new')}>Giao bài tập</Btn>
       </div>
+      {loading ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
+      ) : list.length === 0 ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">{error ? 'Không tải được dữ liệu' : 'Không có kết quả'}</div>
+      ) : (
       <div className="flex flex-col gap-3">
         {list.map((a) => {
           const tone = a.status === 'closing' ? p.warn : a.status === 'done' ? p.ok : p.accent;
           const toneBg = a.status === 'closing' ? 'bg-lms-warn/12' : a.status === 'done' ? 'bg-lms-ok/12' : 'bg-lms-accent/12';
           const toneText = a.status === 'closing' ? 'text-lms-warn' : a.status === 'done' ? 'text-lms-ok' : 'text-lms-accent';
-          const pct = a.total ? Math.round((a.submitted / a.total) * 100) : 0;
+          // Tiến độ CHẤM (đã chấm / đã nộp). Không còn sĩ số lớp làm mẫu số tổng nên
+          // thanh tiến độ thể hiện mức độ chấm xong trên số bài đã nộp.
+          const pct = a.submitted ? Math.round((a.graded / a.submitted) * 100) : 0;
           return (
             <div key={a.id} className={`lms-card ${cardClass(20)} flex cursor-pointer items-center gap-[18px]`} onClick={() => go('grade-one', { assignment: a.id })}>
               <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${toneBg}`}>
@@ -112,7 +129,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
               </div>
               <div className="w-[150px]">
                 <div className="mb-[5px] flex justify-between text-[11px] text-lms-faint">
-                  <span>Đã nộp {a.submitted}/{a.total}</span><span className="font-mono">{pct}%</span>
+                  <span>Đã chấm {a.graded}/{a.submitted}</span><span className="font-mono">{pct}%</span>
                 </div>
                 <Progress p={p} value={pct} height={6} />
               </div>
@@ -124,6 +141,8 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
           );
         })}
       </div>
+      )}
+      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
       </div>
     </div>
   );
@@ -139,9 +158,6 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const wizard = (t.assignFlow || 'wizard') === 'wizard';
   const [step, setStep] = React.useState(0);
   const [title, setTitle] = React.useState('');
-  // PHẠM VI = lớp học. 'public' = công khai (không gán lớp); ngược lại là _id của lớp.
-  const [cls, setCls] = React.useState('public');
-  const [classes, setClasses] = React.useState<any[]>([]);
   const [kind, setKind] = React.useState('quiz');
   // Start with nothing pre-selected — the teacher picks real questions/docs from
   // the (live) bank. Seeding mock ids ('q1'/'q2') made the attach-question step
@@ -163,19 +179,6 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   // falling back to "no folder". Lets newly-created exercises land in "Kho đề thi" folders.
   const [folder, setFolder] = React.useState<string>(ctx?.folderId ? String(ctx.folderId) : '');
   const exFolders = (DB as any).EX_FOLDERS || [];
-
-  // Load the teacher's classes for the PHẠM VI selector (best-effort; empty on error/logged-out).
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res: any = await classesApi.list({ pageSize: 200 });
-        const records: any[] = res?.records ?? (Array.isArray(res) ? res : []);
-        if (alive) setClasses(records.map((c) => ({ id: c._id || c.id, name: c.name, grade: c.grade ?? '' })));
-      } catch { if (alive) setClasses([]); }
-    })();
-    return () => { alive = false; };
-  }, []);
 
   const togglePick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
@@ -202,15 +205,6 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
       showScoreAfter: showScore,
       notifyOnAssign: notify,
     };
-    // PHẠM VI = lớp học. 'public' → công khai (không gán classId). Ngược lại gửi classId
-    // và đặt scope = tên lớp để hiển thị.
-    if (cls && cls !== 'public') {
-      body.classId = cls;
-      const picked = classes.find((c) => c.id === cls);
-      body.scope = picked?.name || 'Lớp học';
-    } else {
-      body.scope = 'Công khai';
-    }
     if (folder) body.folderId = folder;
     if (instructions.trim()) body.instructions = instructions.trim();
     if (rubric && rubric !== 'none') body.rubricId = rubric;
@@ -253,11 +247,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
         <Select p={p} value={folder} onChange={setFolder} className="mt-2"
           options={[{ value: '', label: 'Không xếp vào thư mục' }, ...exFolders.map((f) => ({ value: f.id, label: f.name }))]} />
       </div>
-      <div className="mb-[18px] grid grid-cols-2 gap-4">
-        <div><label className={lblClass()}>PHẠM VI (LỚP HỌC)</label>
-          <Select p={p} value={cls} onChange={setCls} className="mt-2"
-            options={[{ value: 'public', label: 'Công khai (không gán lớp)' },
-              ...classes.map((c) => ({ value: c.id, label: c.grade ? `${c.name} · Khối ${c.grade}` : c.name }))]} /></div>
+      <div className="mb-[18px]">
         <div><label className={lblClass()}>HÌNH THỨC</label>
           <div className="mt-2 flex gap-2">
             {[['quiz', 'Trắc nghiệm', 'bank'], ['essay', 'Tự luận', 'docs'], ['file', 'Nộp tệp', 'upload']].map(([k, lab, ic]) => (

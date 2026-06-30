@@ -11,6 +11,11 @@ import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { DOC_TYPE_META, RubricMatrix } from '@/app/screens/resources';
 import { DocCardMini } from '@/app/screens/teacher';
 import { levelMeta, QuestionView } from '@/app/screens/bank';
+import { Pagination } from '@/app/components/Pagination';
+import { FilterSelect } from '@/app/components/FilterSelect';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapExercise } from '@/app/lib/sync/load-exercises';
+import { EX_TYPE_OPTS, EX_STATUS_OPTS } from '@/app/screens/assign';
 
 function taskTone(p, s) { return { todo: p.accent, done: p.info, graded: p.ok }[s] || p.sub; }
 function taskLabel(s) { return { todo: 'Cần làm', done: 'Đã nộp', graded: 'Đã chấm' }[s] || s; }
@@ -338,7 +343,7 @@ function STaskRow({ task, p, go }) {
         <Icon name={task.status === 'graded' ? 'checkCircle' : 'assign'} size={20} stroke={tone} /></div>
       <div className="min-w-0 flex-1">
         <div className="text-[14.5px] font-semibold text-lms-ink">{task.title}</div>
-        <div className="mt-1 text-xs text-lms-sub">{[task.class || task.subject, task.type, task.due && `hạn ${task.due}`].filter(Boolean).join(' · ')}</div>
+        <div className="mt-1 text-xs text-lms-sub">{[task.subject, task.type, task.due && `hạn ${task.due}`].filter(Boolean).join(' · ')}</div>
       </div>
       {task.score != null
         ? <div className="text-center"><div className="font-lms-heading text-[22px] font-semibold text-lms-ok">{task.score}</div><div className="text-[10px] text-lms-faint">/{task.points}</div></div>
@@ -350,31 +355,39 @@ function STaskRow({ task, p, go }) {
 
 export function STasks({ p, t, go }) {
   useLMS();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const f = parseTaskTab(searchParams.get('activeTab'));
+  const exFolders = (DB as any).EX_FOLDERS || [];
+  const folderOpts = exFolders.map((f: any) => ({ value: String(f.id), label: f.name }));
 
-  const setTab = React.useCallback((tab: TaskTab) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === 'todo') params.delete('activeTab');
-    else params.set('activeTab', tab);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+  // The old todo/done tabs were a per-student attempt overlay the /exercises list
+  // can't server-filter, so they are replaced by server-driven type + status
+  // filters (plus folder + keyword). Per-student "đã làm" status is carried on the
+  // legacy DB.STUDENT_TASKS snapshot, which we overlay onto each row when present.
+  const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
+  const { records, loading, error } = paged;
 
-  const list = DB.STUDENT_TASKS.filter((x) => f === 'all' ? true : f === 'done' ? x.status !== 'todo' : x.status === 'todo');
+  // Overlay the current user's per-exercise status from the (loader-fed) snapshot.
+  const myStatusOf = (id: string) => {
+    const s = (DB.STUDENT_TASKS || []).find((x: any) => x.id === id);
+    return s?.status ?? 'todo';
+  };
+  const list = records.map((e) => ({ ...e, status: myStatusOf(e.id), score: undefined }));
+
   return (
     <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="mb-[22px] flex gap-2">
-        <Pill p={p} active={f === 'todo'} onClick={() => setTab('todo')}>Cần làm</Pill>
-        <Pill p={p} active={f === 'done'} onClick={() => setTab('done')}>Đã nộp & chấm</Pill>
-        <Pill p={p} active={f === 'all'} onClick={() => setTab('all')}>Tất cả</Pill>
+      <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
+        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm bài tập…" className="w-[240px]" />
+        <FilterSelect label="HÌNH THỨC" p={p} value={paged.filters.type} options={EX_TYPE_OPTS} onChange={(v) => paged.setFilter('type', v)} />
+        <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={EX_STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
+        {folderOpts.length > 0 && (
+          <FilterSelect label="THƯ MỤC" p={p} value={paged.filters.folderId} options={folderOpts} onChange={(v) => paged.setFilter('folderId', v)} />
+        )}
       </div>
-      {list.length === 0 ? (
+      {loading ? (
+        <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
+      ) : list.length === 0 ? (
         <div className="rounded-xl border border-lms-line bg-lms-surface py-10">
           <Empty
-            description={DB.STUDENT_TASKS.length === 0 ? 'Chưa có bài tập' : 'Không có bài tập trong mục này'}
+            description={error ? 'Không tải được dữ liệu' : 'Không có kết quả'}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </div>
@@ -383,6 +396,7 @@ export function STasks({ p, t, go }) {
           {list.map((task) => <STaskRow key={task.id} task={task} p={p} go={go} />)}
         </div>
       )}
+      <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
     </div>
   );
 }

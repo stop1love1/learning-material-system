@@ -8,10 +8,8 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { Enrollment } from '../../schemas/class/enrollment.schema';
-import { Notification } from '../../schemas/notification.schema';
 import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
-import { EnrollmentStatus, ExerciseStatus, UserRole } from '../../enums';
+import { UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -27,33 +25,7 @@ export class ExercisesService {
     @InjectModel(Participant.name) private readonly participantModel: Model<Participant>,
     @InjectModel(Submission.name) private readonly submissionModel: Model<Submission>,
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
-    @InjectModel(Enrollment.name) private readonly enrollmentModel: Model<Enrollment>,
-    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
   ) {}
-
-  /**
-   * Gửi thông báo "Bài tập mới" tới mọi học viên đang ghi danh Active của lớp.
-   * Best-effort: không có lớp / không có học viên → không làm gì, không ném lỗi.
-   */
-  private async notifyClassOnAssign(exercise: { _id: any; title?: string; classId?: any }): Promise<void> {
-    if (!exercise?.classId) return;
-    const enrollments = await this.enrollmentModel
-      .find({ classId: exercise.classId, status: EnrollmentStatus.Active })
-      .select('studentId')
-      .lean();
-    if (!enrollments.length) return;
-    const exerciseId = exercise._id;
-    const docs = enrollments.map((e: any) => ({
-      userId: e.studentId,
-      title: `Bài tập mới: ${exercise.title ?? ''}`,
-      tag: 'Bài tập',
-      icon: 'assign',
-      link: `/luyen-tap/${exerciseId}`,
-      refId: exerciseId,
-      refType: 'exercise',
-    }));
-    await this.notificationModel.insertMany(docs);
-  }
 
   async list(dto: ListExercisesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
@@ -66,25 +38,6 @@ export class ExercisesService {
       ...(dto.grade ? { grade: dto.grade } : {}),
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
-
-    // Phạm vi lớp:
-    //  · Admin → thấy tất cả (không thêm điều kiện).
-    //  · Teacher → thấy tất cả (giữ nguyên hành vi: chủ xem được bài mình giao).
-    //  · Student → chỉ bài công khai (classId null) HOẶC thuộc lớp đang ghi danh Active.
-    //  · Khách (không đăng nhập) → chỉ bài công khai (classId null).
-    const role = viewer?.role;
-    if (role === UserRole.Admin || role === UserRole.Teacher) {
-      // không giới hạn theo lớp
-    } else if (viewer?.userId) {
-      const enrolled = await this.enrollmentModel
-        .find({ studentId: convertStringToObjectId(viewer.userId), status: EnrollmentStatus.Active })
-        .select('classId')
-        .lean();
-      const classIds = enrolled.map((e) => e.classId);
-      query.$or = [{ classId: null }, { classId: { $in: classIds } }];
-    } else {
-      query.classId = null;
-    }
 
     const [records, total] = await Promise.all([
       this.exerciseModel
@@ -105,18 +58,48 @@ export class ExercisesService {
     ]);
     const countMap = new Map(counts.map((c: any) => [c._id.toString(), c.n]));
 
-    // Lượt làm + số người làm (distinct studentId/sessionId) cho mỗi bài tập.
+    // Lượt làm + số người làm (distinct studentId/sessionId) + số lượt ĐÃ NỘP cho mỗi
+    // bài tập. "Đã nộp" = attempt có submittedAt (không còn đang làm dở).
     const attemptAgg = await this.attemptModel.aggregate([
       { $match: { exerciseId: { $in: ids } } },
-      { $group: { _id: '$exerciseId', attempts: { $sum: 1 }, learners: { $addToSet: { $ifNull: ['$studentId', '$sessionId'] } } } },
-      { $project: { attempts: 1, learners: { $size: '$learners' } } },
+      {
+        $group: {
+          _id: '$exerciseId',
+          attempts: { $sum: 1 },
+          learners: { $addToSet: { $ifNull: ['$studentId', '$sessionId'] } },
+          submitted: { $sum: { $cond: [{ $ne: ['$submittedAt', null] }, 1, 0] } },
+        },
+      },
+      { $project: { attempts: 1, submitted: 1, learners: { $size: '$learners' } } },
     ]);
     const attemptMap = new Map(attemptAgg.map((a: any) => [a._id.toString(), a]));
+
+    // Số lượt ĐÃ CHẤM cho mỗi bài tập. Bắt đầu từ Attempt (dùng index exerciseId)
+    // lọc theo trang hiện tại trước, rồi join sang Submission — tránh quét toàn bộ
+    // collection submissions trên mỗi lần list. Chỉ đếm submission isGraded = true.
+    const gradedAgg = await this.attemptModel.aggregate([
+      { $match: { exerciseId: { $in: ids } } },
+      {
+        $lookup: {
+          from: 'submissions',
+          localField: '_id',
+          foreignField: 'attemptId',
+          as: 'sub',
+        },
+      },
+      { $unwind: '$sub' },
+      { $match: { 'sub.isGraded': true } },
+      { $group: { _id: '$exerciseId', graded: { $sum: 1 } } },
+    ]);
+    const gradedMap = new Map(gradedAgg.map((g: any) => [g._id.toString(), g.graded]));
+
     const withCount = records.map((r: any) => ({
       ...r,
       questionCount: countMap.get(r._id.toString()) ?? 0,
       attemptCount: attemptMap.get(r._id.toString())?.attempts ?? 0,
       learnerCount: attemptMap.get(r._id.toString())?.learners ?? 0,
+      submittedCount: attemptMap.get(r._id.toString())?.submitted ?? 0,
+      gradedCount: gradedMap.get(r._id.toString()) ?? 0,
     }));
     return buildPagination(withCount, total, page, pageSize);
   }
@@ -184,7 +167,7 @@ export class ExercisesService {
   }
 
   async create(dto: CreateExerciseDto, userId: string) {
-    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
     const exercise = await this.exerciseModel.create({
       ...rest,
       userId: convertStringToObjectId(userId),
@@ -192,12 +175,7 @@ export class ExercisesService {
       ...(materialIds ? { materialIds: materialIds.map((m) => convertStringToObjectId(m)) } : {}),
       ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
       ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
-      ...(classId !== undefined ? { classId: classId ? convertStringToObjectId(classId) : null } : {}),
     });
-    // No-spam: thông báo khi TẠO bài ở trạng thái open + bật notifyOnAssign + có lớp.
-    if (exercise.status === ExerciseStatus.Open && exercise.notifyOnAssign === true && exercise.classId) {
-      await this.notifyClassOnAssign(exercise);
-    }
     // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
     return this.findOne(exercise._id.toString(), { userId });
   }
@@ -208,30 +186,16 @@ export class ExercisesService {
   }
 
   async update(id: string, dto: UpdateExerciseDto, userId: string, role?: UserRole) {
-    const { materialIds, dueDate, folderId, rubricId, classId, ...rest } = dto;
+    const { materialIds, dueDate, folderId, rubricId, ...rest } = dto;
     const patch: Record<string, unknown> = { ...rest };
     if (dueDate !== undefined) patch.dueDate = dueDate ? new Date(dueDate) : null;
     if (materialIds !== undefined) patch.materialIds = materialIds.map((m) => convertStringToObjectId(m));
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
     if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
-    if (classId !== undefined) patch.classId = classId ? convertStringToObjectId(classId) : null;
-    // Đọc trạng thái cũ TRƯỚC khi cập nhật để phát hiện chuyển tiếp sang "open".
-    const prev = await this.exerciseModel.findOne(this.ownerFilter(id, userId, role)).select('status').lean();
-    const wasOpen = (prev as any)?.status === ExerciseStatus.Open;
     const exercise = await this.exerciseModel
       .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
       .lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
-    // No-spam: chỉ thông báo khi bài CHUYỂN TIẾP sang open (trước đó chưa open),
-    // đồng thời bật notifyOnAssign + có lớp. PATCH không đổi trạng thái → không gửi.
-    if (
-      !wasOpen &&
-      (exercise as any).status === ExerciseStatus.Open &&
-      (exercise as any).notifyOnAssign === true &&
-      (exercise as any).classId
-    ) {
-      await this.notifyClassOnAssign(exercise as any);
-    }
     return exercise;
   }
 

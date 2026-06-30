@@ -31,7 +31,6 @@ export const DB: Record<string, any> = {
   SCHEDULE: [] as Rec[],
   STUDENT_TASKS: [] as Rec[],
   ARTICLES: [] as Rec[],
-  CLASSES: [] as Rec[],
   ADMIN_STATS: {
     users: 0, docs: 0, exercises: 0, articles: 0, questions: 0,
     attempts: 0, submissions: 0, graded: 0, ungraded: 0,
@@ -78,7 +77,7 @@ export const LMS = {
   addAssignment(a: Record<string, any>) {
     const id = uid('a');
     DB.ASSIGNMENTS.unshift({ id, submitted: 0, graded: 0, status: 'open', ...a });
-    DB.STUDENT_TASKS.unshift({ id, title: a.title, class: a.class, type: a.type, due: a.due,
+    DB.STUDENT_TASKS.unshift({ id, title: a.title, type: a.type, due: a.due,
       dueIn: a.dueIn || 'Mới giao', status: 'todo', points: a.points, questions: a.questions });
     bump();
     return id;

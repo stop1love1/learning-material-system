@@ -13,6 +13,22 @@ const ROLE_LABELS: Record<string, string> = {
   student: 'Người dùng',
 };
 
+/**
+ * Map one /users record into the admin table row shape (id/name/email/rawRole/
+ * role label/joined/status). Shared by the paged users list hook and the loader.
+ */
+export function mapUser(u: Record<string, any>): Record<string, any> {
+  return {
+    id: u._id || u.id,
+    name: u.name,
+    email: u.email,
+    rawRole: u.role || 'student',
+    role: ROLE_LABELS[u.role] ?? 'Người dùng',
+    joined: formatDateVi(u.createdAt),
+    status: u.status || 'active',
+  };
+}
+
 export async function loadUsers(): Promise<void> {
   try {
     const res: any = await usersApi.list({ pageSize: 200 });

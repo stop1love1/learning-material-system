@@ -90,12 +90,6 @@ export enum ExerciseStatus {
   Closed = 'closed',
 }
 
-/** Trạng thái ghi danh học viên vào lớp. */
-export enum EnrollmentStatus {
-  Active = 'active',
-  Removed = 'removed',
-}
-
 /** Đối tượng được tự đánh giá (màn "Tự đánh giá"). */
 export enum SelfAssessmentSource {
   File = 'file',

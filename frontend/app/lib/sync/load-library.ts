@@ -13,6 +13,35 @@ function driveThumb(url: string, size = 480): string | null {
   return id ? `https://lh3.googleusercontent.com/d/${id}=w${size}` : null;
 }
 
+/**
+ * Map one /files record into the screen's Doc shape. Used by both the (legacy)
+ * loader and the paged list hook so mapping stays identical. The backend now
+ * populates `folderName`, so the name-based `folder` label is resolved from that
+ * (or the file's tag/subject), without needing a separate folder lookup.
+ */
+export function mapFile(f: Record<string, any>): Record<string, any> {
+  return {
+    id: f._id,
+    name: f.name,
+    type: f.fileType,
+    size: f.sizeLabel ?? '',
+    folderId: f.folderId != null ? String(f.folderId?._id ?? f.folderId) : null,
+    folder:
+      f.folderName ??
+      (f.folderId != null && typeof f.folderId === 'object' ? f.folderId.name : undefined) ??
+      (Array.isArray(f.tags) ? f.tags[0] : undefined) ??
+      f.subject ??
+      'Tư liệu',
+    updated: formatRelativeVi(f.updatedAt),
+    by: (f.userId && typeof f.userId === 'object' ? f.userId.name : undefined) ?? '—',
+    downloads: f.downloadCount ?? 0,
+    views: f.viewCount ?? 0,
+    url: f.url ?? '',
+    desc: f.description ?? '',
+    thumb: f.thumbnailUrl || driveThumb(f.url),
+  };
+}
+
 export async function loadLibrary(): Promise<void> {
   try {
     // Fetch folders FIRST so files can be grouped by their real folder name
@@ -30,35 +59,18 @@ export async function loadLibrary(): Promise<void> {
       parentId: f.parentId ? String(f.parentId?._id ?? f.parentId) : null,
     }));
 
+    // The files list itself is now hook-driven on the library screens, but other
+    // screens (home, public kho tài liệu, reader, overview, the task material
+    // lookup) still read DB.DOCS, so keep populating it here. Reuse mapFile, then
+    // overlay the folder name resolved from the (already fetched) folder list.
     const filesRes: any = await filesApi.list({ pageSize: 200 });
     const files: any[] = filesRes?.records ?? [];
-    DB.DOCS = files.map((f: Record<string, any>) => ({
-      id: f._id,
-      name: f.name,
-      type: f.fileType,
-      size: f.sizeLabel ?? '',
-      // Real folder id (in ADDITION to the name-based `folder` below) so the tree
-      // sidebar can filter by id. Null when the file is unfiled.
-      folderId: f.folderId != null ? String(f.folderId?._id ?? f.folderId) : null,
-      // Prefer the real folder name resolved from folderId; fall back to the
-      // backend-populated folderName, then tag/subject, else default. This keeps
-      // file grouping in sync with the real DB.DOC_FOLDERS names.
-      folder:
-        (f.folderId != null ? folderMap[String(f.folderId?._id ?? f.folderId)] : undefined) ??
-        f.folderName ??
-        (Array.isArray(f.tags) ? f.tags[0] : undefined) ??
-        f.subject ??
-        'Tư liệu',
-      updated: formatRelativeVi(f.updatedAt),
-      // userId is a raw ObjectId today; if the backend populates it to { name },
-      // we read the name. Falls back to '—' otherwise.
-      by: (f.userId && typeof f.userId === 'object' ? f.userId.name : undefined) ?? '—',
-      downloads: f.downloadCount ?? 0,
-      views: f.viewCount ?? 0,
-      url: f.url ?? '',
-      desc: f.description ?? '',
-      thumb: f.thumbnailUrl || driveThumb(f.url),
-    }));
+    DB.DOCS = files.map((f: Record<string, any>) => {
+      const doc = mapFile(f);
+      const resolved = doc.folderId ? folderMap[String(doc.folderId)] : undefined;
+      if (resolved) doc.folder = resolved;
+      return doc;
+    });
 
     if (getToken()) {
       const mine: any[] = (await filesApi.myDownloads()) ?? [];

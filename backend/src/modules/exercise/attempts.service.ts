@@ -17,10 +17,9 @@ import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { User } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
-import { Enrollment } from '../../schemas/class/enrollment.schema';
 import { MailService } from '../../global/mail.service';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
-import { EnrollmentStatus, QuestionType, UserRole } from '../../enums';
+import { QuestionType, UserRole } from '../../enums';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SubmitAttemptDto } from './dto/submit-attempt.dto';
 import { GradeAttemptDto } from './dto/grade-attempt.dto';
@@ -48,7 +47,6 @@ export class AttemptsService {
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Settings.name) private readonly settingsModel: Model<Settings>,
-    @InjectModel(Enrollment.name) private readonly enrollmentModel: Model<Enrollment>,
     private readonly mail: MailService,
   ) {}
 
@@ -267,23 +265,6 @@ export class AttemptsService {
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
 
     const studentId = convertStringToObjectId(userId);
-
-    // Bài tập gán lớp: chỉ cho làm khi caller là chủ bài tập / Admin / Teacher, hoặc
-    // đang ghi danh Active vào lớp đó. Bài công khai (classId null) bỏ qua kiểm tra.
-    if (exercise.classId) {
-      const isOwner = exercise.userId?.toString() === userId;
-      const isPrivileged = role === UserRole.Admin || role === UserRole.Teacher;
-      if (!isOwner && !isPrivileged) {
-        const enrolled = await this.enrollmentModel.exists({
-          classId: exercise.classId,
-          studentId,
-          status: EnrollmentStatus.Active,
-        });
-        if (!enrolled) {
-          throw new ForbiddenException('Bạn chưa được ghi danh vào lớp của bài tập này');
-        }
-      }
-    }
 
     const existing = await this.attemptModel.countDocuments({ exerciseId, studentId });
 
