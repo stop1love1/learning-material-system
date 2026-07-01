@@ -18,7 +18,6 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
       { key: 'rubrics', icon: 'rubric', label: 'Rubrics' },
       { key: 'a-blog', icon: 'docs', label: 'Bài viết' },
       { key: 'grade', icon: 'grade', label: 'Chấm bài', badge: 19 },
-      { key: 'a-schedule', icon: 'calendar', label: 'Lịch dạy' },
     ] },
     { group: 'QUẢN LÝ', items: [
       { key: 'a-users', icon: 'users', label: 'Người dùng' },
@@ -68,7 +67,6 @@ export const PAGE_TITLES: Record<string, [string, string]> = {
   'a-users': ['Người dùng & phân quyền', 'Tài khoản · vai trò · quyền hạn'],
   'a-settings': ['Cài đặt hệ thống', 'Giao diện · cấu hình chung · bảo mật · tích hợp'],
   'a-reports': ['Báo cáo & Thống kê', 'Thống kê toàn hệ thống & xuất dữ liệu'],
-  'a-schedule': ['Lịch dạy', 'Quản lý lịch dạy theo thứ trong tuần'],
   account: ['Hồ sơ cá nhân', 'Thông tin tài khoản của bạn'],
 };
 

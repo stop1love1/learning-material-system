@@ -10,7 +10,6 @@ import { loadSubmissions } from './load-submissions';
 import { loadStats } from './load-stats';
 import { loadReports } from './load-reports';
 import { loadNotifications } from './load-notifications';
-import { loadSchedule } from './load-schedule';
 
 type Loader = () => Promise<void>;
 
@@ -35,7 +34,7 @@ const BY_ROUTE: Record<string, Loader[]> = {
   'grade-one': [loadExercises, loadSubmissions],
   'a-blog': [loadArticles],
   'a-users': [loadUsers],
-  'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers, loadSchedule],
+  'a-overview': [loadStats, loadLibrary, loadArticles, loadExercises, loadUsers],
   'a-reports': [loadReports],
   notify: [loadNotifications],
 };

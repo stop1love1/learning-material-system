@@ -28,7 +28,6 @@ export const DB: Record<string, any> = {
   ASSIGNMENTS: [] as Rec[],
   SUBMISSIONS: [] as Rec[],
   NOTICES: [] as Rec[],
-  SCHEDULE: [] as Rec[],
   STUDENT_TASKS: [] as Rec[],
   ARTICLES: [] as Rec[],
   ADMIN_STATS: {

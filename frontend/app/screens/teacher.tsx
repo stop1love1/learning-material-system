@@ -73,34 +73,6 @@ export function TOverview({ p, t, setRoute, go }) {
               ))}
             </div>
           </section>
-
-          <section className={cardClass(20)}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="m-0 font-lms-heading text-xl font-medium text-lms-ink">Lịch hôm nay</h3>
-              <div className="flex items-center gap-2.5">
-                <Tag p={p} color={p.sub}>{DB.SCHEDULE.length} BUỔI</Tag>
-                <span onClick={() => setRoute('a-schedule')} className="cursor-pointer font-mono text-[11.5px] text-lms-accent">Quản lý lịch →</span>
-              </div>
-            </div>
-            {DB.SCHEDULE.length === 0 && (
-              <div className="py-6 text-center text-[13px] text-lms-faint">Hôm nay chưa có buổi học nào.</div>
-            )}
-            {DB.SCHEDULE.map((s, i) => (
-              <div key={i} className={`flex gap-3.5 py-3 ${i ? 'border-t border-lms-line' : ''}`}>
-                <div className="w-[50px] shrink-0 text-right">
-                  <div className="font-mono text-sm font-medium text-lms-ink">{s.time}</div>
-                  <div className="mt-0.5 font-mono text-[10px] text-lms-faint">{s.dur}</div>
-                </div>
-                <div className="relative w-px bg-lms-line">
-                  <span className={`absolute top-1 left-[-2.5px] h-1.5 w-1.5 rounded-[3px] ${i === 0 ? 'bg-lms-accent' : 'bg-lms-faint'}`} />
-                </div>
-                <div>
-                  <div className="text-[13.5px] font-semibold text-lms-ink">{s.title}</div>
-                  <div className="mt-0.5 text-xs text-lms-sub">{s.room} · {s.cls}</div>
-                </div>
-              </div>
-            ))}
-          </section>
         </div>
 
         <div className="flex flex-col gap-[22px]">

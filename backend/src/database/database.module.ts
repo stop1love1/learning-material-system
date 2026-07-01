@@ -61,8 +61,6 @@ import {
   NotificationSchema,
   Settings,
   SettingsSchema,
-  Schedule,
-  ScheduleSchema,
 } from '../schemas';
 
 // Model name (X.name) is what `ref`/`refPath` point to, so registering with
@@ -98,7 +96,6 @@ const MODELS: ModelDefinition[] = [
   { name: Article.name, schema: ArticleSchema },
   { name: Notification.name, schema: NotificationSchema },
   { name: Settings.name, schema: SettingsSchema },
-  { name: Schedule.name, schema: ScheduleSchema },
 ];
 
 @Global()

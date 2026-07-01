@@ -141,11 +141,3 @@ export const notificationsApi = {
   markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.post('/notifications/read-all'),
 };
-
-export const scheduleApi = {
-  today: () => api.get<any[]>('/schedule/today'),
-  list: () => api.get<any[]>('/schedule'),
-  create: (body: any) => api.post('/schedule', body),
-  update: (id: string, body: any) => api.patch(`/schedule/${id}`, body),
-  remove: (id: string) => api.del(`/schedule/${id}`),
-};

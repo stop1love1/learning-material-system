@@ -28,4 +28,3 @@ export * from './exercise/self-assessment.schema';
 export * from './article.schema';
 export * from './notification.schema';
 export * from './settings.schema';
-export * from './schedule.schema';

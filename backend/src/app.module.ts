@@ -18,7 +18,6 @@ import { ArticleModule } from './modules/article/article.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { ScheduleModule } from './modules/schedule/schedule.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
@@ -43,7 +42,6 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     SettingsModule,
     StatsModule,
     NotificationsModule,
-    ScheduleModule,
     MaintenanceModule,
   ],
   controllers: [AppController],
