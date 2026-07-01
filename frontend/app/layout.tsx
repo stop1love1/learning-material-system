@@ -22,7 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập cho mọi môn học.",
   };
   try {
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
+    // Server-side fetch: gọi thẳng backend nội bộ (NEXT_PUBLIC_API_URL có thể là
+    // "/api" tương đối — không dùng được ở server).
+    const base = (process.env.INTERNAL_API_URL ?? "http://127.0.0.1:3001") + "/api";
     const res = await fetch(`${base}/settings`, { cache: "no-store" });
     if (!res.ok) return fallback;
     const seo = (await res.json())?.seo;

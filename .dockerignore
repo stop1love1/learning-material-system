@@ -1,0 +1,22 @@
+# Build context = repo root. Loại các thứ nặng / không cần cho image.
+**/node_modules
+**/.next
+**/dist
+**/.git
+.git
+**/.env
+**/.env.local
+**/.env.*.local
+**/npm-debug.log*
+**/*.log
+
+# Frontend test artifacts
+frontend/e2e
+frontend/test-results
+frontend/playwright-report
+
+# Misc dev
+**/.DS_Store
+**/coverage
+**/.vscode
+**/.idea
