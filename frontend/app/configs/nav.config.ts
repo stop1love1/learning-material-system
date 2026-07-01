@@ -16,7 +16,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
       { key: 'bank', icon: 'bank', label: 'Ngân hàng câu hỏi' },
       { key: 'assignments', icon: 'assign', label: 'Bài tập' },
       { key: 'rubrics', icon: 'rubric', label: 'Rubrics' },
-      { key: 'a-blog', icon: 'docs', label: 'Bài viết / Blog' },
+      { key: 'a-blog', icon: 'docs', label: 'Bài viết' },
       { key: 'grade', icon: 'grade', label: 'Chấm bài', badge: 19 },
       { key: 'a-schedule', icon: 'calendar', label: 'Lịch dạy' },
     ] },
@@ -39,11 +39,11 @@ export const ROUTE_PARENT: Record<string, string> = {
 };
 
 export const PAGE_TITLES: Record<string, [string, string]> = {
-  home: ['Trang chủ', 'Học liệu Ngữ văn Tiểu học'],
+  home: ['Trang chủ', 'Nền tảng học liệu mở'],
   's-mine': ['Của tôi', 'Tài liệu đã tải & bài đã làm'],
   blog: ['Bài viết', 'Chia sẻ học thuật'],
   article: ['Bài viết', ''],
-  'a-blog': ['Bài viết / Blog', 'Đăng và quản lý bài viết'],
+  'a-blog': ['Bài viết', 'Đăng và quản lý bài viết'],
   overview: ['Tổng quan', 'Bảng điều khiển giảng dạy'],
   assignments: ['Bài tập & Giao bài', 'Tạo, giao và theo dõi bài tập'],
   'assign-new': ['Giao bài tập mới', 'Soạn và phát cho lớp'],

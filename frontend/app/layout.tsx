@@ -18,8 +18,8 @@ const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "
 // SEO lấy từ Cài đặt (settings.seo) để admin tự chỉnh; fallback về mặc định nếu API down.
 export async function generateMetadata(): Promise<Metadata> {
   const fallback: Metadata = {
-    title: { default: "Vườn Văn · Học liệu Ngữ văn Tiểu học", template: "%s · Vườn Văn" },
-    description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập môn Ngữ văn / Tiếng Việt Tiểu học.",
+    title: { default: "Vườn Văn · Nền tảng học liệu", template: "%s · Vườn Văn" },
+    description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập cho mọi môn học.",
   };
   try {
     const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";

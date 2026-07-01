@@ -43,7 +43,7 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
             <div className="font-lms-heading text-lg font-bold text-lms-ink">Vườn Văn</div>
           </div>
           <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
-            Học liệu Ngữ văn Tiểu học miễn phí — tài liệu, đề thi, bài giảng và bài tập cho các em học sinh, phụ huynh và thầy cô.
+            Kho học liệu mở miễn phí — tài liệu, đề thi, bài giảng và bài tập cho học sinh, phụ huynh và thầy cô.
           </p>
           <div className="mt-4 flex gap-[9px]">
             {['globe', 'message', 'send'].map((ic) => (
@@ -65,7 +65,7 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
       </div>
       <div className="border-t border-lms-line-soft">
         <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-[30px] py-4">
-          <span className="text-xs text-lms-faint">© 2026 Vườn Văn · Học liệu Ngữ văn Tiểu học</span>
+          <span className="text-xs text-lms-faint">© 2026 Vườn Văn · Nền tảng học liệu</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-lms-faint">
             <Icon name="globe" size={13} stroke={p.faint} /> Truy cập tự do · Không cần đăng nhập
           </span>
@@ -123,7 +123,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">Vườn Văn</div>
-              <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NGỮ VĂN TIỂU HỌC</div>
+              <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
             </div>
           </Link>
           <nav className="lms-hide-sm ml-3.5 flex items-center gap-1">

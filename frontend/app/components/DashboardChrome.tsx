@@ -111,13 +111,17 @@ function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: stri
       className="lms-rail relative z-2 flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg"
       style={{ width: t.railWide ? 268 : 244 }}
     >
-      <div className={`flex items-center gap-[11px] ${compact ? 'px-5 pt-[18px] pb-3.5' : 'p-[22px_22px_18px]'}`}>
+      <Link
+        href={ROUTES.home}
+        onClick={onNavigate}
+        className={`flex cursor-pointer items-center gap-[11px] no-underline ${compact ? 'px-5 pt-[18px] pb-3.5' : 'p-[22px_22px_18px]'}`}
+      >
         <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">V</div>
         <div>
           <div className="font-lms-heading text-lg font-semibold leading-none text-lms-ink">Vườn Văn</div>
-          <div className="mt-[3px] font-mono text-[9.5px] tracking-wide text-lms-faint">NGỮ VĂN · TIỂU HỌC</div>
+          <div className="mt-[3px] font-mono text-[9.5px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
         </div>
-      </div>
+      </Link>
       <nav className="lms-scroll flex-1 overflow-y-auto px-3.5 pt-1">
         {nav.map((g, gi) => (
           <div key={gi} className={compact ? 'mb-2.5' : 'mb-3.5'}>

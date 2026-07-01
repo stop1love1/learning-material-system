@@ -25,6 +25,20 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   const [twofa, setTwofa] = React.useState<null | { email: string; devOtp?: string }>(null);
   const [otp, setOtp] = React.useState('');
 
+  // Google's GSI button needs an explicit px width to span the form. Measure the
+  // container (and track resize) so the button stays full-width like the others.
+  const gBoxRef = React.useRef<HTMLDivElement>(null);
+  const [gWidth, setGWidth] = React.useState(360);
+  React.useLayoutEffect(() => {
+    const el = gBoxRef.current;
+    if (!el) return;
+    const update = () => setGWidth(Math.min(400, Math.max(200, Math.round(el.offsetWidth))));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tab, twofa, sent]);
+
   const friendly = (e: unknown) =>
     e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Có lỗi xảy ra';
 
@@ -173,12 +187,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
           <label className={lblClass()}>MÃ XÁC THỰC (6 SỐ)</label>
           <Field p={p} value={otp} onChange={setOtp} placeholder="123456" icon="target" className="mt-2 mb-3.5" />
 
-          {twofa.devOtp && (
-            <div className="mb-3.5 rounded-[9px] border border-lms-line bg-lms-sink px-3 py-2 text-[12.5px] text-lms-sub">
-              Mã (chế độ dev): <b className="text-lms-ink">{twofa.devOtp}</b>
-            </div>
-          )}
-
           {err && <div className="mb-2.5 text-center text-[12.5px] text-lms-danger">{err}</div>}
 
           <Btn p={p} full size="lg" icon="check" onClick={verifyOtp}>
@@ -223,14 +231,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
             Đã gửi liên kết xác thực tới <b className="text-lms-ink">{email}</b>. Mở email và bấm liên kết để kích hoạt
             tài khoản.
           </p>
-          {sent.devVerifyLink && (
-            <p className="m-0 mb-4 break-all text-[12px] leading-normal text-lms-sub">
-              Chế độ dev (chưa cấu hình email):{' '}
-              <a href={sent.devVerifyLink} className="font-semibold text-lms-accent underline">
-                bấm vào đây để xác thực
-              </a>
-            </p>
-          )}
           <Btn p={p} full size="lg" icon="logout" onClick={backToLogin}>
             Quay lại đăng nhập
           </Btn>
@@ -315,14 +315,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
         {resent && (
           <div className="mb-2.5 text-center text-[12.5px] text-lms-sub">
             Đã gửi lại email xác thực tới {email}.
-            {resent.devVerifyLink && (
-              <>
-                {' '}
-                <a href={resent.devVerifyLink} className="font-semibold text-lms-accent underline">
-                  Xác thực ngay (dev)
-                </a>
-              </>
-            )}
           </div>
         )}
         <Btn p={p} full size="lg" icon={reg ? 'check' : 'logout'} onClick={submit} className={reg ? 'mt-2' : ''}>
@@ -336,10 +328,16 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
               <span className="text-[11.5px] font-medium text-lms-faint">hoặc</span>
               <div className="h-px flex-1 bg-lms-line" />
             </div>
-            <div className="flex justify-center">
+            <div ref={gBoxRef} className="flex w-full justify-center">
               <GoogleLogin
                 onSuccess={(cr) => cr.credential && handleGoogle(cr.credential)}
                 onError={() => setErr('Đăng nhập Google thất bại')}
+                width={gWidth}
+                theme={t?.dark ? 'filled_black' : 'outline'}
+                size="large"
+                shape="pill"
+                text="signin_with"
+                logo_alignment="center"
               />
             </div>
           </>
@@ -351,7 +349,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
             {reg ? 'Đăng nhập' : 'Đăng ký miễn phí'}
           </span>
         </p>
-        <p className="m-0 mt-3.5 text-center text-[11px] text-lms-faint">Đăng nhập qua API · cần backend đang chạy</p>
       </div>
     </div>
   );

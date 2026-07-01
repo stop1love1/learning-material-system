@@ -9,9 +9,22 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { questionsApi, topicsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { FolderTree, type TreeNode } from '@/app/components/FolderTree';
+import { Pagination } from '@/app/components/Pagination';
+import { usePagedResource } from '@/app/lib/paged/usePagedResource';
+import { mapQuestion } from '@/app/lib/sync/load-questions';
 
-// Carries the topic node selected in the tree into the (route-separate) compose form,
-// so a new question defaults to the chosen topic. Cleared after it is consumed.
+// Map a /questions/:id detail payload → the shape QuestionView expects.
+function qDetailToView(type: string, d: any): { options: any[]; answer: any[]; pairs: any[] } {
+  const out = { options: [] as any[], answer: [] as any[], pairs: [] as any[] };
+  if (!d) return out;
+  if (type === 'single') { out.options = d.options || []; out.answer = d.correctOptionIndex != null ? [d.correctOptionIndex] : []; }
+  else if (type === 'multi') { out.options = d.options || []; out.answer = d.correctOptionIndices || []; }
+  else if (type === 'truefalse') { out.answer = [d.isCorrect ? 0 : 1]; }
+  else if (type === 'fill') { out.answer = d.answers || []; }
+  else if (type === 'match') { out.pairs = (d.pairs || []).map((pp: any) => [pp.left || '', pp.right || '']); }
+  return out;
+}
+
 let pendingTopicId: string | null = null;
 
 export function typeMeta(id) { return DB.QTYPES.find((x) => x.id === id) || DB.QTYPES[0]; }
@@ -201,18 +214,18 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 
 export function TBank({ p, t, setRoute, go }) {
   const [type, setType] = React.useState('all');
-  const [kw, setKw] = React.useState('');
-  const [sel, setSel] = React.useState(DB.QUESTIONS[0]?.id);
+  const [sel, setSel] = React.useState<string | undefined>(undefined);
   const [showFilter, setShowFilter] = React.useState(false);
   const [level, setLevel] = React.useState('all');
   const [selTopic, setSelTopic] = React.useState<string | null>(null);
-  const k = kw.trim().toLowerCase();
-  const list = (type === 'all' ? DB.QUESTIONS : DB.QUESTIONS.filter((q) => q.type === type))
-    .filter((q) => selTopic === null || String(q.topicId) === selTopic)
-    .filter((q) => level === 'all' || q.level === level)
-    .filter((q) => !k || (q.stem || '').toLowerCase().includes(k) || (q.topic || '').toLowerCase().includes(k));
 
-  // Topic-tree management (backend @Roles gates teacher/admin; errors are surfaced/swallowed).
+  // Server-side paged (type/level/topic/keyword filters via API) + antd Pagination.
+  const paged = usePagedResource<any>({ fetcher: questionsApi.list, mapper: mapQuestion, pageSize: 10 });
+  const list = paged.records;
+  const pickType = (v: string) => { setType(v); paged.setFilter('type', v === 'all' ? '' : v); };
+  const pickLevel = (v: string) => { setLevel(v); paged.setFilter('level', v === 'all' ? '' : v); };
+  const pickTopic = (id: string | null) => { setSelTopic(id); paged.setFilter('topicId', id || ''); };
+
   const addRootTopic = async () => {
     const title = (typeof window !== 'undefined' && window.prompt('Tên chủ đề mới:'))?.trim();
     if (!title) return;
@@ -238,14 +251,27 @@ export function TBank({ p, t, setRoute, go }) {
       if (selTopic === node.id) setSelTopic(null);
       await hydrateFor('bank');
     } catch (e: any) {
-      // ConflictException (non-empty topic) → surface the backend message.
       if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được chủ đề.');
     }
   };
   const composeWithTopic = () => { pendingTopicId = selTopic; setRoute('bank-edit'); };
-  const q = DB.QUESTIONS.find((x) => x.id === sel) || list[0];
+  const q = list.find((x) => x.id === sel) || list[0];
 
-  // Nhân bản câu hỏi: tạo bản sao qua API (fallback LMS khi offline/đăng xuất).
+  // The list mapper omits per-type detail (no N+1); fetch it lazily for the
+  // previewed question so QuestionView shows options/answer/pairs.
+  const [detailMap, setDetailMap] = React.useState<Record<string, any>>({});
+  React.useEffect(() => {
+    const id = q?.id;
+    if (!id || detailMap[id]) return;
+    let alive = true;
+    questionsApi.get(id).then((r: any) => {
+      if (!alive || !r?.detail) return;
+      setDetailMap((m) => ({ ...m, [id]: qDetailToView(q.type, r.detail) }));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [q?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const qFull = q ? { ...q, ...(detailMap[q.id] || {}) } : q;
+
   const duplicate = async (src) => {
     if (!src) return;
     const detail: Record<string, any> = {};
@@ -272,7 +298,7 @@ export function TBank({ p, t, setRoute, go }) {
       <FolderTree
         nodes={(DB.TOPIC_TREE || []) as TreeNode[]}
         selectedId={selTopic}
-        onSelect={setSelTopic}
+        onSelect={pickTopic}
         p={p}
         allLabel="Tất cả chủ đề"
         allCount={DB.QUESTIONS.length}
@@ -302,7 +328,7 @@ export function TBank({ p, t, setRoute, go }) {
       {treeSidebar}
       <div>
       <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
+        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
         <div className="flex-1" />
         <Btn p={p} variant={showFilter || level !== 'all' ? 'soft' : 'ghost'} size="md" icon="filter" onClick={() => setShowFilter((s) => !s)}>Bộ lọc</Btn>
         <Btn p={p} icon="plus" onClick={composeWithTopic}>Soạn câu hỏi</Btn>
@@ -311,25 +337,26 @@ export function TBank({ p, t, setRoute, go }) {
       {showFilter && (
         <div className="mb-[18px] flex flex-wrap items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise px-4 py-3">
           <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">ĐỘ KHÓ</span>
-          <Pill p={p} active={level === 'all'} onClick={() => setLevel('all')}>Tất cả</Pill>
+          <Pill p={p} active={level === 'all'} onClick={() => pickLevel('all')}>Tất cả</Pill>
           {DB.LEVELS.map((l) => (
-            <Pill key={l.id} p={p} active={level === l.id} onClick={() => setLevel(l.id)}>{l.label}</Pill>
+            <Pill key={l.id} p={p} active={level === l.id} onClick={() => pickLevel(l.id)}>{l.label}</Pill>
           ))}
           {level !== 'all' && (
-            <button onClick={() => setLevel('all')} className="ml-auto cursor-pointer border-0 bg-transparent font-mono text-[11px] text-lms-accent">Xoá lọc</button>
+            <button onClick={() => pickLevel('all')} className="ml-auto cursor-pointer border-0 bg-transparent font-mono text-[11px] text-lms-accent">Xoá lọc</button>
           )}
         </div>
       )}
 
       <div className="mb-[18px] flex flex-wrap gap-2">
-        <Pill p={p} active={type === 'all'} onClick={() => setType('all')}>Tất cả · {DB.QUESTIONS.length}</Pill>
+        <Pill p={p} active={type === 'all'} onClick={() => pickType('all')}>Tất cả · {DB.QUESTIONS.length}</Pill>
         {DB.QTYPES.map((qt) => {
           const n = DB.QUESTIONS.filter((x) => x.type === qt.id).length;
-          return <Pill key={qt.id} p={p} icon={qt.icon} active={type === qt.id} onClick={() => setType(qt.id)}>{qt.short} · {n}</Pill>;
+          return <Pill key={qt.id} p={p} icon={qt.icon} active={type === qt.id} onClick={() => pickType(qt.id)}>{qt.short} · {n}</Pill>;
         })}
       </div>
 
       <div className="grid grid-cols-[1.25fr_1fr] items-start gap-[22px]">
+        <div>
         <div className="flex flex-col gap-3">
           {list.map((item) => {
             const im = typeMeta(item.type), il = levelMeta(item.level), on = item.id === sel;
@@ -350,6 +377,8 @@ export function TBank({ p, t, setRoute, go }) {
             );
           })}
         </div>
+        <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
+        </div>
 
         <div className="sticky top-0">
           <div className={cardClass(24)}>
@@ -365,7 +394,7 @@ export function TBank({ p, t, setRoute, go }) {
             </div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ · {q.topic.toUpperCase()}</div>
             <div className="mb-5 text-[17px] font-medium leading-normal text-lms-ink">{q.stem}</div>
-            <QuestionView q={q} p={p} mode="preview" />
+            <QuestionView q={qFull} p={p} mode="preview" />
             <div className="mt-[22px] flex gap-4 border-t border-lms-line pt-4 text-xs text-lms-faint">
               <span>Đã dùng {q.uses} lần</span><span>· Cập nhật {q.updated}</span>
             </div>
@@ -384,14 +413,12 @@ export function TBankEdit({ p, t, setRoute }) {
   const [options, setOptions] = React.useState(['', '', '', '']);
   const [correct, setCorrect] = React.useState([0]);
   const [topic, setTopic] = React.useState('');
-  // Default the new question's topic to the node selected in the tree (consumed once).
   const [topicId, setTopicId] = React.useState<string | null>(() => {
     const t0 = pendingTopicId; pendingTopicId = null; return t0;
   });
   const [fillAns, setFillAns] = React.useState('');
   const [essayGrading, setEssayGrading] = React.useState('rubric');
   const [pairs, setPairs] = React.useState([['', ''], ['', '']]);
-  // Sửa câu hỏi: id lấy từ ?id= (useSearchParams; trang được bọc <Suspense> ở page.tsx).
   const editId = useSearchParams().get('id');
   React.useEffect(() => {
     if (!editId) return;
@@ -579,13 +606,11 @@ export function TBankEdit({ p, t, setRoute }) {
                 detail = { pairs: ps.length ? ps : [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
               }
               try {
-                // Send the selected Topic ref id (omitted when no topic chosen).
                 const topicField = topicId ? { topic: topicId } : {};
                 if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 await hydrateFor('bank');
               } catch {
-                // logged-out / student / API down → optimistic mock add (chỉ khi tạo mới)
                 if (!editId) LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',
                   options: (type === 'single' || type === 'multi') ? opts : undefined,
                   answer: correct,

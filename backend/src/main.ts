@@ -12,7 +12,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Vườn Văn / Học Viện LMS API')
-    .setDescription('REST API cho hệ thống học liệu Ngữ văn Tiểu học')
+    .setDescription('REST API cho nền tảng học liệu')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

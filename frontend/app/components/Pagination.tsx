@@ -34,6 +34,7 @@ export function Pagination({
         total={total}
         onChange={(page) => onChange(page)}
         showSizeChanger={false}
+        showQuickJumper
         showTotal={(t) => `tổng ${t.toLocaleString('vi-VN')} kết quả`}
       />
     </div>

@@ -146,12 +146,12 @@ export class Settings {
 
   @Prop({
     type: {
-      badge: { type: String, default: 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ' },
-      heroTitle: { type: String, default: 'Học Văn nhẹ nhàng, tài liệu mở cho tất cả.' },
+      badge: { type: String, default: 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ' },
+      heroTitle: { type: String, default: 'Học tập nhẹ nhàng, tài liệu mở cho tất cả.' },
       heroSubtitle: {
         type: String,
         default:
-          'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.',
+          'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.',
       },
       ctaLabel: { type: String, default: 'Khám phá' },
     },
@@ -163,13 +163,13 @@ export class Settings {
 
   @Prop({
     type: {
-      title: { type: String, default: 'Vườn Văn — Học liệu Ngữ văn / Tiếng Việt Tiểu học' },
+      title: { type: String, default: 'Vườn Văn — Nền tảng học liệu' },
       description: {
         type: String,
         default:
-          'Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập môn Ngữ văn / Tiếng Việt Tiểu học.',
+          'Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập cho mọi môn học.',
       },
-      keywords: { type: [String], default: ['ngữ văn', 'tiếng việt', 'tiểu học', 'học liệu', 'đề thi'] },
+      keywords: { type: [String], default: ['học liệu', 'tiểu học', 'đề thi', 'bài giảng', 'lms'] },
       ogImage: { type: String, default: null },
     },
     default: {},

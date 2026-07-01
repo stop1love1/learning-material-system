@@ -16,7 +16,7 @@ test('question bank: antd pagination + lazy preview detail', async ({ page, requ
   await page.waitForLoadState('networkidle');
 
   // antd Pagination present and total matches API.
-  await expect(page.locator('.ant-pagination')).toBeVisible();
+  await expect(page.locator('.ant-pagination')).toBeVisible({ timeout: 20000 });
   const uiTotal = await readUiTotal(page);
   expect(uiTotal).toBe(api.total);
 

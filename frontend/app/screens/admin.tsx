@@ -214,6 +214,7 @@ export function AUsers({ p, t }) {
             total: paged.total,
             onChange: paged.setPage,
             showSizeChanger: false,
+            showQuickJumper: true,
             showTotal: (t) => `tổng ${t.toLocaleString('vi-VN')} người dùng`,
           }}
           columns={[

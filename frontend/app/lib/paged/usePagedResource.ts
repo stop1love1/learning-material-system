@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 export type PagedEnvelope<R = any> = {
   records?: R[];
@@ -53,17 +54,47 @@ export function usePagedResource<T, R = any>({
   initialFilters = {},
   debounceMs = 300,
 }: UsePagedResourceArgs<T, R>): UsePagedResource<T> {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [records, setRecords] = React.useState<T[]>([]);
   const [total, setTotal] = React.useState(0);
   const [pages, setPages] = React.useState(1);
-  const [current, setCurrent] = React.useState(1);
+  // Initialise page + keyword from the URL so a reload restores them.
+  const [current, setCurrent] = React.useState(() => {
+    const pg = parseInt(searchParams?.get('page') || '1', 10);
+    return pg > 0 ? pg : 1;
+  });
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
 
-  const [keyword, setKeywordState] = React.useState('');
-  const [debouncedKw, setDebouncedKw] = React.useState('');
+  const [keyword, setKeywordState] = React.useState(() => searchParams?.get('q') || '');
+  const [debouncedKw, setDebouncedKw] = React.useState(() => searchParams?.get('q') || '');
   const [filters, setFilters] = React.useState<Params>(initialFilters);
   const [reloadTick, setReloadTick] = React.useState(0);
+
+  // Persist page + debounced keyword to the URL (?page=, ?q=) so reload/back
+  // restores them. Reads live window.location so it merges with any other params
+  // a screen may own (e.g. ?activeTab=).
+  const syncUrl = React.useCallback(
+    (page: number, q: string) => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      if (page <= 1) params.delete('page');
+      else params.set('page', String(page));
+      const kw = (q || '').trim();
+      if (!kw) params.delete('q');
+      else params.set('q', kw);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname],
+  );
+  React.useEffect(() => {
+    syncUrl(current, debouncedKw);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, debouncedKw]);
 
   const fetcherRef = React.useRef(fetcher);
   const mapperRef = React.useRef(mapper);

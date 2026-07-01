@@ -88,13 +88,13 @@ export function UserHome({ p, t, setRoute, go }) {
       <div className="bento mb-4">
         <div className="col-8 row-2 reveal bento-tile relative flex min-h-[320px] flex-col justify-center overflow-hidden border border-lms-line bg-(image:--lms-hero-gradient) p-[38px]">
           <span className="mb-[18px] inline-flex items-center gap-[7px] self-start rounded-[20px] border border-lms-line bg-lms-surface px-3 py-[5px] text-[11.5px] font-bold text-lms-accent">
-            <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ'}
+            <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ'}
           </span>
           <h1 className="m-0 max-w-[620px] font-lms-heading text-[clamp(30px,4.4vw,50px)] font-extrabold leading-[1.04] tracking-[-1.4px] text-lms-ink">
-            {hp?.heroTitle || 'Học Văn nhẹ nhàng, tài liệu mở cho tất cả.'}
+            {hp?.heroTitle || 'Học tập nhẹ nhàng, tài liệu mở cho tất cả.'}
           </h1>
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
-            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập Ngữ văn Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
+            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
           <form onSubmit={(e) => { e.preventDefault(); submitHeroSearch(); }} className="flex max-w-[540px] flex-wrap gap-2.5">
             <Field p={p} icon="search" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
@@ -106,14 +106,14 @@ export function UserHome({ p, t, setRoute, go }) {
             <div className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] bg-lms-accent font-lms-heading text-[22px] font-bold text-white">PT</div>
             <div>
               <div className="text-[15.5px] font-bold text-lms-ink">Cô Phương Thanh</div>
-              <div className="text-[12.5px] text-lms-sub">Giáo viên Tiểu học</div>
+              <div className="text-[12.5px] text-lms-sub">Giáo viên</div>
             </div>
           </div>
           <p className="m-0 text-[13.5px] leading-relaxed text-lms-sub">
             “Mình tin học liệu tốt nên đến được với mọi người. Tất cả ở đây đều miễn phí.”
           </p>
           <div className="mt-auto flex gap-2">
-            <span className="rounded-[20px] bg-lms-accent-soft px-2.5 py-1 text-[11.5px] text-lms-sub">10+ năm dạy Tiểu học</span>
+            <span className="rounded-[20px] bg-lms-accent-soft px-2.5 py-1 text-[11.5px] text-lms-sub">10+ năm kinh nghiệm giảng dạy</span>
             <span className="rounded-[20px] bg-lms-accent-soft px-2.5 py-1 text-[11.5px] text-lms-sub">Chia sẻ mở</span>
           </div>
         </div>
@@ -742,7 +742,7 @@ export function SDocs({ p, t, go }) {
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px]">
         <h2 className="m-0 font-lms-heading text-[26px] font-bold tracking-[-0.4px] text-lms-ink">
-          Kho tài liệu <span className="text-lms-accent">Ngữ văn</span>
+          Kho tài liệu <span className="text-lms-accent">học tập</span>
         </h2>
         <p className="mt-2 mb-[18px] max-w-[520px] text-sm leading-normal text-lms-sub">
           Tìm tài liệu, đề thi, sơ đồ tư duy và bài giảng để đọc, ôn tập và làm bài.
@@ -798,7 +798,7 @@ export function SDocs({ p, t, go }) {
 }
 
 const DOC_BODY = [
-  'Tài liệu này tổng hợp những nội dung trọng tâm, được biên soạn bám sát chương trình Tiếng Việt Tiểu học hiện hành.',
+  'Tài liệu này tổng hợp những nội dung trọng tâm, được biên soạn bám sát chương trình hiện hành.',
   'Phần đầu giới thiệu khái quát bài học, kèm sơ đồ hệ thống ý đơn giản, nhiều màu sắc để các em dễ ghi nhớ.',
   'Phần thân hướng dẫn từng bước, có ví dụ minh hoạ gần gũi và gợi ý cách viết đoạn văn theo cấu trúc mở — thân — kết.',
   'Cuối tài liệu là bộ câu hỏi tự luyện kèm đáp án, giúp các em tự kiểm tra mức độ nắm bài trước khi làm bài tập trên hệ thống.',
@@ -883,7 +883,7 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
       <div className={`${cardClass(30)} mb-[22px]`}>
         {d.desc
           ? <div className="lms-rich text-[15.5px] leading-[1.9] text-lms-ink" dangerouslySetInnerHTML={{ __html: d.desc }} />
-          : <p className="m-0 text-[15.5px] leading-[1.9] text-lms-sub">Tài liệu được chia sẻ từ kho học liệu Ngữ văn. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
+          : <p className="m-0 text-[15.5px] leading-[1.9] text-lms-sub">Tài liệu được chia sẻ từ kho học liệu. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
         <div className="mt-[18px] flex flex-wrap gap-2.5">
           <Btn p={p} variant="soft" icon="assign" onClick={() => setRoute('s-tasks')}>Làm bài tập liên quan</Btn>
           <Btn p={p} variant="ghost" icon="rubric" onClick={() => setRoute('s-selfcheck')}>Tự đánh giá</Btn>

@@ -54,9 +54,9 @@ export function SBlog({ p, t, go }) {
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-9 pb-2">
       <div className="reveal mb-2">
         <div className="mb-2 font-mono text-[11.5px] tracking-wide text-lms-accent">BLOG · CHIA SẺ HỌC THUẬT</div>
-        <h1 className="m-0 font-lms-heading text-[34px] font-extrabold tracking-[-0.8px] text-lms-ink">Bài viết & mẹo học Văn</h1>
+        <h1 className="m-0 font-lms-heading text-[34px] font-extrabold tracking-[-0.8px] text-lms-ink">Bài viết & mẹo học tập</h1>
         <p className="mt-2.5 mb-0 w-full text-[15px] leading-relaxed text-lms-sub">
-          Những bài viết về phương pháp học, kỹ năng viết văn và luyện từ — do thầy cô biên soạn chia sẻ.
+          Những bài viết về phương pháp học tập và kỹ năng học tốt các môn — do thầy cô biên soạn chia sẻ.
         </p>
       </div>
 
