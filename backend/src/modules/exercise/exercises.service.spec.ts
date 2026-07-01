@@ -92,9 +92,6 @@ describe('ExercisesService', () => {
     expect(service).toBeDefined();
   });
 
-  // ---------------------------------------------------------------------------
-  // list() query building
-  // ---------------------------------------------------------------------------
   describe('list query building', () => {
     beforeEach(() => {
       exerciseModel.find.mockReturnValue(leanChain([]));
@@ -141,8 +138,6 @@ describe('ExercisesService', () => {
       exerciseModel.find.mockReturnValue(leanChain([{ _id: e1 }]));
       exerciseModel.countDocuments.mockResolvedValue(1);
       exerciseQuestionModel.aggregate.mockResolvedValue([{ _id: e1, n: 4 }]);
-      // attemptModel.aggregate is called twice: first for attempt stats, then for
-      // the graded count (joined attempts → submissions, grouped by exerciseId).
       attemptModel.aggregate
         .mockResolvedValueOnce([{ _id: e1, attempts: 9, learners: 3, submitted: 6 }])
         .mockResolvedValueOnce([{ _id: e1, graded: 2 }]);
@@ -178,9 +173,6 @@ describe('ExercisesService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // create
-  // ---------------------------------------------------------------------------
   describe('create', () => {
     const stubFindOnePipeline = (newId: any, userId: string) => {
       exerciseModel.findById.mockReturnValue(leanChain({ _id: newId, userId: new Types.ObjectId(userId) }));
@@ -203,9 +195,6 @@ describe('ExercisesService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // update
-  // ---------------------------------------------------------------------------
   describe('update', () => {
     it('applies a simple patch and returns the updated doc', async () => {
       exerciseModel.findOneAndUpdate.mockReturnValue(leanChain({ _id: oid(), title: 'renamed' }));

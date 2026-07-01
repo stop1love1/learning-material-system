@@ -1,5 +1,4 @@
 'use client';
-// GET /rubrics embeds levels + criterions per row — no per-id detail fetch (no N+1).
 import { DB } from '@/app/store/store';
 import { rubricsApi } from '@/app/lib/api';
 

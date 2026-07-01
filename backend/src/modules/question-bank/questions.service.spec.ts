@@ -16,7 +16,6 @@ import { SortQuestion } from '../../schemas/question-bank/sort-question.schema';
 import { TableSelectionQuestion } from '../../schemas/question-bank/table-selection-question.schema';
 import { QuestionModel, QuestionType, UserRole } from '../../enums';
 
-// ---- Test helpers ----------------------------------------------------------
 
 // convertStringToObjectId() validates with mongoose, so ids MUST be valid hex.
 const oid = () => new Types.ObjectId().toHexString();

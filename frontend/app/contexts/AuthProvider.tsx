@@ -40,8 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setReady(true));
   }, []);
 
-  // Auto-logout when any authenticated request gets a 401 (token expired/revoked).
-  // client.ts already clears the token; here we drop the user and prompt re-login.
+  // client.ts clears token on 401; drop user and prompt re-login.
   React.useEffect(() => {
     const onUnauthorized = () => {
       setUser((u) => {
@@ -62,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       devOtp?: string;
     };
     if (res.needs2fa) {
-      // Org-wide 2FA on: don't set token/user; the modal switches to the OTP step.
       return { needs2fa: true, email: res.email, devOtp: res.devOtp };
     }
     setToken(res.accessToken!);
@@ -79,8 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = React.useCallback(async (name: string, email: string, password: string) => {
-    // No auto-login: the backend creates an unverified account and emails a
-    // verification link. The modal stays open and shows a "check your email" view.
     const res = await authApi.register(name, email, password);
     return { needsVerification: res.needsVerification, devVerifyLink: res.devVerifyLink };
   }, []);
@@ -93,7 +89,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = React.useCallback(() => {
-    // Best-effort server-side token revocation; never block the UI on it.
     authApi.logout().catch(() => {});
     clearToken();
     setUser(null);

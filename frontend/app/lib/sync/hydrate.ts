@@ -40,7 +40,7 @@ const BY_ROUTE: Record<string, Loader[]> = {
   notify: [loadNotifications],
 };
 
-/** Fetch the live collections needed by `routeKey` into DB, then re-render. */
+/** Load live collections for `routeKey` into DB, then bump subscribers. */
 export async function hydrateFor(routeKey?: string): Promise<void> {
   const loaders = routeKey ? BY_ROUTE[routeKey] : undefined;
   if (!loaders?.length) return;

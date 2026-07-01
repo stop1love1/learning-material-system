@@ -3,15 +3,13 @@ import { DB } from '@/app/store/store';
 import { articlesApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
-/** Map one /articles record into the screen's article shape (loader + hook share this). */
+/** Map /articles record → screen shape (shared by loader + hook). */
 export function mapArticle(a: Record<string, any>): Record<string, any> {
   return {
     id: a._id,
     title: a.title,
     excerpt: a.excerpt ?? '',
     cat: a.category ?? '',
-    // userId is a raw ObjectId today; if the backend populates it to { name },
-    // we read the name. Falls back to '—' otherwise.
     author: a.userId?.name ?? '—',
     date: formatDateVi(a.createdAt),
     read: (a.readMinutes ?? 4) + ' phút',

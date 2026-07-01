@@ -8,9 +8,7 @@ import { LmsTweaks } from '@/app/components/LmsTweaks';
 import { ServerStatusBanner } from '@/app/components/ServerStatusBanner';
 
 export function LmsProviders({ children }: { children: React.ReactNode }) {
-  // GoogleOAuthProvider must sit ABOVE AuthProvider/LoginModal (the Google button lives
-  // inside LoginModal and needs this context). Only mount it when a client id is configured
-  // — the provider throws on an empty clientId.
+  // GoogleOAuthProvider throws on empty clientId; must wrap LoginModal.
   const gid = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const tree = (
     <ThemeProvider>

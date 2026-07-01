@@ -14,7 +14,6 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { typeMeta } from '@/app/screens/bank';
 import { DOC_TYPE_META } from '@/app/screens/resources';
 
-// Backend ExerciseType / ExerciseStatus enum values → Vietnamese labels for the filters.
 export const EX_TYPE_OPTS = [
   { value: 'quiz', label: 'Trắc nghiệm' },
   { value: 'essay', label: 'Tự luận' },
@@ -33,7 +32,6 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
   const canManage = !!auth?.isStaff;
   const folders = (DB as any).EX_FOLDERS || [];
 
-  // Server-side paginated exercises list (keyword + folder + type + status filters).
   const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
   const { records: list, loading, error } = paged;
 
@@ -41,7 +39,6 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
 
   const onSelectFolder = (id: string | null) => { setSelFolder(id); paged.setFilter('folderId', id); };
 
-  // Per-folder exercise tally for the tree badges (from the sidebar DB snapshot).
   const folderCounts: Record<string, number> = {};
   for (const a of DB.ASSIGNMENTS) {
     const fid = a.folderId ? String(a.folderId) : null;
@@ -110,8 +107,6 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
           const tone = a.status === 'closing' ? p.warn : a.status === 'done' ? p.ok : p.accent;
           const toneBg = a.status === 'closing' ? 'bg-lms-warn/12' : a.status === 'done' ? 'bg-lms-ok/12' : 'bg-lms-accent/12';
           const toneText = a.status === 'closing' ? 'text-lms-warn' : a.status === 'done' ? 'text-lms-ok' : 'text-lms-accent';
-          // Tiến độ CHẤM (đã chấm / đã nộp). Không còn sĩ số lớp làm mẫu số tổng nên
-          // thanh tiến độ thể hiện mức độ chấm xong trên số bài đã nộp.
           const pct = a.submitted ? Math.round((a.graded / a.submitted) * 100) : 0;
           return (
             <div key={a.id} className={`lms-card ${cardClass(20)} flex cursor-pointer items-center gap-[18px]`} onClick={() => go('grade-one', { assignment: a.id })}>
@@ -159,24 +154,16 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const [step, setStep] = React.useState(0);
   const [title, setTitle] = React.useState('');
   const [kind, setKind] = React.useState('quiz');
-  // Start with nothing pre-selected — the teacher picks real questions/docs from
-  // the (live) bank. Seeding mock ids ('q1'/'q2') made the attach-question step
-  // POST non-existent ids → 400s on publish.
   const [picked, setPicked] = React.useState<string[]>([]);
   const [docs, setDocs] = React.useState<string[]>([]);
   const [points, setPoints] = React.useState(10);
   const [rubric, setRubric] = React.useState('none');
-  // HẠN NỘP as an <input type="datetime-local"> value (yyyy-MM-ddTHH:mm) so it binds
-  // to real state and serialises to a proper ISO dueDate on publish.
   const [due, setDue] = React.useState('2026-06-26T23:59');
   const [instructions, setInstructions] = React.useState('');
-  // 4 cài đặt giao bài (controlled) → allowLateSubmit / shuffleQuestions / showScoreAfter / notifyOnAssign.
   const [allowLate, setAllowLate] = React.useState(false);
   const [shuffle, setShuffle] = React.useState(true);
   const [showScore, setShowScore] = React.useState(false);
   const [notify, setNotify] = React.useState(true);
-  // Default to the folder selected in the tree sidebar (passed via ctx by ScreenHost),
-  // falling back to "no folder". Lets newly-created exercises land in "Kho đề thi" folders.
   const [folder, setFolder] = React.useState<string>(ctx?.folderId ? String(ctx.folderId) : '');
   const exFolders = (DB as any).EX_FOLDERS || [];
 
@@ -184,18 +171,14 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
   const visible = (s) => wizard ? step === s : true;
 
-  // datetime-local (yyyy-MM-ddTHH:mm) → ISO string for dueDate; '' when unset.
   const dueIso = () => {
     if (!due) return undefined;
     const d = new Date(due);
     return isNaN(d.getTime()) ? undefined : d.toISOString();
   };
 
-  // Gom toàn bộ cài đặt wizard thành payload create/update exercise. `status` quyết
-  // định 'draft' (Lưu nháp) hay 'open' (Đăng / giao bài).
   const buildBody = (status: string) => {
     const body: any = {
-      // kind ('quiz'|'essay'|'file') already matches the ExerciseType enum.
       title: title || 'Bài luyện tập mới',
       type: kind,
       points: Number(points) || 10,
@@ -210,13 +193,10 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
     if (rubric && rubric !== 'none') body.rubricId = rubric;
     const iso = dueIso();
     if (iso) body.dueDate = iso;
-    // Tài liệu đính kèm (DB.DOCS[].id là FileItem _id) → materialIds, áp dụng cho
-    // mọi hình thức (kể cả tự luận / nộp tệp, không chỉ trắc nghiệm).
     if (docs.length) body.materialIds = docs;
     return body;
   };
 
-  // Tạo exercise rồi (chỉ với hình thức trắc nghiệm) đính câu hỏi đã chọn.
   const save = async (status: string) => {
     const body = buildBody(status);
     try {
@@ -224,12 +204,11 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
       const exId = ex?._id ?? ex?.id;
       if (exId && kind === 'quiz') {
         for (const questionId of picked) {
-          try { await exercisesApi.addQuestion(exId, { questionId }); } catch { /* skip unknown/mock ids */ }
+          try { await exercisesApi.addQuestion(exId, { questionId }); } catch { /* skip invalid ids */ }
         }
       }
       await hydrateFor('assignments');
     } catch {
-      // offline / logged-out fallback: keep the mock store behaviour
       const typeLabel = kind === 'quiz' ? 'Trắc nghiệm' : kind === 'essay' ? 'Tự luận' : 'Nộp tệp';
       LMS && LMS.addAssignment({ title: title || 'Bài luyện tập mới', type: typeLabel, due: 'Sắp tới', dueIn: status === 'draft' ? 'Bản nháp' : 'Mới đăng', points: Number(points) || 10, rubric: rubric !== 'none' ? rubric : undefined, questions: kind === 'quiz' ? picked.length : docs.length });
     } finally {

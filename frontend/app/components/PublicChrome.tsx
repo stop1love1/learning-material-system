@@ -81,9 +81,8 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const push = React.useCallback((href: string) => router.push(href), [router]);
-  useLMS(); // re-render when live data (e.g. real folder names) loads
+  useLMS();
 
-  // Footer "Chủ đề" comes from the real library folders, not a hardcoded list.
   const topics = (DB.DOC_FOLDERS as string[])
     .filter((f) => f && f !== 'Tất cả')
     .slice(0, 5)

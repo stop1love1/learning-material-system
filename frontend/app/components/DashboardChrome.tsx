@@ -10,7 +10,6 @@ import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { notificationsApi } from '@/app/lib/api';
 
-// Khoảng thời gian tương đối ngắn gọn cho thông báo (vd: "5 phút trước").
 function timeAgoVi(iso?: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -23,8 +22,6 @@ function timeAgoVi(iso?: string): string {
   return d.toLocaleDateString('vi-VN');
 }
 
-// Chuông thông báo cá nhân: nạp /notifications/me khi mở khu vực quản trị, badge = số
-// chưa đọc THẬT. Best-effort — chưa đăng nhập / API lỗi → 0 + danh sách rỗng (im lặng).
 function NotifyBell({ p }: { p: any }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -36,7 +33,7 @@ function NotifyBell({ p }: { p: any }) {
       const list: any[] = Array.isArray(res) ? res : res?.records ?? [];
       setItems(list);
     } catch {
-      setItems([]); // logged-out / API down → empty, no error surfaced
+      setItems([]);
     }
   }, []);
 

@@ -1,5 +1,5 @@
 'use client';
-// List endpoint has no per-answer body — text/wordcount filled when opening GET /attempts/:id/result.
+// List endpoint omits answer bodies; detail via GET /attempts/:id/result.
 import { DB } from '@/app/store/store';
 import { attemptsApi } from '@/app/lib/api';
 
@@ -21,14 +21,11 @@ function codeFrom(student: any): string {
   return s.length > 6 ? `HS${s.slice(-4).toUpperCase()}` : `HS${s.toUpperCase()}`;
 }
 
-// Đếm số chữ (token tách bởi khoảng trắng) cho phần bài làm tự luận.
 function wordCount(text: string): number {
   const t = (text || '').trim();
   return t ? t.split(/\s+/).length : 0;
 }
 
-// Trích phần văn bản học viên làm từ 1 đáp án (shape tùy loại câu hỏi).
-//  essay: { text, fileUrls[] } · fill: string[] · single: number · ...
 function answerText(answer: any): string {
   if (answer == null) return '';
   if (typeof answer === 'string') return answer;
@@ -60,7 +57,6 @@ export async function loadSubmissions(): Promise<void> {
       return {
         id: a._id,
         attemptId: a._id,
-        // assignmentId must line up with DB.ASSIGNMENTS[].id (= exercise _id).
         assignmentId: ex?._id ?? ex ?? '',
         studentId: student?._id ?? '',
         name: student?.name ?? 'Học viên ẩn danh',
@@ -68,8 +64,6 @@ export async function loadSubmissions(): Promise<void> {
         at: atVi(a.submittedAt),
         status: graded ? 'graded' : 'ungraded',
         ...(graded && score != null ? { score } : {}),
-        // Per-answer body lives behind GET /attempts/:id/result; the queue has no text.
-        // Filled lazily by loadSubmissionDetail() when the teacher opens the submission.
         loaded: false,
         wordcount: 0,
         text: '',
@@ -81,9 +75,7 @@ export async function loadSubmissions(): Promise<void> {
   }
 }
 
-// Tải bài làm THẬT của 1 lượt nộp (GET /attempts/:id/result) rồi gắn vào bản ghi
-// trong DB.SUBMISSIONS: text/wordcount (gộp các câu) + mảng questions per-câu để
-// gửi điểm theo từng câu. Best-effort — nuốt lỗi (API down / không có quyền).
+/** Fetch attempt result and merge text/questions into DB.SUBMISSIONS (best-effort). */
 export async function loadSubmissionDetail(attemptId: string): Promise<void> {
   if (!attemptId) return;
   try {
@@ -98,7 +90,6 @@ export async function loadSubmissionDetail(attemptId: string): Promise<void> {
       isCorrect: typeof sq.isCorrect === 'boolean' ? sq.isCorrect : null,
       feedback: sq.feedback ?? '',
     }));
-    // Gộp toàn bộ phần bài làm có nội dung (chủ yếu là câu tự luận) để hiển thị.
     const text = questions.map((q) => q.text).filter(Boolean).join('\n\n');
 
     const list: any[] = (DB as any).SUBMISSIONS ?? [];
@@ -111,6 +102,6 @@ export async function loadSubmissionDetail(attemptId: string): Promise<void> {
       if (submission?.feedback != null) rec.feedback = submission.feedback;
     }
   } catch {
-    // không tải được → để nguyên (text rỗng), không chặn chấm điểm.
+    /* best-effort */
   }
 }

@@ -120,14 +120,12 @@ export function AOverview({ p, t }) {
 }
 
 
-// Backend role enum ↔ Vietnamese label used by the admin two-bucket model.
 const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Người dùng', student: 'Người dùng' };
 const fmtJoined = (d) => {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('vi-VN'); } catch { return '—'; }
 };
 
-// Backend UserRole / UserStatus enum values → labels for the filter dropdowns.
 const ROLE_OPTS = [
   { value: 'student', label: 'Học viên' },
   { value: 'teacher', label: 'Giáo viên' },
@@ -142,12 +140,10 @@ export function AUsers({ p, t }) {
   const [busy, setBusy] = React.useState(false);
   const [modal, setModal] = React.useState(null);
 
-  // Server-side paginated users list (keyword + role + status filters).
   const paged = usePagedResource<any>({ fetcher: usersApi.list, mapper: mapUser });
   const { records: list, loading, error } = paged;
 
   const roleColor = (r) => ({ 'Người dùng': p.accent, 'Quản trị viên': p.warn }[r] || p.sub);
-  // KPI cards: total comes from the list envelope; admin count from a dedicated query.
   const [nAdmin, setNAdmin] = React.useState(0);
   React.useEffect(() => {
     usersApi.list({ role: 'admin', pageSize: 1 }).then((r: any) => setNAdmin(r?.total ?? 0)).catch(() => {});
@@ -314,15 +310,12 @@ function UserFormModal({ p, mode, user, busy, onClose, onSave }) {
   );
 }
 
-// yyyy-mm-dd from a Date, for download filenames (handlers are client-only).
 const isoDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 export function AReports({ p, t }) {
   const r = DB.ADMIN_REPORTS || {};
   const [exporting, setExporting] = React.useState('');
 
-  // Fetch the live reports payload (falls back to the in-memory DB slice if the
-  // API is unavailable / not authed) and hand it to a consumer.
   const withReports = React.useCallback(async (fn) => {
     let data = null;
     try { data = await statsApi.reports(); } catch { /* fall back to DB below */ }
@@ -335,10 +328,6 @@ export function AReports({ p, t }) {
     finally { setExporting(''); }
   };
 
-  // Each card maps to a slice of the /stats/reports payload + CSV column set.
-  // The payload only returns: distribution, perExercise, weeklySeries, avgScore,
-  // submissionRate, gradedCount, totalSubmissions — so every export below pulls
-  // from a field that actually exists.
   const REPORT_CARDS = [
     {
       key: 'distribution', label: 'Phân bố điểm bài nộp', file: 'phan-bo-diem',
@@ -352,7 +341,6 @@ export function AReports({ p, t }) {
     },
     {
       key: 'summary', label: 'Tổng quan chấm bài', file: 'tong-quan-cham-bai',
-      // Scalar metrics → a single summary row (key/value) so the CSV is non-empty.
       pick: (d) => [
         { metric: 'Tổng bài nộp', value: d?.totalSubmissions ?? 0 },
         { metric: 'Đã chấm', value: d?.gradedCount ?? 0 },
@@ -435,10 +423,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const setT = setTweak || (() => {});
   const [sec, setSec] = React.useState('appearance');
 
-  // Live system settings (org + misc) loaded from settingsApi.get; appearance
-  // stays driven by the theme tweaks (setTweak) for the instant live preview.
   const ORG_DEFAULTS = { name: 'Vườn Văn', domain: 'vuonvan.edu.vn', timezone: 'hcm' };
-  // backend stores IANA tz; map to/from the design's single 'hcm' option.
   const tzToOpt = (tz) => (tz === 'Asia/Ho_Chi_Minh' || !tz ? 'hcm' : tz);
   const optToTz = (o) => (o === 'hcm' ? 'Asia/Ho_Chi_Minh' : o);
   const [org, setOrg] = React.useState(ORG_DEFAULTS);
@@ -449,7 +434,6 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [seo, setSeo] = React.useState({ title: '', description: '', keywords: '', ogImage: '' });
   const [logoUrl, setLogoUrl] = React.useState('');
 
-  // Sections that now persist to the backend (academic / security / notifications / integration / data).
   const [academic, setAcademic] = React.useState({ scoreScale: 10, passThreshold: 5, rounding: 'half', allowResubmit: true, showScoreImmediately: true });
   const [security, setSecurity] = React.useState({ twoFactor: true, passwordRotationDays: 0, lockoutThreshold: 5, allowSelfRegister: true, ssoEnabled: true });
   const [notifications, setNotifications] = React.useState({ emailOnSubmit: true, remindUngraded: true, weeklyDigest: false });
@@ -485,7 +469,6 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     return () => { alive = false; };
   }, []);
 
-  // Persist a single settings group; reuses the org section's saved/saving banner.
   const saveGroup = React.useCallback(async (group) => {
     setSaving(true);
     try {
@@ -498,7 +481,6 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     setSaving(false);
   }, []);
 
-  // Controlled on/off toggle (shared ToggleRow is uncontrolled, so we use a local one for persisted settings).
   const Toggle = ({ label, value, onChange }) => (
     <div className="flex items-center justify-between rounded-xl border border-lms-line bg-lms-raise px-3.5 py-[11px]">
       <span className="text-[13.5px] text-lms-ink">{label}</span>
@@ -509,7 +491,6 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     </div>
   );
 
-  // Save row reused by the persisted sections (academic/security/notifications/integration/data).
   const SaveRow = ({ onSave }) => (
     <div className="mt-5 flex items-center justify-end gap-3 border-t border-lms-line-soft pt-4">
       {saved && (

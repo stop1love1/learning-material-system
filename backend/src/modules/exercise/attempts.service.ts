@@ -50,7 +50,6 @@ export class AttemptsService {
     private readonly mail: MailService,
   ) {}
 
-  /** Đọc nhóm `academic` từ settings (system). Đọc phòng thủ với mặc định hợp lý. */
   private async getAcademicPolicy(): Promise<AcademicPolicy> {
     const defaults: AcademicPolicy = {
       scoreScale: 10,
@@ -75,7 +74,6 @@ export class AttemptsService {
     }
   }
 
-  /** Đọc 1 cờ thông báo từ settings (mặc định true). */
   private async getEmailOnSubmit(): Promise<boolean> {
     try {
       const doc = await this.settingsModel.findOne({ key: 'system' }).select('notifications').lean();
@@ -86,19 +84,12 @@ export class AttemptsService {
     }
   }
 
-  /**
-   * Áp chính sách điểm: clamp [0, scoreScale], làm tròn theo rounding, và tính isPassed.
-   * `raw` là điểm đã ở thang scoreScale (caller tự scale nếu nguồn là count/percent).
-   */
   private applyScorePolicy(raw: number, policy: AcademicPolicy): { score: number; isPassed: boolean } {
     let score = raw;
     if (!Number.isFinite(score)) score = 0;
-    // (a) clamp
     score = Math.max(0, Math.min(policy.scoreScale, score));
-    // (b) round
     if (policy.rounding === 'half') score = Math.round(score * 2) / 2;
     else if (policy.rounding === 'integer') score = Math.round(score);
-    // (c) pass/fail
     const isPassed = score >= policy.passThreshold;
     return { score, isPassed };
   }
@@ -111,7 +102,7 @@ export class AttemptsService {
    */
   private gradeObjective(question: any, answer: unknown): boolean | null {
     const detail = question?.questionDetail;
-    if (!detail) return null; // thiếu đáp án gốc → chờ chấm tay
+    if (!detail) return null;
     const type = question.type;
 
     switch (type) {
@@ -133,7 +124,6 @@ export class AttemptsService {
         return answer === detail.isCorrect;
       }
       case QuestionType.Fill: {
-        // ShortAnswer: answer = string | string[]; đúng nếu khớp BẤT KỲ đáp án nào.
         const accepted: string[] = Array.isArray(detail.answers) ? detail.answers : [];
         const given = Array.isArray(answer) ? answer : [answer];
         const mode = detail.matchMode;
@@ -163,7 +153,6 @@ export class AttemptsService {
         return correctAnswers.every((c, i) => Boolean(answer[i]) === c);
       }
       case QuestionType.Match: {
-        // pairs = [{left,right}]. Đáp án học viên: mảng [{left,right}] hoặc map {left:right}.
         const pairs: { left: string; right: string }[] = Array.isArray(detail.pairs)
           ? detail.pairs
           : [];
@@ -173,11 +162,10 @@ export class AttemptsService {
         return pairs.every((p) => givenMap.get(String(p.left)) === String(p.right));
       }
       default:
-        return null; // loại không xác định → chờ chấm tay
+        return null;
     }
   }
 
-  /** answer → chỉ số (number) hoặc null. Hỗ trợ số hoặc chuỗi số. */
   private toIndex(answer: unknown): number | null {
     if (typeof answer === 'number' && Number.isInteger(answer)) return answer;
     if (typeof answer === 'string' && answer.trim() !== '' && Number.isInteger(Number(answer))) {
@@ -186,7 +174,6 @@ export class AttemptsService {
     return null;
   }
 
-  /** answer → mảng chỉ số, hoặc null nếu không phải mảng hợp lệ. */
   private toIndexArray(answer: unknown): number[] | null {
     if (!Array.isArray(answer)) return null;
     const out: number[] = [];
@@ -207,7 +194,6 @@ export class AttemptsService {
     return null;
   }
 
-  /** So khớp 2 tập chỉ số không quan tâm thứ tự (loại trùng). */
   private sameNumberSet(a: number[], b: number[]): boolean {
     const sa = new Set(a);
     const sb = new Set(b);
@@ -216,28 +202,23 @@ export class AttemptsService {
     return true;
   }
 
-  /** So khớp 2 dãy chỉ số theo đúng thứ tự. */
   private sameNumberSeq(a: number[], b: number[]): boolean {
     if (a.length !== b.length) return false;
     return a.every((x, i) => x === b[i]);
   }
 
-  /** So khớp văn bản theo matchMode (exact / caseless / trimmed). */
   private matchText(expected: string, given: unknown, mode: string): boolean {
     if (typeof given !== 'string') return false;
     const norm = (s: string) => {
       let v = s;
       if (mode === 'trimmed') v = v.trim();
       else if (mode === 'caseless') v = v.trim().toLowerCase();
-      else v = v; // exact
       return v;
     };
-    // exact: so sánh nguyên trạng; các mode khác chuẩn hoá cả 2 vế.
     if (mode === 'exact') return expected === given;
     return norm(expected) === norm(given);
   }
 
-  /** Chuẩn hoá đáp án ghép đôi về Map(left→right). */
   private toMatchMap(answer: unknown): Map<string, string> | null {
     const map = new Map<string, string>();
     if (Array.isArray(answer)) {
@@ -299,14 +280,11 @@ export class AttemptsService {
 
     const policy = await this.getAcademicPolicy();
 
-    // Chặn nộp LẠI chính lượt này nếu đã nộp rồi và không cho phép nộp lại.
-    // (Trước đây chỉ chặn các lượt KHÁC → re-POST cùng attempt vẫn tính lại điểm.)
+    // Chặn nộp lại lượt đã nộp khi không cho phép nộp lại (re-POST cùng attempt).
     if (attempt.submittedAt && !policy.allowResubmit) {
       throw new ConflictException('Lượt làm này đã nộp và không cho phép nộp lại.');
     }
 
-    // Respect allowResubmit: nếu tắt và học viên đã có lượt khác (cùng exercise) đã nộp,
-    // chặn nộp mới. Bỏ qua chính lượt hiện tại (cho phép cập nhật lại bài chưa nộp lần nào).
     if (!policy.allowResubmit) {
       const priorSubmitted = await this.attemptModel.exists({
         exerciseId: attempt.exerciseId,
@@ -319,15 +297,11 @@ export class AttemptsService {
       }
     }
 
-    // Enforce maxAttempts: tổng số lượt đã nộp (cùng exercise) không vượt giới hạn.
-    // Lượt hiện tại tính vào nếu chưa nộp lần nào.
     const exerciseDoc = await this.exerciseModel
       .findById(attempt.exerciseId)
       .select('maxAttempts dueDate allowLateSubmit showScoreAfter')
       .lean();
 
-    // Hạn nộp: nếu đã quá dueDate và bài KHÔNG cho nộp muộn → từ chối nộp.
-    // (allowLateSubmit = true thì cho qua; không có field "late" riêng nên không đánh dấu.)
     if (exerciseDoc?.dueDate && !exerciseDoc.allowLateSubmit) {
       const due = new Date(exerciseDoc.dueDate).getTime();
       if (Number.isFinite(due) && Date.now() > due) {
@@ -347,8 +321,7 @@ export class AttemptsService {
       throw new ConflictException(`Bạn đã dùng hết ${maxAttempts} lượt nộp cho bài tập này`);
     }
 
-    // SERVER-SIDE GRADING. Tải các câu hỏi của bài tập kèm bản ghi chi tiết đa hình
-    // (questionDetail / questionModel) — KHÔNG tin ans.isCorrect / ans.grades từ client.
+    // SERVER-SIDE GRADING — không tin ans.isCorrect / ans.grades từ client.
     const links = await this.exerciseQuestionModel
       .find({ exerciseId: attempt.exerciseId })
       .select('questionId grades')
@@ -359,7 +332,6 @@ export class AttemptsService {
       .populate('questionDetail')
       .lean();
     const questionMap = new Map(questions.map((q: any) => [String(q._id), q]));
-    // Điểm tối đa mỗi câu (mặc định 1đ nếu link.grades chưa đặt).
     const pointsMap = new Map(
       links.map((l: any) => [String(l.questionId), l.grades != null ? l.grades : 1]),
     );
@@ -383,7 +355,7 @@ export class AttemptsService {
       const maxPoints = pointsMap.get(key) ?? 1;
       const answer = ans.answer ?? null;
 
-      // Tính isCorrect/grades phía server theo đáp án ĐÃ LƯU; bỏ qua giá trị client.
+      // Tính isCorrect/grades phía server; bỏ qua giá trị client.
       let isCorrect: boolean | null = null;
       let grades: number | null = null;
       if (!isEssay && question) {
@@ -413,12 +385,10 @@ export class AttemptsService {
 
       if (isEssay) {
         numberOfEssays += 1;
-        // Tự luận luôn chấm tay → chờ giáo viên.
         waitingGrades += 1;
       } else if (grades !== null) {
         multipleChoiceGrades += grades;
       } else {
-        // Câu khách quan không chấm được tự động (thiếu detail/đáp án) → chờ chấm tay.
         waitingGrades += 1;
       }
     }
@@ -435,9 +405,6 @@ export class AttemptsService {
       submittedAt: new Date(),
     };
 
-    // Auto-graded quiz: nếu không còn câu chờ chấm tay (waitingGrades === 0) thì điểm
-    // đã là cuối cùng → scale raw lên scoreScale, áp policy và lưu totalScore/percent/isPassed.
-    // Tổng điểm thô tối đa = sum(grades) của các câu trong bài (mặc định 1đ/câu nếu chưa đặt).
     if (waitingGrades === 0) {
       const rawEarned = (multipleChoiceGrades || 0) + (essayGrades || 0);
       const maxRaw = links.reduce((sum, l: any) => sum + (l.grades != null ? l.grades : 1), 0);
@@ -466,12 +433,9 @@ export class AttemptsService {
       { isFinished: true, endedAt: new Date() },
     );
 
-    // Thông báo email cho chủ bài tập (best-effort, không bao giờ làm hỏng submit).
     await this.notifyOwnerOnSubmit(attempt.exerciseId, studentId).catch(() => undefined);
 
-    // showScoreAfter (bài) hoặc showScoreImmediately (hệ thống) = false → KHÔNG lộ
-    // điểm/đúng-sai ngay khi nộp; chỉ xác nhận "đã nộp, chờ công bố". Mặc định (true)
-    // giữ nguyên hành vi cũ.
+    // showScoreAfter / showScoreImmediately = false → ẩn điểm khi nộp.
     const revealScore = (exerciseDoc?.showScoreAfter ?? true) && policy.showScoreImmediately;
     const result = submission.toObject() as any;
     if (!revealScore) {
@@ -480,10 +444,7 @@ export class AttemptsService {
     return result;
   }
 
-  /**
-   * Ẩn điểm/đúng-sai khỏi bản ghi submission trả về (khi chưa được phép công bố).
-   * Trả về trạng thái "đã nộp, chờ công bố" — giữ các trường định danh/thời gian.
-   */
+  /** Ẩn điểm/đúng-sai khỏi submission trả về khi chưa được phép công bố. */
   private withheldSubmission(submission: any): any {
     if (!submission || typeof submission !== 'object') return submission;
     const {
@@ -500,7 +461,6 @@ export class AttemptsService {
     return { ...rest, scoreWithheld: true };
   }
 
-  /** Gửi email cho người tạo bài tập khi có bài nộp (nếu notifications.emailOnSubmit bật). */
   private async notifyOwnerOnSubmit(exerciseId: Types.ObjectId, studentId: Types.ObjectId): Promise<void> {
     try {
       const enabled = await this.getEmailOnSubmit();
@@ -531,7 +491,6 @@ export class AttemptsService {
     const attempt = await this.attemptModel.findById(id).lean();
     if (!attempt) throw new NotFoundException('Không tìm thấy lượt làm');
 
-    // Allow the owning student OR the exercise's author/teacher.
     const isOwner = attempt.studentId && attempt.studentId.toString() === userId;
     const exercise = await this.exerciseModel
       .findById(attempt.exerciseId)
@@ -545,9 +504,7 @@ export class AttemptsService {
       this.studentQuestionModel.find({ attemptId: id }).lean(),
     ]);
 
-    // Với HỌC VIÊN (không phải tác giả), nếu bài đặt showScoreAfter=false hoặc hệ thống
-    // showScoreImmediately=false thì ẩn điểm/đúng-sai cho tới khi được công bố. Tác giả/
-    // giáo viên luôn xem đầy đủ để chấm.
+    // Học viên (không phải tác giả): ẩn điểm khi showScoreAfter/showScoreImmediately tắt.
     if (!isAuthor && submission) {
       const policy = await this.getAcademicPolicy();
       const revealScore = (exercise?.showScoreAfter ?? true) && policy.showScoreImmediately;
@@ -588,7 +545,6 @@ export class AttemptsService {
       .select('_id')
       .lean();
     const essayIds = new Set(essayDocs.map((q) => String(q._id)));
-    // Tổng điểm thô tối đa của bài (mặc định 1đ/câu) — để quy đổi điểm cuối.
     const maxRaw = links.reduce((sum, l: any) => sum + (l.grades != null ? l.grades : 1), 0);
 
     let correct = 0;
@@ -624,8 +580,6 @@ export class AttemptsService {
       numberOfEssays,
       multipleChoiceGrades,
       essayGrades,
-      // Chỉ coi là đã chấm xong khi không còn câu chờ chấm tay — nếu không, lượt
-      // vẫn phải nằm trong danh sách chờ chấm (listForGrading pendingOnly).
       isGraded: waitingGrades === 0,
       gradedBy: convertStringToObjectId(graderId),
       gradedAt: new Date(),
@@ -633,7 +587,6 @@ export class AttemptsService {
 
     const policy = await this.getAcademicPolicy();
     if (dto.totalScore !== undefined) {
-      // Áp chính sách academic lên điểm cuối do giáo viên nhập: clamp/làm tròn + đạt/không đạt.
       const { score, isPassed } = this.applyScorePolicy(dto.totalScore, policy);
       set.totalScore = score;
       set.isPassed = isPassed;
@@ -641,7 +594,6 @@ export class AttemptsService {
         set.percent = maxRaw > 0 ? Math.round((dto.totalScore / policy.scoreScale) * 100) : 0;
       }
     } else if (waitingGrades === 0) {
-      // Không truyền totalScore: tính lại điểm cuối từ điểm từng câu giáo viên đã nhập.
       const rawEarned = (multipleChoiceGrades || 0) + (essayGrades || 0);
       const scaled = maxRaw > 0 ? (rawEarned / maxRaw) * policy.scoreScale : 0;
       const { score, isPassed } = this.applyScorePolicy(scaled, policy);
@@ -671,8 +623,6 @@ export class AttemptsService {
       submittedAt: { $ne: null },
     };
 
-    // pendingOnly: loại các lượt đã có submission đã chấm — đưa vào query TRƯỚC khi
-    // phân trang để total + số bản ghi mỗi trang đều chính xác.
     if (dto.pendingOnly === 'true') {
       const gradedSubs = await this.submissionModel.find({ isGraded: true }).select('attemptId').lean();
       const gradedIds = gradedSubs.map((s: any) => s.attemptId).filter(Boolean);

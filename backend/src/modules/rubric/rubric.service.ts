@@ -26,9 +26,6 @@ export class RubricService {
       ...(safeKeyword ? { name: { $regex: safeKeyword, $options: 'i' } } : {}),
       ...(dto.groupId ? { groupId: convertStringToObjectId(dto.groupId) } : {}),
     };
-    // Embed levels + criterions per row via an aggregation so the frontend list
-    // loader needs no per-id detail fetch. Lookups run only on the page slice
-    // (after $skip/$limit). Output field names match getRubric.
     const pipeline: any[] = [
       { $match: query },
       { $sort: { createdAt: -1 } },

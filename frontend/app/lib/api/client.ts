@@ -41,17 +41,13 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    // fetch only rejects on a network-level failure (server down / unreachable).
     setServerOnline(false);
     throw new ApiError('Network request failed', 0, null);
   }
-  // Got an HTTP response (even an error status) → the server is reachable.
   setServerOnline(true);
 
   const text = await res.text();
-  // Success bodies are usually JSON, but a 2xx may return an empty body or
-  // non-JSON (e.g. an HTML error page from a proxy). Never let a raw
-  // SyntaxError escape — fall back to null so the ApiError envelope stays consistent.
+  // Non-JSON 2xx bodies fall back to null so ApiError stays consistent.
   let data: any = null;
   if (text) {
     try {
@@ -61,9 +57,7 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
     }
   }
   if (!res.ok) {
-    // Auto-logout on 401 — but only when a token was actually sent. A 401 from an
-    // unauthenticated endpoint (login/forgot/reset use { auth:false }) is just a
-    // credential error and must NOT clear the session or loop.
+    // 401 with a sent token → clear session; unauthenticated endpoints must not.
     if (res.status === 401 && auth && token) {
       clearToken();
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('lms:unauthorized'));

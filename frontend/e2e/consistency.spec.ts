@@ -28,7 +28,6 @@ async function waitListSettled(page) {
   await page.waitForTimeout(800);
 }
 
-// ───────────────────────── Criterion 1: totals match ─────────────────────────
 test.describe('1. Totals/counts UI == API', () => {
   test('/bai-viet UI total == /articles API total', async ({ page, request }) => {
     const errs = collectConsoleErrors(page);
@@ -59,7 +58,6 @@ test.describe('1. Totals/counts UI == API', () => {
     const errs = collectConsoleErrors(page);
     const token = await getToken(request);
     const { total: apiT } = await apiTotal(request, '/exercises', {}, token);
-    // /luyen-tap reads exercises with auth; seed token so the list populates.
     await seedAuth(page, token);
     await page.goto('/luyen-tap');
     await waitListSettled(page);
@@ -77,14 +75,12 @@ test.describe('1. Totals/counts UI == API', () => {
     await page.goto('/kho-hoc-lieu');
     await waitListSettled(page);
 
-    // The library screen surfaces the live total on the "Tất cả · N" folder tab
     // (allCount={paged.total}) rather than only in the pagination bar.
     const allTab = page.getByRole('button', { name: /^Tất cả · / });
     await expect(allTab).toBeVisible({ timeout: 15_000 });
     const tabTxt = (await allTab.innerText()).trim();
     const uiT = parseInt((tabTxt.match(/·\s*([\d.,]+)/)?.[1] || '0').replace(/[.,]/g, ''), 10);
 
-    // Public library (SDocs) is intentionally NOT server-paged: it renders the
     // whole DB.DOCS snapshot (loader fetches pageSize:200) with no <Pagination>.
     // So "page-1 items" == all loaded items. We record the count and confirm the
     // UI total equals the API total; the <=pageSize cap does not apply here.
@@ -99,7 +95,6 @@ test.describe('1. Totals/counts UI == API', () => {
   });
 });
 
-// ─────────────────── Criterion 2: filter consistency + page reset ───────────────────
 test.describe('2. Filter consistency UI == API', () => {
   test('/luyen-tap type=quiz filter total matches API', async ({ page, request }) => {
     const errs = collectConsoleErrors(page);
@@ -109,7 +104,6 @@ test.describe('2. Filter consistency UI == API', () => {
     await page.goto('/luyen-tap');
     await waitListSettled(page);
 
-    // Open the "HÌNH THỨC" FilterSelect (antd Select) and pick "Trắc nghiệm" (=quiz).
     const hinhThuc = page.locator('label', { hasText: 'HÌNH THỨC' }).locator('.ant-select');
     await hinhThuc.click();
     await page.locator('.ant-select-dropdown .ant-select-item-option', { hasText: 'Trắc nghiệm' }).click();
@@ -133,7 +127,6 @@ test.describe('2. Filter consistency UI == API', () => {
 
   test('/bai-viet category filter total matches API', async ({ page, request }) => {
     const errs = collectConsoleErrors(page);
-    // Discover an existing category from the API (categories are real data, not the
     // admin compose hardcoded list).
     const { records } = await apiTotal(request, '/articles', { pageSize: 100 } as any);
     const cat = records.map((r: any) => r.category).find(Boolean);
@@ -142,9 +135,7 @@ test.describe('2. Filter consistency UI == API', () => {
 
     await page.goto('/bai-viet');
     await waitListSettled(page);
-    // Category pills render the category text; click the one matching `cat`.
     await page.getByRole('button', { name: cat, exact: true }).first().click().catch(async () => {
-      // Pill may not be a button role; fall back to text click.
       await page.locator('button, [role="button"]', { hasText: cat }).first().click();
     });
     await waitListSettled(page);
@@ -155,7 +146,6 @@ test.describe('2. Filter consistency UI == API', () => {
   });
 });
 
-// ─────────────────────── Criterion 3: pagination navigation ───────────────────────
 test.describe('3. Pagination navigation', () => {
   test('/luyen-tap page 2 differs from page 1 and matches API', async ({ page, request }) => {
     const errs = collectConsoleErrors(page);
@@ -175,27 +165,21 @@ test.describe('3. Pagination navigation', () => {
     await page.goto('/luyen-tap');
     await waitListSettled(page);
 
-    // Capture the titles shown on page 1 (exercise rows render the title text).
     const beforeText = await page.locator('.lms-card, .flex.flex-col.gap-3 > *').first().innerText().catch(() => '');
 
-    // Click pagination "2".
     await page.locator('.ant-pagination-item-2 a, .ant-pagination-item[title="2"] a').first().click();
     await waitListSettled(page);
 
     const afterText = await page.locator('.lms-card, .flex.flex-col.gap-3 > *').first().innerText().catch(() => '');
     console.log(`[3] api p1[0]="${apiP1Titles[0]}" p2[0]="${apiP2Titles[0]}"; UI changed: ${beforeText !== afterText}`);
 
-    // Page-1 and page-2 datasets differ at the API level.
     expect(apiP1Titles.join('|')).not.toBe(apiP2Titles.join('|'));
-    // The UI's first card text changed after navigating to page 2.
     expect(afterText).not.toBe(beforeText);
-    // And a known page-2 title is now visible.
     await expect(page.getByText(apiP2Titles[0], { exact: false }).first()).toBeVisible();
     expect(realErrors(errs), realErrors(errs).join('\n')).toEqual([]);
   });
 });
 
-// ──────────────── Criterion 4: data consistency admin <-> public ────────────────
 test.describe('4. Admin <-> public article consistency', () => {
   test('admin published article appears on public /bai-viet; public shows only published', async ({
     page,
@@ -204,7 +188,6 @@ test.describe('4. Admin <-> public article consistency', () => {
     const errs = collectConsoleErrors(page);
     const token = await getToken(request);
 
-    // Admin view of articles (auth) and public view (no auth).
     const adminRes = await request.get(`${API}/articles?page=1&pageSize=100`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -215,18 +198,15 @@ test.describe('4. Admin <-> public article consistency', () => {
     const publishedAdmin = (admin.records || []).filter((a: any) => a.isPublished);
     const publicTitles = new Set((pub.records || []).map((a: any) => a.title));
 
-    // Every published admin article appears in the public list.
     const missing = publishedAdmin.filter((a: any) => !publicTitles.has(a.title));
     console.log(
       `[4] admin total ${admin.total}, published ${publishedAdmin.length}, public total ${pub.total}, missing-from-public ${missing.length}`,
     );
     expect(missing.map((a: any) => a.title)).toEqual([]);
 
-    // Public list contains ONLY published items.
     const unpublishedInPublic = (pub.records || []).filter((a: any) => a.isPublished === false);
     expect(unpublishedInPublic.map((a: any) => a.title)).toEqual([]);
 
-    // And the public UI actually renders one of those titles.
     const sample = publishedAdmin[0]?.title;
     if (sample) {
       await page.goto('/bai-viet');
@@ -238,15 +218,12 @@ test.describe('4. Admin <-> public article consistency', () => {
   });
 });
 
-// ─────────────────────── Criterion 5: permissions ───────────────────────
 test.describe('5. Permissions on admin routes', () => {
   test('/quan-tri/nguoi-dung without token shows login gate, not the user table', async ({ page }) => {
     const errs = collectConsoleErrors(page);
-    // No seedAuth → no token in localStorage.
     await page.goto('/quan-tri/nguoi-dung');
     await page.waitForTimeout(2500);
 
-    // The admin user table must NOT be rendered.
     const tableCount = await page.locator('.ant-table').count();
     // A login gate / prompt must appear.
     const gate = page.getByText('Cần đăng nhập để vào trang quản trị', { exact: false });

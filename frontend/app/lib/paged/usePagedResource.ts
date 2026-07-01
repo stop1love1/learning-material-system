@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 
-// Standard paginated list envelope returned by the backend list endpoints.
 export type PagedEnvelope<R = any> = {
   records?: R[];
   total?: number;
@@ -44,11 +43,8 @@ export type UsePagedResource<T> = {
 };
 
 /**
- * Generic server-side paginated list hook. Fetches on mount and whenever the
- * page, debounced keyword, or any filter changes; changing keyword/filters resets
- * the page to 1. Best-effort: on error it clears records and flags `error` (the
- * connection banner + empty state cover the UI) — it never throws. Out-of-order
- * responses are dropped via a per-request sequence guard.
+ * Server-side paginated list hook. Drops stale responses via a sequence guard;
+ * on error clears records and sets `error` (never throws).
  */
 export function usePagedResource<T, R = any>({
   fetcher,
@@ -69,13 +65,11 @@ export function usePagedResource<T, R = any>({
   const [filters, setFilters] = React.useState<Params>(initialFilters);
   const [reloadTick, setReloadTick] = React.useState(0);
 
-  // Keep the latest fetcher/mapper without re-triggering the fetch effect.
   const fetcherRef = React.useRef(fetcher);
   const mapperRef = React.useRef(mapper);
   fetcherRef.current = fetcher;
   mapperRef.current = mapper;
 
-  // Debounce keyword → typing does not fire a request per keystroke.
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedKw(keyword), debounceMs);
     return () => clearTimeout(id);
@@ -99,7 +93,6 @@ export function usePagedResource<T, R = any>({
   const setPage = React.useCallback((n: number) => setCurrent(Math.max(1, n)), []);
   const reload = React.useCallback(() => setReloadTick((n) => n + 1), []);
 
-  // Serialise filters so the effect dep is stable by value, not reference.
   const filterKey = JSON.stringify(filters);
 
   const seqRef = React.useRef(0);
@@ -113,14 +106,11 @@ export function usePagedResource<T, R = any>({
     (async () => {
       try {
         const res = await fetcherRef.current(params);
-        if (!alive || seq !== seqRef.current) return; // stale response — ignore
+        if (!alive || seq !== seqRef.current) return;
         const recs = res?.records ?? [];
         setRecords(recs.map((r) => mapperRef.current(r)));
         setTotal(res?.total ?? 0);
         setPages(res?.pages ?? 1);
-        // `current` is client-authoritative (driven by setPage); don't echo the
-        // server's value back into state — that would fire a redundant fetch if a
-        // backend ever clamped an out-of-range page.
         setError(false);
       } catch {
         if (!alive || seq !== seqRef.current) return;

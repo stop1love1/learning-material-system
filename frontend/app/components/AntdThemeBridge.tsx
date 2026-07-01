@@ -5,16 +5,12 @@ import viVN from 'antd/locale/vi_VN';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 
 /**
- * Bridges the LMS theme (palette + dark/light + accent tweak) into antd's
- * ConfigProvider so every antd component (Select/Input/Pagination/Table/…)
- * matches the bespoke inline-style palette. Must sit under <ThemeProvider> (to
- * read the theme) and under <AntdRegistry> (for SSR style extraction).
+ * Maps LMS palette/dark mode into antd ConfigProvider tokens.
+ * Must sit under ThemeProvider and AntdRegistry.
  */
 export function AntdThemeBridge({ children }: { children: React.ReactNode }) {
   const { p, dark } = useLmsTheme();
-  // Solid base text colours (palette ink/sub are rgba w/ alpha → give antd solids
-  // so its derived neutral ramp + component tokens stay crisp; rgba seeds get
-  // flattened to near-white in dark mode otherwise).
+  // Palette ink/sub are rgba — antd needs solid seeds for dark-mode neutrals.
   const textBase = dark ? '#fdfaf5' : '#241c12';
   const textSub = dark ? '#c9c0b2' : '#6b5e4e';
   return (

@@ -73,9 +73,6 @@ describe('NotificationsService', () => {
     expect(service).toBeDefined();
   });
 
-  // ---------------------------------------------------------------------------
-  // listForUser (/me)
-  // ---------------------------------------------------------------------------
   describe('listForUser', () => {
     it('returns owner-scoped records (newest first shape) + unreadCount', async () => {
       const userId = oid().toString();
@@ -134,9 +131,6 @@ describe('NotificationsService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // markRead
-  // ---------------------------------------------------------------------------
   describe('markRead', () => {
     it('marks one read (owner-scoped) and returns {id,isRead}', async () => {
       const userId = oid().toString();
@@ -159,9 +153,6 @@ describe('NotificationsService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // markAllRead
-  // ---------------------------------------------------------------------------
   describe('markAllRead', () => {
     it('marks all unread of the user read and returns updated count', async () => {
       const userId = oid().toString();
@@ -184,9 +175,6 @@ describe('NotificationsService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // feed (existing derived feed)
-  // ---------------------------------------------------------------------------
   describe('feed', () => {
     it('aggregates recent events and prepends grading-pending when ungraded > 0', async () => {
       exerciseModel.find.mockReturnValue(leanChain([{ _id: oid(), title: 'Bài 1', createdAt: new Date() }]));

@@ -77,8 +77,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const [, bump] = React.useReducer((n) => n + 1, 0);
   const rubricStyle = t.rubricStyle || 'matrix';
 
-  // Lấy bài làm THẬT của lượt nộp đang mở (GET /attempts/:id/result) — list endpoint
-  // chỉ có meta, không có nội dung trả lời. Tải xong thì ép render lại để hiện bài làm.
+  // List endpoint has meta only; result endpoint has answer content.
   React.useEffect(() => {
     if (!sub || !sub.attemptId || sub.loaded) return;
     let alive = true;
@@ -87,7 +86,6 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   }, [sub?.attemptId, sub?.loaded]);
 
   const draftKey = (id) => `lms-grade-draft-${id}`;
-  // Khôi phục bản nháp đã lưu khi mở từng bài nộp.
   React.useEffect(() => {
     if (!sub || typeof window === 'undefined') return;
     setDraftSaved(false);
@@ -123,11 +121,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const reset = (i) => { setIdx(i); setSel({}); setScore(''); setFb(''); };
   const gradedCount = subs.filter((s) => s.status === 'graded').length;
 
-  // Persist a grade: best-effort hit the teacher grade endpoint, then refresh the
-  // queue from the API; always update the local store so the UI reflects it even
-  // when the backend is down / not authorised (mock fallback).
-  // Tóm tắt breakdown rubric (tiêu chí → mức đã chọn) thành text để lưu kèm câu tự
-  // luận — backend không có chỗ lưu từng tiêu chí, nên ghi vào feedback của câu.
+  // Rubric breakdown has no backend field — store as text in first essay feedback.
   const rubricBreakdownText = () => {
     if (!rubric) return '';
     const lines = rubric.criteria
@@ -139,9 +133,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const persistGrade = async (s, finalScore, feedback) => {
     if (s && s.attemptId) {
       try {
-        // Điểm tổng do GV nhập gửi qua totalScore (backend ưu tiên dùng nó), nên KHÔNG
-        // nhồi điểm cuối vào grades của từng câu (sai thang điểm). Chỉ đính kèm breakdown
-        // rubric vào feedback câu đầu để lưu lại chi tiết từng tiêu chí.
+        // Send totalScore only — not per-question grades; attach rubric breakdown to first answer feedback.
         const breakdown = rubricBreakdownText();
         const qs: any[] = Array.isArray(s.questions) ? s.questions : [];
         const answers = qs.map((q, i) => ({

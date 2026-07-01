@@ -144,8 +144,7 @@ export class QuestionsService {
 
     let detail: any;
     try {
-      // Not transactional (standalone Mongo has no sessions). If detail
-      // validation fails after the base row is saved, delete the orphan.
+      // Roll back base row if detail validation fails (no Mongo transaction).
       detail = await detailModel.create({ questionId: base._id, ...dto.detail });
     } catch (err) {
       await this.questionModel.deleteOne({ _id: base._id });
@@ -194,10 +193,6 @@ export class QuestionsService {
     let detail: any = null;
 
     if (typeChanged) {
-      // Type changed → migrate the detail to the correct collection, mirroring
-      // create(): drop the old detail row, create a new one in the new model,
-      // re-link questionModel/questionDetail. dto.detail must hold the new-type
-      // fields (validated on create()).
       const oldQuestionModel = base.questionModel;
       const oldQuestionDetail = base.questionDetail;
       const { model: newDetailModel, questionModel: newQuestionModel } = this.resolveDetail(dto.type as QuestionType);
@@ -220,9 +215,6 @@ export class QuestionsService {
         const detailModel = this.modelByQuestionModel(base.questionModel);
         detail = await detailModel.findById(base.questionDetail).lean();
         if (dto.detail) {
-          // runValidators so per-type validators (option-index ranges,
-          // statements/correctAnswers length, essay percent totals) still fire;
-          // restrict $set to the detail's own fields.
           const $set = this.pickDetailFields(detailModel, dto.detail);
           detail = await detailModel
             .findByIdAndUpdate(base.questionDetail, { $set }, { new: true, runValidators: true })

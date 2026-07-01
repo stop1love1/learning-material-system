@@ -3,7 +3,7 @@
 import React from 'react';
 
 let online = true;
-let checked = false; // becomes true after the first request resolves/rejects
+let checked = false;
 const subs = new Set<() => void>();
 
 function emit() {
@@ -29,6 +29,6 @@ export function useServerOnline(): boolean {
       return () => subs.delete(cb);
     },
     () => online,
-    () => true, // SSR: assume online so the banner never flashes on the server render
+    () => true, // SSR: assume online
   );
 }

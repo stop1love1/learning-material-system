@@ -1,8 +1,4 @@
 'use client';
-// GET /exercises records now carry submittedCount/gradedCount/learnerCount/etc.,
-// so the list no longer needs the bulk /attempts fetch. The per-student "đã làm"
-// status overlay (myStatus) still uses /attempts/me — but only for the legacy
-// DB.STUDENT_TASKS feed (home/overview), not the hook-driven lists.
 import { DB } from '@/app/store/store';
 import { exercisesApi, attemptsApi, exerciseFoldersApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
@@ -20,13 +16,13 @@ export function typeVi(t: string): string {
   }
 }
 
-// Map backend ExerciseStatus (draft|open|closing|closed) → assign.tsx values (open|closing|done).
+/** Backend status (draft|open|closing|closed) → screen values (open|closing|done). */
 export function statusVi(s: string): string {
   switch (s) {
     case 'closed':
-      return 'done'; // backend "closed" → screen "done" (Đã đóng tab + ok tone)
+      return 'done';
     case 'draft':
-      return 'open'; // screen has no draft concept; treat as open
+      return 'open';
     case 'open':
     case 'closing':
     default:
@@ -46,12 +42,7 @@ function dueInVi(due: string | Date | null | undefined): string {
   return `Còn ${diff} ngày`;
 }
 
-/**
- * Map one /exercises record into the assignment/list shape. submitted/graded come
- * straight from the record's submittedCount/gradedCount (no bulk attempts fetch).
- * `total` = submitted (the record has no separate total-attempts that isn't the
- * submitted count for the teacher list). Shared by the loader + paged list hook.
- */
+/** Map /exercises record → assignment shape (shared by loader + paged hook). */
 export function mapExercise(e: Record<string, any>): Record<string, any> {
   const submitted = e.submittedCount ?? 0;
   return {
@@ -76,8 +67,6 @@ export function mapExercise(e: Record<string, any>): Record<string, any> {
 }
 
 export async function loadExercises(): Promise<void> {
-  // Exercise folder tree (best-effort): "Kho đề thi" + "Bài tập" are browsed as a
-  // folder hierarchy. Stored flat as { id, name, parentId } for <FolderTree>.
   try {
     const folders: any[] = await exerciseFoldersApi.list();
     (DB as any).EX_FOLDERS = (folders ?? []).map((f: Record<string, any>) => ({
@@ -93,8 +82,6 @@ export async function loadExercises(): Promise<void> {
     const res: any = await exercisesApi.list({ pageSize: 200 });
     const records: any[] = (res as any)?.records ?? [];
 
-    // Per-student task status for the home/overview feed (the hook-driven lists
-    // get their own server filters instead). Best-effort: logged-out → all 'todo'.
     const myStatus: Record<string, string> = {};
     try {
       const mineRes: any = await attemptsApi.mine();
@@ -105,7 +92,7 @@ export async function loadExercises(): Promise<void> {
         if (a?.status === 'graded') myStatus[exId] = 'graded';
         else if (a?.status === 'submitted' && myStatus[exId] !== 'graded') myStatus[exId] = 'done';
       }
-    } catch { /* logged out → keep 'todo' */ }
+    } catch { /* best-effort */ }
 
     (DB as any).ASSIGNMENTS = records.map(mapExercise);
 

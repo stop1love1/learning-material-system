@@ -26,7 +26,6 @@ export class FilesService {
 
   async list(dto: ListFilesDto, viewer?: { userId?: string; role?: UserRole }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
-    // parseKeyword escapes regex metachars — an unescaped keyword can 500 / cause backtracking.
     const safeKeyword = parseKeyword(keyword);
     const query: Record<string, any> = {
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
@@ -34,7 +33,6 @@ export class FilesService {
       ...(dto.subject ? { subject: dto.subject } : {}),
       ...(dto.grade ? { grade: dto.grade } : {}),
     };
-    // Visibility and keyword each use $or; combine via $and so they don't overwrite each other.
     const and: Record<string, any>[] = [this.visibilityFilter(viewer)];
     if (safeKeyword) {
       and.push({
@@ -145,7 +143,6 @@ export class FilesService {
       .lean();
     const fileIds = downloads.map((d) => d.fileId);
     const files = await this.fileModel.find({ _id: { $in: fileIds } }).lean();
-    // The $in find returns DB order; re-sort to preserve the downloads' createdAt-desc order.
     const byId = new Map(files.map((f: Record<string, any>) => [f._id.toString(), f]));
     return fileIds.map((fid) => byId.get(fid.toString())).filter((f): f is Record<string, any> => Boolean(f));
   }

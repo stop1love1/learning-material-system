@@ -49,8 +49,6 @@ export class ExercisesService {
       this.exerciseModel.countDocuments(query),
     ]);
 
-    // Attach a questionCount per exercise (single aggregation over the link
-    // collection — no N+1) so the frontend list can show "X câu" correctly.
     const ids = records.map((r: any) => r._id);
     const counts = await this.exerciseQuestionModel.aggregate([
       { $match: { exerciseId: { $in: ids } } },
@@ -58,8 +56,6 @@ export class ExercisesService {
     ]);
     const countMap = new Map(counts.map((c: any) => [c._id.toString(), c.n]));
 
-    // Lượt làm + số người làm (distinct studentId/sessionId) + số lượt ĐÃ NỘP cho mỗi
-    // bài tập. "Đã nộp" = attempt có submittedAt (không còn đang làm dở).
     const attemptAgg = await this.attemptModel.aggregate([
       { $match: { exerciseId: { $in: ids } } },
       {
@@ -74,9 +70,6 @@ export class ExercisesService {
     ]);
     const attemptMap = new Map(attemptAgg.map((a: any) => [a._id.toString(), a]));
 
-    // Số lượt ĐÃ CHẤM cho mỗi bài tập. Bắt đầu từ Attempt (dùng index exerciseId)
-    // lọc theo trang hiện tại trước, rồi join sang Submission — tránh quét toàn bộ
-    // collection submissions trên mỗi lần list. Chỉ đếm submission isGraded = true.
     const gradedAgg = await this.attemptModel.aggregate([
       { $match: { exerciseId: { $in: ids } } },
       {
@@ -117,9 +110,6 @@ export class ExercisesService {
 
     const links = await this.exerciseQuestionModel.find({ exerciseId }).sort({ order: 1 }).lean();
     const questionIds = links.map((l) => l.questionId);
-    // Populate the polymorphic per-type detail (options/correct answer/etc.) via
-    // `questionDetail` (refPath `questionModel`) so the student UI can render and
-    // the result can be computed.
     const questions = await this.questionModel
       .find({ _id: { $in: questionIds } })
       .populate('questionDetail')
@@ -144,18 +134,12 @@ export class ExercisesService {
    */
   private sanitizeDetailForViewer(detail: any): void {
     if (!detail || typeof detail !== 'object') return;
-    // Single / Multiple choice
     delete detail.correctOptionIndex;
     delete detail.correctOptionIndices;
-    // True/False
     delete detail.isCorrect;
-    // ShortAnswer / Number (mảng đáp án chấp nhận)
     delete detail.answers;
-    // Sort (thứ tự đúng)
     delete detail.correctOrder;
-    // TableSelection (mảng boolean đúng/sai)
     delete detail.correctAnswers;
-    // Essay (đáp án mẫu / gợi ý chấm)
     delete detail.guideAnswer;
     // Match: giữ left + tập right có thể chọn, nhưng KHÔNG lộ cặp ghép đúng.
     if (Array.isArray(detail.pairs)) {
@@ -176,7 +160,6 @@ export class ExercisesService {
       ...(folderId !== undefined ? { folderId: folderId ? convertStringToObjectId(folderId) : null } : {}),
       ...(rubricId !== undefined ? { rubricId: rubricId ? convertStringToObjectId(rubricId) : null } : {}),
     });
-    // Người tạo là chủ → trả đầy đủ đáp án (cần để tiếp tục biên tập).
     return this.findOne(exercise._id.toString(), { userId });
   }
 
@@ -205,9 +188,6 @@ export class ExercisesService {
     if (res.deletedCount === 0) throw new NotFoundException('Không tìm thấy bài tập');
     await this.exerciseQuestionModel.deleteMany({ exerciseId });
 
-    // Dọn các bản ghi liên quan để tránh dữ liệu mồ côi. Attempt trỏ trực tiếp tới
-    // exerciseId; participant/submission/student-question chỉ trỏ tới attemptId,
-    // nên resolve attempt ids của exercise trước rồi xóa theo attemptId.
     const attempts = await this.attemptModel.find({ exerciseId }).select('_id').lean();
     const attemptIds = attempts.map((a) => a._id);
     if (attemptIds.length > 0) {

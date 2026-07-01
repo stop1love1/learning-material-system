@@ -26,7 +26,6 @@ export function SBlog({ p, t, go }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // Categories come from the (loader-fed) DB snapshot; the list itself is server-paged.
   const cats = ['Tất cả', ...Array.from(new Set<string>(DB.ARTICLES.map((a: any) => a.cat)))];
   const rawTab = searchParams.get('activeTab');
   const cat = !rawTab ? 'Tất cả' : rawTab;
@@ -43,13 +42,11 @@ export function SBlog({ p, t, go }) {
     paged.setFilter('category', c === 'Tất cả' ? '' : c);
   }, [pathname, router, searchParams, paged]);
 
-  // Keep the hook's category filter in sync with the ?activeTab URL on first load / nav.
   React.useEffect(() => {
     paged.setFilter('category', cat === 'Tất cả' ? '' : cat);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cat]);
 
-  // Only treat the first item as "featured" on page 1; later pages are a plain grid.
   const onFirstPage = paged.current <= 1;
   const lead = onFirstPage ? list[0] : undefined;
   const rest = onFirstPage ? list.slice(1) : list;
@@ -204,7 +201,6 @@ export function ABlog({ p, t, setRoute, go }) {
                   }
                   await hydrateFor('a-blog');
                 } catch {
-                  // offline / logged-out fallback: optimistic mock insert
                   if (!editId) LMS && LMS.addArticle({ title: safeTitle, cat, body: plain ? [plain] : ['(Chưa có nội dung)'], cover: 'blue' });
                 } finally {
                   setMode('list'); setTitle(''); setBody(''); setEditId(null);

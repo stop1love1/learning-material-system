@@ -36,20 +36,16 @@ export const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp
 
 export function TDocs({ p, t, auth }) {
   useLMS();
-  // selId === null → "Tất cả"; otherwise a real Folder _id (string).
   const [selId, setSelId] = React.useState<string | null>(null);
   const [view, setView] = React.useState('grid');
   const tree: any[] = DB.DOC_FOLDER_TREE || [];
   const canManage = !!(auth && auth.isStaff);
 
-  // Server-side paginated docs list (keyword + folder filters).
   const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
   const { records: docs, loading, error } = paged;
   const kw = paged.keyword;
   const setKw = paged.setKeyword;
-  // Tree selection → server folderId filter.
   const onSelectFolder = (id: string | null) => { setSelId(id); paged.setFilter('folderId', id); };
-  // The tree count badges still come from the (sidebar) DB.DOCS snapshot.
   const folderCounts = React.useMemo(() => {
     const m: Record<string, number> = {};
     for (const d of DB.DOCS) { if (d.folderId != null) m[String(d.folderId)] = (m[String(d.folderId)] || 0) + 1; }
@@ -61,8 +57,6 @@ export function TDocs({ p, t, auth }) {
     { value: 'image', label: 'Ảnh' }, { value: 'video', label: 'Video' },
     { value: 'audio', label: 'Âm thanh' }, { value: 'slide', label: 'Slide' }, { value: 'link', label: 'Liên kết' },
   ];
-  // Folder picker options for the create-file form: id-based (value=id, label=name),
-  // plus an "unfiled" option. Defaults to the currently-selected tree node.
   const folderOptions = [{ value: '', label: 'Không có thư mục' }, ...tree.map((n) => ({ value: n.id, label: n.name }))];
   const blankForm = () => ({ name: '', ftype: 'pdf', url: '', folderId: selId ?? '', desc: '' });
   const [composing, setComposing] = React.useState(false);
@@ -87,7 +81,6 @@ export function TDocs({ p, t, auth }) {
     } finally { setSaving(false); }
   };
 
-  // Folder management (teacher/admin). All refresh via hydrateFor('docs').
   const addRootFolder = async () => {
     const name = (typeof window !== 'undefined' ? window.prompt('Tên thư mục mới') : '')?.trim();
     if (!name) return;
@@ -114,7 +107,6 @@ export function TDocs({ p, t, auth }) {
       await hydrateFor('docs');
       paged.reload();
     } catch (e: any) {
-      // Backend ConflictException (e.g. non-empty folder) → surface its message.
       if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được thư mục.');
     }
   };
@@ -134,7 +126,6 @@ export function TDocs({ p, t, auth }) {
   };
   const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
 
-  // "..." menu: mở liên kết, sao chép liên kết, hoặc xoá tài liệu (có xác nhận).
   const [menuFor, setMenuFor] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (!menuFor) return;
@@ -390,7 +381,6 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
           className="flex-1 border-0 bg-transparent font-lms-heading text-[28px] font-semibold tracking-[-0.4px] text-lms-ink outline-none" />
         <Btn p={p} variant="ghost" onClick={() => setRoute('rubrics')}>Huỷ</Btn>
         <Btn p={p} icon="check" onClick={async () => {
-          // Map the design shape (criteria/scale) → backend DTO (criterions/levels).
           const body = {
             name: rubric.name,
             levels: (rubric.scale || []).map((s: any, i: number) => ({ name: s.label, percentage: s.pct ?? 0, order: i })),
@@ -401,7 +391,7 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
             else await rubricsApi.create(body);
             await hydrateFor('rubrics');
           } catch {
-            LMS && LMS.saveRubric(rubric); // offline / logged-out fallback
+            LMS && LMS.saveRubric(rubric);
           } finally {
             setRoute('rubrics');
           }

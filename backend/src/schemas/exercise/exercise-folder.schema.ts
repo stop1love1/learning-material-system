@@ -43,9 +43,7 @@ export class ExerciseFolder {
 
 export const ExerciseFolderSchema = SchemaFactory.createForClass(ExerciseFolder);
 
-// Cập nhật ancestors/depth từ parentId khi lưu.
 ExerciseFolderSchema.pre('save', async function (this: ExerciseFolderDocument) {
-  // Ghi nhận để post('save') biết có cần cascade tính lại cây con hay không.
   this.$locals.parentChanged = this.isModified('parentId');
   if (!this.isModified('parentId')) return;
   if (!this.parentId) {
@@ -73,8 +71,6 @@ ExerciseFolderSchema.pre('save', async function (this: ExerciseFolderDocument) {
   this.depth = (parent.depth || 0) + 1;
 });
 
-// Sau khi parentId đổi, ancestors/depth của toàn bộ cây con đã lỗi thời. Tính lại cho
-// từng descendant dựa trên ancestors mới của node này (giữ phần đuôi đường dẫn nội bộ).
 ExerciseFolderSchema.post('save', async function (this: ExerciseFolderDocument) {
   if (!this.$locals.parentChanged) return;
   const model = this.constructor as Model<ExerciseFolderDocument>;
@@ -82,7 +78,6 @@ ExerciseFolderSchema.post('save', async function (this: ExerciseFolderDocument) 
   const baseAncestors = [...(this.ancestors || []), this._id];
   for (const d of descendants) {
     const idx = (d.ancestors || []).findIndex((a) => a.equals(this._id));
-    // Phần đường dẫn nằm dưới node này (sau vị trí của node trong chuỗi ancestors cũ).
     const tail = idx >= 0 ? (d.ancestors || []).slice(idx + 1) : [];
     const newAncestors = [...baseAncestors, ...tail];
     await model.updateOne({ _id: d._id }, { ancestors: newAncestors, depth: newAncestors.length });

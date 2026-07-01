@@ -19,12 +19,9 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
   const reg = tab === 'register';
   const [err, setErr] = React.useState('');
   const [busy, setBusy] = React.useState(false);
-  // After a successful register: show a "check your email" view instead of the form.
   const [sent, setSent] = React.useState<null | { devVerifyLink?: string }>(null);
-  // When login fails because the email is unverified, expose a "resend" action.
   const [needsVerify, setNeedsVerify] = React.useState(false);
   const [resent, setResent] = React.useState<null | { devVerifyLink?: string }>(null);
-  // When org-wide 2FA is on, login returns needs2fa → switch to the OTP step.
   const [twofa, setTwofa] = React.useState<null | { email: string; devOtp?: string }>(null);
   const [otp, setOtp] = React.useState('');
 
@@ -51,7 +48,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
     } catch (e) {
       const msg = friendly(e);
       setErr(msg);
-      // 403 "email chưa được xác thực" → offer to resend the verification link.
       if (msg.includes('xác thực')) setNeedsVerify(true);
     } finally {
       setBusy(false);
@@ -77,7 +73,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
     setBusy(true);
     try {
       await auth.verify2fa(twofa.email, otp.trim());
-      // verify2fa closes the modal on success.
     } catch (e) {
       setErr(friendly(e));
     } finally {
@@ -140,7 +135,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
       />
     );
   }
-  // Org-wide 2FA: enter the email OTP sent to the user.
   if (twofa) {
     return (
       <div
@@ -200,7 +194,6 @@ export function LoginModal({ p, t, auth, onClose }: { p: Palette; t: Tweaks; aut
       </div>
     );
   }
-  // Post-register: "check your email" view.
   if (sent) {
     return (
       <div

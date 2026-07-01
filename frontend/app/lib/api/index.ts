@@ -7,33 +7,25 @@ export type AuthResult = { accessToken: string; user: Record<string, any> };
 
 export const authApi = {
   login: (email: string, password: string) => api.post<AuthResult>('/auth/login', { email, password }, { auth: false }),
-  // Registration no longer auto-logs-in: the account is created unverified and an
-  // email-verification link is sent. In dev (no SMTP) the link is returned as `devVerifyLink`.
+  // Creates unverified account; dev returns `devVerifyLink` when SMTP is off.
   register: (name: string, email: string, password: string) =>
     api.post<{ ok: true; needsVerification?: boolean; devVerifyLink?: string }>(
       '/auth/register',
       { name, email, password },
       { auth: false },
     ),
-  // Confirm an email-verification token → activates the account and auto-logs-in.
   verifyEmail: (token: string) =>
     api.post<{ ok: true; accessToken: string; user: Record<string, any> }>('/auth/verify-email', { token }, { auth: false }),
-  // Re-send the verification email. In dev the link is returned as `devVerifyLink`.
   resendVerification: (email: string) =>
     api.post<{ ok: true; devVerifyLink?: string }>('/auth/resend-verification', { email }, { auth: false }),
-  // Sign in with a Google ID token (credential from @react-oauth/google).
   google: (idToken: string) => api.post<AuthResult>('/auth/google', { idToken }, { auth: false }),
-  // Step 2 of email-OTP 2FA: exchange the 6-digit code for a session.
   verify2fa: (email: string, code: string) =>
     api.post<AuthResult>('/auth/verify-2fa', { email, code }, { auth: false }),
   me: () => api.get<Record<string, any>>('/auth/me'),
   updateMe: (body: { name?: string; email?: string; avatar?: string }) => api.patch<Record<string, any>>('/auth/me', body),
-  // Server-side logout (best-effort token revocation). Frontend clears the token regardless.
   logout: () => api.post('/auth/logout'),
-  // Silent session extension. Returns a fresh accessToken for the current user.
   refresh: () => api.post<{ accessToken: string }>('/auth/refresh'),
-  // Password recovery. forgotPassword always 200 (no user enumeration); in dev the reset
-  // token/link is returned in `devToken`/`devResetLink` when SMTP is not configured.
+  // Always 200 (no user enumeration); dev may return `devToken`/`devResetLink`.
   forgotPassword: (email: string) =>
     api.post<{ ok: true; devToken?: string; devResetLink?: string }>('/auth/forgot-password', { email }, { auth: false }),
   resetPassword: (token: string, password: string) =>
@@ -105,11 +97,9 @@ export const attemptsApi = {
   submit: (attemptId: string, answers: any[]) => api.post<any>(`/attempts/${attemptId}/submit`, { answers }),
   result: (attemptId: string) => api.get<any>(`/attempts/${attemptId}/result`),
   grade: (attemptId: string, body: any) => api.patch<any>(`/attempts/${attemptId}/grade`, body),
-  // pendingOnly: attempts whose submission is missing or not yet graded.
   list: (q: Record<string, unknown> = {}) => api.get<any>(`/attempts${qs(q)}`),
   mine: () => api.get<any[]>('/attempts/me'),
 };
-// Alias to match the "submissions" naming used by the grading screen/loader.
 export const submissionsApi = attemptsApi;
 
 export const selfAssessmentsApi = {
@@ -128,7 +118,6 @@ export const articlesApi = {
 export const settingsApi = {
   get: () => api.get<any>('/settings', { auth: false }),
   update: (body: any) => api.patch('/settings', body),
-  // Admin content backup: export returns a JSON snapshot; import restores it (upsert by _id).
   export: () => api.get<any>('/settings/export'),
   import: (snapshot: any) => api.post<{ ok: true; restored: Record<string, number> }>('/settings/import', { snapshot }),
 };
@@ -147,9 +136,7 @@ export const statsApi = {
 };
 
 export const notificationsApi = {
-  // Teacher/Admin derived feed (existing).
   list: (limit = 20) => api.get<any[]>(`/notifications${qs({ limit })}`),
-  // Personal stored notifications for the current authed user (any role), newest first.
   me: (limit = 20) => api.get<any[]>(`/notifications/me${qs({ limit })}`),
   markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.post('/notifications/read-all'),

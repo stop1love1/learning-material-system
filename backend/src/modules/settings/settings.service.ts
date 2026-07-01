@@ -89,7 +89,6 @@ export class SettingsService {
       .lean();
   }
 
-  /** Xuất bản sao lưu nội dung (JSON) — admin tải về. */
   async exportBackup() {
     const collections: Record<string, any[]> = {};
     for (const key of BACKUP_COLLECTIONS) {
@@ -102,7 +101,6 @@ export class SettingsService {
     };
   }
 
-  /** Khôi phục từ bản sao lưu — upsert theo _id. Không động tới users/attempts. */
   async importBackup(snapshot: any) {
     if (!snapshot || typeof snapshot !== 'object' || !snapshot.collections) {
       throw new BadRequestException('Tệp sao lưu không hợp lệ');

@@ -59,12 +59,8 @@ export class UsersService {
     return this.findById(user._id.toString());
   }
 
-  // Build the update patch from a whitelist so an unexpected/extra body field
-  // can never be written. `email`/`password` are normalised below.
   async update(id: string, dto: UpdateUserDto, currentUserId?: string) {
-    // Self-protection: an admin must not lock or demote their OWN account, which
-    // could leave the system without an active admin. Only enforced when the
-    // caller id is supplied (see note in users.controller — pass @CurrentUser('sub')).
+    // Admin must not lock or demote their own account.
     if (currentUserId && currentUserId === id) {
       if (dto.role !== undefined && dto.role !== UserRole.Admin) {
         throw new ForbiddenException('Không thể tự hạ quyền tài khoản của chính mình');
@@ -89,12 +85,10 @@ export class UsersService {
   }
 
   async remove(id: string, currentUserId?: string) {
-    // Self-protection: an admin must not delete their OWN account.
     if (currentUserId && currentUserId === id) {
       throw new ForbiddenException('Không thể tự xóa tài khoản của chính mình');
     }
-    // Last-admin guard: never remove the final remaining Admin account, which
-    // would leave the system with no administrator.
+    // Never remove the final Admin account.
     const target = await this.userModel.findById(convertStringToObjectId(id)).select('role').lean();
     if (!target) throw new NotFoundException('Không tìm thấy người dùng');
     if (target.role === UserRole.Admin) {

@@ -33,20 +33,9 @@ const EMAIL_SEND_COOLDOWN_MS = 60 * 1000; // 60s chống gửi lặp
 const OTP_MAX_ATTEMPTS = 5; // số lần nhập sai OTP tối đa trong một cửa sổ
 const OTP_ATTEMPT_WINDOW_MS = OTP_TTL_MS; // cửa sổ đếm = thời hạn OTP (5 phút)
 
-/**
- * In-memory cooldown for outbound transactional emails, keyed by lowercased
- * email → last-send epoch ms. Split per-flow so forgot-password and
- * resend-verification don't block each other. Acceptable for this
- * single-instance app.
- */
 const forgotPasswordCooldown = new Map<string, number>();
 const resendVerificationCooldown = new Map<string, number>();
 
-/**
- * In-memory brute-force guard for the 2FA OTP step, keyed by lowercased email.
- * Counts wrong-code attempts inside a rolling window and locks the OTP step out
- * once the threshold is hit. Single-instance app only.
- */
 const otpAttempts = new Map<string, { count: number; firstAt: number }>();
 
 @Injectable()
@@ -90,7 +79,6 @@ export class AuthService {
     const verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
     const delivered = await this.mail.sendVerification(email, verifyLink);
 
-    // Không cấp access token — người dùng phải xác thực email trước.
     return {
       ok: true,
       needsVerification: true,
@@ -107,7 +95,6 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
 
-    // Tài khoản đang bị tạm khoá?
     if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
       throw new UnauthorizedException(
         'Tài khoản tạm khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau ít phút.',
@@ -120,8 +107,6 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
 
-    // Mật khẩu đúng: reset bộ đếm + mở khoá NGAY (kể cả tài khoản inactive — tránh để
-    // lại bộ đếm cũ), rồi mới kiểm tra trạng thái.
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     user.lastActiveAt = new Date();
@@ -141,7 +126,6 @@ export class AuthService {
 
     const security = await this.getSecurity();
 
-    // Chính sách hết hạn mật khẩu (chỉ áp dụng tài khoản local).
     if (
       user.provider !== 'google' &&
       security.passwordRotationDays > 0 &&
@@ -153,7 +137,6 @@ export class AuthService {
       );
     }
 
-    // 2FA qua email-OTP: không cấp token ngay, gửi mã 6 số rồi chờ /auth/verify-2fa.
     if (security.twoFactor === true && user.provider !== 'google') {
       const code = String(randomInt(100000, 1000000));
       user.otpCode = this.hashToken(code);
@@ -171,7 +154,6 @@ export class AuthService {
     return this.issue(user);
   }
 
-  /** Step 2 of email-OTP 2FA: verify the 6-digit code and issue a token. */
   async verify2fa(dto: Verify2faDto) {
     const email = dto.email.toLowerCase();
 
@@ -193,7 +175,6 @@ export class AuthService {
       throw new UnauthorizedException('Mã đã hết hạn');
     }
     if (!user.otpCode || !this.otpMatches(dto.code, user.otpCode)) {
-      // Mã sai: tăng bộ đếm. Khi chạm ngưỡng thì xoá OTP để mã đã gửi vô hiệu.
       if (this.registerOtpFailure(email) >= OTP_MAX_ATTEMPTS) {
         user.otpCode = null;
         user.otpExpires = null;
@@ -202,7 +183,6 @@ export class AuthService {
       throw new UnauthorizedException('Mã không đúng');
     }
 
-    // Mã đúng: kiểm tra lại trạng thái tài khoản trước khi cấp token (mirror login).
     if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
       throw new UnauthorizedException(
         'Tài khoản tạm khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau ít phút.',
@@ -243,19 +223,16 @@ export class AuthService {
     return this.sanitize(user);
   }
 
-  /** Best-effort logout. Tokens are stateless JWTs so there is nothing to revoke server-side. */
   logout() {
     return { ok: true };
   }
 
-  /** Re-issue a fresh JWT for the current (already authenticated) user. */
   async refresh(userId: string) {
     const user = await this.userModel.findById(userId).select('+lockUntil');
     if (!user) throw new UnauthorizedException();
     if (user.status !== UserStatus.Active) {
       throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
-    // Tài khoản đang bị tạm khoá không được cấp token mới.
     if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
       throw new UnauthorizedException(
         'Tài khoản tạm khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau ít phút.',
@@ -270,21 +247,14 @@ export class AuthService {
     return { accessToken };
   }
 
-  /**
-   * Always returns 200 to avoid user enumeration. Generates a reset token, stores its
-   * SHA-256 hash + expiry on the user, and "sends" the email (dev mode = logs the link).
-   * In dev mode (SMTP not configured) also returns the raw token + link.
-   */
   async forgotPassword(dto: ForgotPasswordDto) {
     const email = dto.email.toLowerCase();
 
     const user = await this.userModel.findOne({ email });
     if (!user) {
-      // No enumeration: pretend success without doing anything.
       return { ok: true };
     }
 
-    // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
     const last = forgotPasswordCooldown.get(email);
     if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
       return { ok: true };
@@ -301,12 +271,9 @@ export class AuthService {
     const delivered = await this.mail.sendPasswordReset(email, resetLink);
     forgotPasswordCooldown.set(email, Date.now());
 
-    // Khi email không gửi được (SMTP chưa cấu hình / lỗi) thì lộ link dev để token
-    // đặt lại không bị mất.
     return { ok: true, ...(delivered ? {} : { devToken: rawToken, devResetLink: resetLink }) };
   }
 
-  /** Verify the reset token (hash + not expired), set a new password, clear token fields. */
   async resetPassword(dto: ResetPasswordDto) {
     if (!dto.token || !dto.token.trim()) {
       throw new BadRequestException('Token không hợp lệ');
@@ -337,10 +304,6 @@ export class AuthService {
     return { ok: true };
   }
 
-  /**
-   * Verify the email-verification token (hash + not expired), mark the user verified,
-   * clear the token fields, then auto-login (issue a JWT).
-   */
   async verifyEmail(dto: VerifyEmailDto) {
     if (!dto.token || !dto.token.trim()) {
       throw new BadRequestException('Liên kết xác thực không hợp lệ');
@@ -368,10 +331,6 @@ export class AuthService {
     return { ok: true, ...this.issue(user) };
   }
 
-  /**
-   * Regenerate + resend the verification link. Always returns 200 (no enumeration):
-   * if the user does not exist or is already verified there is nothing to do.
-   */
   async resendVerification(dto: ResendVerificationDto) {
     const email = dto.email.toLowerCase();
     const user = await this.userModel.findOne({ email });
@@ -379,7 +338,6 @@ export class AuthService {
       return { ok: true };
     }
 
-    // Chống gửi lặp (60s). Trả về no-op cùng shape thành công, không sinh token mới.
     const last = resendVerificationCooldown.get(email);
     if (last && Date.now() - last < EMAIL_SEND_COOLDOWN_MS) {
       return { ok: true };
@@ -398,10 +356,6 @@ export class AuthService {
     return { ok: true, ...(delivered ? {} : { devVerifyLink: verifyLink }) };
   }
 
-  /**
-   * Verify a Google ID token, then log in (or auto-create) the matching user.
-   * Google has already verified the email so the account is marked verified.
-   */
   async googleLogin(dto: GoogleLoginDto) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId || !clientId.trim()) {
@@ -448,8 +402,6 @@ export class AuthService {
     return this.issue(user);
   }
 
-  // ---- helpers -------------------------------------------------------------
-
   private hashToken(raw: string): string {
     return createHash('sha256').update(raw).digest('hex');
   }
@@ -465,7 +417,6 @@ export class AuthService {
     return timingSafeEqual(a, b);
   }
 
-  /** True if the OTP step is currently locked out for this email (and the window is live). */
   private isOtpLocked(email: string): boolean {
     const entry = otpAttempts.get(email);
     if (!entry) return false;
@@ -476,7 +427,6 @@ export class AuthService {
     return entry.count >= OTP_MAX_ATTEMPTS;
   }
 
-  /** Record a wrong-OTP attempt and return the running count within the current window. */
   private registerOtpFailure(email: string): number {
     const now = Date.now();
     const entry = otpAttempts.get(email);
@@ -488,7 +438,6 @@ export class AuthService {
     return entry.count;
   }
 
-  /** Read the `security` group from the `system` settings doc, defensively. */
   private async getSecurity(): Promise<{
     lockoutThreshold: number;
     allowSelfRegister: boolean;
@@ -519,12 +468,10 @@ export class AuthService {
     }
   }
 
-  /** Increment failed-login counter and lock the account when the threshold is reached. */
   private async registerFailedLogin(user: UserDocument): Promise<void> {
     const { lockoutThreshold } = await this.getSecurity();
     user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
 
-    // 0 (or negative) = lockout disabled.
     if (lockoutThreshold > 0 && user.failedLoginAttempts >= lockoutThreshold) {
       user.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
       await user.save();

@@ -17,7 +17,6 @@ import { JwtService } from '../../global/jwt.service';
 import { MailService } from '../../global/mail.service';
 import { UserRole, UserStatus } from '../../enums';
 
-// ---- google-auth-library mock --------------------------------------------
 // AuthService does `new OAuth2Client(clientId)` then `client.verifyIdToken(...)`.
 // We mock the constructor so each test can control the returned ticket/payload.
 const mockVerifyIdToken = jest.fn();
@@ -141,9 +140,6 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  // =========================================================================
-  // login
-  // =========================================================================
   describe('login', () => {
     it('issues a token + sanitized user on success and resets failure counters', async () => {
       const user = makeUser({ failedLoginAttempts: 3, lockUntil: new Date(Date.now() - 1000) });
@@ -307,9 +303,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // register
-  // =========================================================================
   describe('register', () => {
     const dto = { name: 'Tân Sinh', email: 'New@Vuonvan.VN', password: 'pw123456' } as any;
 
@@ -355,9 +348,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // verifyEmail
-  // =========================================================================
   describe('verifyEmail', () => {
     it('rejects an empty token', async () => {
       await expect(service.verifyEmail({ token: '  ' } as any)).rejects.toBeInstanceOf(
@@ -414,9 +404,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // forgotPassword / resetPassword
-  // =========================================================================
   describe('forgotPassword', () => {
     it('returns 200 with no work when the user does not exist (no enumeration)', async () => {
       userModel.findOne.mockResolvedValue(null);
@@ -524,9 +511,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // resendVerification
-  // =========================================================================
   describe('resendVerification', () => {
     it('is a 200 no-op when the user does not exist', async () => {
       userModel.findOne.mockResolvedValue(null);
@@ -583,9 +567,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // verify2fa (OTP step)
-  // =========================================================================
   describe('verify2fa', () => {
     const otpExpires = () => new Date(Date.now() + 60_000);
 
@@ -690,9 +671,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // googleLogin
-  // =========================================================================
   describe('googleLogin', () => {
     const ORIGINAL_ENV = process.env.GOOGLE_CLIENT_ID;
     afterEach(() => {
@@ -771,9 +749,6 @@ describe('AuthService', () => {
     });
   });
 
-  // =========================================================================
-  // sanitize (via me) — secrets must never leak
-  // =========================================================================
   describe('sanitize / me', () => {
     it('strips every secret/internal field from the returned user', async () => {
       const user = makeUser({

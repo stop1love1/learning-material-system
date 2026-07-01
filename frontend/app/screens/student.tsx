@@ -254,7 +254,6 @@ export function SOverview({ p, t, setRoute, go }) {
   const todo = DB.STUDENT_TASKS.filter((x) => x.status === 'todo');
   const graded = DB.STUDENT_TASKS.filter((x) => x.status === 'graded' || (x.status === 'done' && x.score));
 
-  // Số liệu THẬT từ các lượt làm của học viên (mine()): điểm trung bình các bài đã chấm.
   const gradedAttempts = attempts.filter((a) => a.status === 'graded' && a.score != null);
   const avgScore = gradedAttempts.length
     ? Math.round((gradedAttempts.reduce((s, a) => s + a.score, 0) / gradedAttempts.length) * 10) / 10
@@ -359,14 +358,9 @@ export function STasks({ p, t, go }) {
   const exFolders = (DB as any).EX_FOLDERS || [];
   const folderOpts = exFolders.map((f: any) => ({ value: String(f.id), label: f.name }));
 
-  // The old todo/done tabs were a per-student attempt overlay the /exercises list
-  // can't server-filter, so they are replaced by server-driven type + status
-  // filters (plus folder + keyword). Per-student "đã làm" status is carried on the
-  // legacy DB.STUDENT_TASKS snapshot, which we overlay onto each row when present.
   const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
   const { records, loading, error } = paged;
 
-  // Overlay the current user's per-exercise status from the (loader-fed) snapshot.
   const myStatusOf = (id: string) => {
     const s = (DB.STUDENT_TASKS || []).find((x: any) => x.id === id);
     return s?.status ?? 'todo';
@@ -402,10 +396,6 @@ export function STasks({ p, t, go }) {
   );
 }
 
-// Map a populated API question (base row + per-type `questionDetail`) into the
-// shape QuestionView/levelMeta expect: { id, type, level, stem, options, answer, pairs }.
-// Mirrors the conventions in lib/sync/load-questions.ts. Returns null when the
-// base question is missing so callers can filter it out.
 function mapApiQuestion(link: any): any {
   const q = link?.question;
   if (!q) return null;
@@ -427,7 +417,7 @@ function mapApiQuestion(link: any): any {
     } else if (q.type === 'match') {
       pairs = (detail.pairs ?? []).map((pr: any) => [pr.left, pr.right] as [string, string]);
     }
-  } catch { /* leave defaults — never crash the player on an odd detail shape */ }
+  } catch { /* tolerate malformed questionDetail */ }
   return {
     id: q._id,
     questionId: q._id,
@@ -440,35 +430,25 @@ function mapApiQuestion(link: any): any {
   };
 }
 
-// Turn the QuestionView "do"-mode answer ({ choices } | { text } | { map }) into the
-// attempts submit payload entry. The server auto-grades from its STORED answers, so we
-// send ONLY the student's raw selection — never a client-computed isCorrect. Each entry
-// maps to the `answer` shape AttemptsService.gradeObjective expects per question type.
+// Server auto-grades from stored answers — send raw selection only, never isCorrect.
 function buildSubmitAnswer(q: any, raw: any): any {
   const out: any = { questionId: q.questionId || q.id };
   const choices = (raw && raw.choices) || [];
   if (q.type === 'single') {
-    // single → selected option index (number) | null when nothing picked.
     out.answer = choices.length ? choices[0] : null;
   } else if (q.type === 'multi') {
-    // multi → array of selected option indices.
     out.answer = choices;
   } else if (q.type === 'truefalse') {
-    // truefalse → boolean (option 0 = "Đúng"/true, 1 = "Sai"/false).
     out.answer = choices.length ? choices[0] === 0 : null;
   } else if (q.type === 'fill') {
-    // fill → the typed string.
     out.answer = (raw && raw.text) || '';
   } else if (q.type === 'match') {
-    // match → [{left,right}] using the actual left text of each pair (q.pairs[i][0])
-    // and the value the student dropped onto it. Backend compares against stored pairs.
     const map = (raw && raw.map) || {};
     out.answer = Object.keys(map).map((k) => ({
       left: (q.pairs && q.pairs[Number(k)] && q.pairs[Number(k)][0]) ?? k,
       right: map[k],
     }));
   } else {
-    // essay / other → submit the raw text, leave grading to the teacher.
     out.answer = raw && raw.text != null ? raw.text : raw;
   }
   return out;
@@ -484,16 +464,11 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   const [result, setResult] = React.useState(null);
   const [submitError, setSubmitError] = React.useState(null);
   const [ws, setWs] = React.useState(null);
-  // Phiếu học tập THẬT của bài (từ materialIds). [] = không có đính kèm → ẩn mục phiếu.
   const [materials, setMaterials] = React.useState<any[]>([]);
-  // Đếm ngược thời gian làm bài (giây) khi bài tập có durationMinutes; null = không giới hạn.
   const [remaining, setRemaining] = React.useState<number | null>(null);
-  // Tránh nộp lặp khi hết giờ; ref giữ submitNow mới nhất để effect đếm ngược không phụ thuộc nó.
   const autoSubmittedRef = React.useRef(false);
   const submitNowRef = React.useRef<() => void>(() => {});
 
-  // Live questions: GET /exercises/:id and map the polymorphic details. Best-effort —
-  // on 404/down/logged-out we fall back to the mock bank so the player still renders.
   React.useEffect(() => {
     if (!task) return;
     let alive = true;
@@ -508,8 +483,6 @@ export function STask({ p, t, ctx, setRoute, auth }) {
         const mins = Number(ex.durationMinutes);
         if (Number.isFinite(mins) && mins > 0) setRemaining(mins * 60);
         if (mapped.length) setLiveQs(mapped);
-        // Phiếu học tập THẬT = các tệp đính kèm (materialIds) của bài tập. Tra tên/đường
-        // dẫn từ kho học liệu đã nạp (DB.DOCS). Không có đính kèm → ẩn mục phiếu.
         const matIds: string[] = (ex.materialIds || []).map((m: any) => String(m?._id ?? m));
         const docs = matIds
           .map((id) => {
@@ -518,13 +491,11 @@ export function STask({ p, t, ctx, setRoute, auth }) {
           })
           .filter(Boolean);
         setMaterials(docs as any[]);
-      } catch { /* keep null → mock fallback below */ }
+      } catch { /* exercise load failed */ }
     })();
     return () => { alive = false; };
   }, [task?.id]);
 
-  // Đồng hồ đếm ngược: chỉ chạy khi có giới hạn thời gian và bài chưa nộp xong.
-  // Khi về 00:00 → tự nộp một lần (qua ref) và dừng đồng hồ.
   React.useEffect(() => {
     if (remaining == null || result) return;
     if (remaining <= 0) return;
@@ -543,7 +514,6 @@ export function STask({ p, t, ctx, setRoute, auth }) {
     return () => clearInterval(id);
   }, [remaining == null, result]);
 
-  // Chưa đăng nhập → tự bật LoginModal (không hiện trang gate riêng).
   React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
 
   if (auth && !auth.loggedIn) {
@@ -570,16 +540,10 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   const q = qs[cur2];
   const answered = Object.keys(answers).length;
 
-  // start → submit → result against the REAL attempt API. The server auto-grades from its
-  // stored answers, so we only send the student's raw answers. No fake-success fallback:
-  // a logged-out user is sent to login, a mock-only exercise (no live questions) shows an
-  // error, and any API failure surfaces an error instead of pretending the bài was nộp.
   async function submitNow() {
     if (submitting) return;
     setSubmitError(null);
-    // Phải đăng nhập thật mới nộp được — không nộp giả.
     if (auth && !auth.loggedIn) { auth.open(); return; }
-    // Không có câu hỏi thật (chỉ có dữ liệu mock) → dữ liệu chưa tải / bài là mock.
     if (!liveQs || !liveQs.length) {
       setSubmitError('Bài tập chưa tải được câu hỏi từ máy chủ nên chưa thể nộp. Hãy tải lại trang và thử lại.');
       return;
@@ -593,7 +557,6 @@ export function STask({ p, t, ctx, setRoute, auth }) {
       const submitted: any = await attemptsApi.submit(attemptId, payload);
       let res: any = null;
       try { res = await attemptsApi.result(attemptId); } catch { /* result optional */ }
-      // submit() trả về submission; result() lồng trong .submission. Dùng cái nào có.
       const sub = res?.submission ?? submitted ?? {};
       const score = typeof sub?.totalScore === 'number' ? sub.totalScore : null;
       setResult({
@@ -604,7 +567,7 @@ export function STask({ p, t, ctx, setRoute, auth }) {
         graded: !!sub?.isGraded,
         waiting: sub?.waitingGrades ?? sub?.numberOfEssays ?? 0,
       });
-      try { await hydrateFor('s-task'); } catch { /* refresh DB best-effort */ }
+      try { await hydrateFor('s-task'); } catch { /* hydrate optional */ }
     } catch (err: any) {
       setSubmitError(err?.message || 'Nộp bài thất bại. Vui lòng kiểm tra kết nối và thử lại.');
     } finally {
@@ -612,7 +575,6 @@ export function STask({ p, t, ctx, setRoute, auth }) {
     }
   }
 
-  // Giữ ref trỏ tới submitNow mới nhất cho đường tự-nộp khi hết giờ.
   submitNowRef.current = submitNow;
 
   if (result) {
@@ -650,10 +612,8 @@ export function STask({ p, t, ctx, setRoute, auth }) {
       </div>
     );
   }
-  // Phiếu học tập = các tệp đính kèm THẬT của bài (materialIds → DB.DOCS). Rỗng → ẩn mục.
   const worksheets = materials;
 
-  // Tải phiếu: mở liên kết thật của tệp đính kèm (học liệu external-link-first).
   const downloadWorksheet = (w: any) => {
     if (typeof window === 'undefined') return;
     if (w?.url) window.open(w.url, '_blank', 'noopener');
@@ -767,13 +727,10 @@ const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&
 
 export function SDocs({ p, t, go }) {
   useLMS();
-  // Server-side paged (matches admin Kho tài liệu + the other list screens).
   const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
   const { records: list, loading, error } = paged;
   const [folderName, setFolderName] = React.useState('Tất cả');
 
-  // Folder pills carry names; the /files API filters by folderId → resolve via the
-  // (loader-fed) folder tree. "Tất cả" clears the filter.
   const pickFolder = React.useCallback((f: string) => {
     setFolderName(f);
     const tree: any[] = (DB as any).DOC_FOLDER_TREE || [];
@@ -957,9 +914,6 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
 
 export function SSelfCheck({ p, t }) {
   useLMS();
-  // "Bài để tự đánh giá" lấy từ các bài tập THẬT của học viên (DB.STUDENT_TASKS,
-  // nạp từ /exercises + /attempts/me). Không có bài nào → fallback dùng chính rubric
-  // có sẵn làm mục để luyện tự chấm (vẫn là dữ liệu thật, không bịa tiêu đề bài).
   const works = React.useMemo(() => {
     const tasks = (DB.STUDENT_TASKS || []).map((x: any) => ({ id: x.id, title: x.title }));
     if (tasks.length) return tasks;
@@ -967,7 +921,6 @@ export function SSelfCheck({ p, t }) {
   }, [DB.STUDENT_TASKS, DB.RUBRICS]);
   const [workId, setWorkId] = React.useState<string>('');
   const work = works.find((w) => w.id === workId) || works[0];
-  // Rubric tự chấm: dùng rubric đầu tiên có sẵn (nguồn rubric thật của hệ thống).
   const rubric = DB.RUBRICS[0];
   const [sel, setSel] = React.useState({});
   const [note, setNote] = React.useState('');
@@ -987,10 +940,7 @@ export function SSelfCheck({ p, t }) {
     setSavingSelf(true);
     setSaveError(null);
     try {
-      // Build the per-criterion matrix the user clicked (`sel` = {criterionIndex: levelIndex})
-      // into the backend `scores` shape: {criterionId, levelId?, percent}. The criterion/level
-      // ids come from the loaded rubric; only emit `scores` when real ids are present so we
-      // never POST invalid (non-MongoId) refs.
+      // Only emit scores when criterion/level ids are present (valid Mongo refs).
       const scores = Object.keys(sel)
         .map((k) => {
           const ci = Number(k);
@@ -1018,7 +968,6 @@ export function SSelfCheck({ p, t }) {
       });
       setSavedSelf(true);
     } catch (err: any) {
-      // Don't claim success on 401/network failure — surface an error and keep editing.
       setSaveError(err?.message || 'Lưu tự đánh giá thất bại. Vui lòng đăng nhập và thử lại.');
     } finally {
       setSavingSelf(false);
@@ -1083,11 +1032,8 @@ export function SSelfCheck({ p, t }) {
   );
 }
 
-// Lượt làm THẬT của học viên hiện tại (GET /attempts/me). Trả về mảng đã chuẩn hoá
-// kèm tiêu đề/điểm bài tập (tiêu đề tra từ DB.STUDENT_TASKS / DB.ASSIGNMENTS theo
-// exerciseId). Best-effort: chưa đăng nhập / API lỗi → mảng rỗng (không bịa số liệu).
 function useMyAttempts() {
-  useLMS(); // re-render khi DB (tiêu đề bài tập) được hydrate
+  useLMS();
   const [rows, setRows] = React.useState<any[]>([]);
   React.useEffect(() => {
     let alive = true;
@@ -1097,12 +1043,11 @@ function useMyAttempts() {
         if (!alive) return;
         setRows(Array.isArray(mine) ? mine : []);
       } catch {
-        if (alive) setRows([]); // không bịa kết quả khi chưa đăng nhập / API lỗi
+        if (alive) setRows([]); /* unauthenticated or API error */
       }
     })();
     return () => { alive = false; };
   }, []);
-  // exerciseId chưa populate → tra tiêu đề/điểm tối đa từ các bài tập đã nạp.
   return React.useMemo(() => rows.map((a) => {
     const exId = String(a?.exerciseId?._id ?? a?.exerciseId ?? '');
     const ex = DB.STUDENT_TASKS.find((x) => x.id === exId)
@@ -1114,7 +1059,7 @@ function useMyAttempts() {
       title: ex.title || 'Bài tập',
       type: ex.type || '',
       points: ex.points ?? 10,
-      status: a.status, // 'graded' | 'submitted' | 'in-progress'
+      status: a.status,
       score: typeof a.totalScore === 'number' ? a.totalScore : null,
       percent: typeof a.percent === 'number' ? a.percent : null,
       submittedAt: a.submittedAt ?? null,
@@ -1126,9 +1071,7 @@ export function SResults({ p, t }) {
   const attempts = useMyAttempts();
   const [open, setOpen] = React.useState(0);
 
-  // Chỉ lấy các lượt ĐÃ CHẤM (graded) có điểm thật để tính trung bình + danh sách.
   const graded = attempts.filter((a) => a.status === 'graded' && a.score != null);
-  // Trung bình % từ percent thật; nếu thiếu percent thì suy từ score/points.
   const pcts = graded
     .map((a) => (a.percent != null ? a.percent : a.points ? Math.round((a.score / a.points) * 100) : null))
     .filter((x): x is number => x != null);
@@ -1136,7 +1079,6 @@ export function SResults({ p, t }) {
   const avgScore = graded.length
     ? Math.round((graded.reduce((s, a) => s + a.score, 0) / graded.length) * 10) / 10
     : null;
-  // Xu hướng: điểm các lượt đã chấm theo thứ tự CŨ → MỚI (mine() trả mới nhất trước).
   const trend = [...graded].reverse().map((a) => a.score).slice(-6);
 
   if (graded.length === 0) {
@@ -1195,7 +1137,6 @@ export function SResults({ p, t }) {
 }
 
 export function SLibrary({ p, t, setRoute, go, auth }) {
-  // Chưa đăng nhập → tự bật LoginModal (không hiện trang gate riêng).
   React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
   if (auth && !auth.loggedIn) {
     return (

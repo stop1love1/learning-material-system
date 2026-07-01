@@ -20,15 +20,12 @@ import { Settings } from '../../schemas/settings.schema';
 import { MailService } from '../../global/mail.service';
 import { QuestionType } from '../../enums';
 
-// --- ObjectId helpers (convertStringToObjectId requires valid ObjectId strings) ---
 const oid = () => new Types.ObjectId().toHexString();
 const ATTEMPT_ID = oid();
 const EXERCISE_ID = oid();
 const STUDENT_ID = oid();
 const OWNER_ID = oid();
 
-// Build a chainable mock whose terminal (.lean()/.exec()) resolves to `value`.
-// Every intermediate method (select/populate/sort/skip/limit) returns the same chain.
 function chain(value: any) {
   const c: any = {};
   c.select = jest.fn(() => c);
@@ -38,7 +35,6 @@ function chain(value: any) {
   c.limit = jest.fn(() => c);
   c.lean = jest.fn(() => Promise.resolve(value));
   c.exec = jest.fn(() => Promise.resolve(value));
-  // Some calls await the query directly (no .lean()); make it thenable.
   c.then = (resolve: any, reject: any) => Promise.resolve(value).then(resolve, reject);
   return c;
 }
@@ -57,7 +53,6 @@ describe('AttemptsService', () => {
   let settingsModel: any;
   let mail: any;
 
-  // Captured upserted student-question docs and the final submission $set.
   let upsertedStudentQuestions: any[];
   let submissionSet: any;
 
@@ -121,10 +116,6 @@ describe('AttemptsService', () => {
     service = moduleRef.get(AttemptsService);
   });
 
-  // ---- Shared submit() harness ---------------------------------------------
-  // Wires up the mocks for a single-question exercise submit and returns the
-  // submission result. `academic` overrides the settings academic policy.
-  // `exerciseOverrides` patches the exercise doc selected during submit.
   async function runSubmit(opts: {
     question: any; // populated question doc (with .type & .questionDetail)
     answer: unknown;
@@ -139,13 +130,11 @@ describe('AttemptsService', () => {
     const questionId = opts.question._id ?? oid();
     const studentId = opts.studentId ?? STUDENT_ID;
 
-    // settingsModel.findOne({key}).select('academic'|'notifications').lean()
     settingsModel.findOne.mockImplementation(() => {
       const c = chain({ academic: opts.academic ?? {}, notifications: opts.notifications ?? {} });
       return c;
     });
 
-    // attemptModel.findById -> a mongoose-like doc with save()/toObject()
     const attemptDoc =
       opts.attemptDoc ??
       {
@@ -160,11 +149,9 @@ describe('AttemptsService', () => {
       };
     attemptModel.findById.mockReturnValue(attemptDoc);
 
-    // attemptModel.exists (priorSubmitted) and countDocuments (submittedCount)
     attemptModel.exists.mockResolvedValue(null);
     attemptModel.countDocuments.mockResolvedValue(0);
 
-    // exerciseModel.findById(...).select(...).lean()  -> exercise meta
     exerciseModel.findById.mockImplementation(() =>
       chain({
         maxAttempts: 3,
@@ -177,15 +164,12 @@ describe('AttemptsService', () => {
       }),
     );
 
-    // exerciseQuestionModel.find(...).select(...).lean() -> links
     exerciseQuestionModel.find.mockReturnValue(
       chain([{ questionId: new Types.ObjectId(questionId), grades: opts.linkGrades }]),
     );
 
-    // questionModel.find(...).populate('questionDetail').lean() -> questions
     questionModel.find.mockReturnValue(chain([{ ...opts.question, _id: new Types.ObjectId(questionId) }]));
 
-    // submissionModel.findOneAndUpdate captures the $set then echoes it back.
     submissionModel.findOneAndUpdate.mockImplementation((filter, update) => {
       submissionSet = update.$set;
       return Promise.resolve({
@@ -206,9 +190,6 @@ describe('AttemptsService', () => {
     return service.submit(ATTEMPT_ID, dto, studentId);
   }
 
-  // =========================================================================
-  // gradeObjective via submit() — every question type
-  // =========================================================================
   describe('server-side grading (gradeObjective via submit)', () => {
     it('SINGLE: correct correctOptionIndex scores full, ignores client isCorrect=false', async () => {
       await runSubmit({
@@ -387,9 +368,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // Essay → manual grading
-  // =========================================================================
   describe('essay handling', () => {
     it('ESSAY question → waitingGrades incremented, numberOfEssays counted, never auto-scored', async () => {
       const res = await runSubmit({
@@ -403,9 +381,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // Final score computation & policy
-  // =========================================================================
   describe('auto-graded final score', () => {
     it('all objective & correct → totalScore scaled to scoreScale, percent=100, isPassed, isGraded', async () => {
       const res: any = await runSubmit({
@@ -431,9 +406,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // showScoreAfter / showScoreImmediately withholding
-  // =========================================================================
   describe('score withholding', () => {
     it('showScoreAfter=false withholds score fields and flags scoreWithheld', async () => {
       const res: any = await runSubmit({
@@ -458,9 +430,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // submit() guards
-  // =========================================================================
   describe('submit guards', () => {
     it('throws NotFound when attempt missing', async () => {
       attemptModel.findById.mockReturnValue(null);
@@ -574,9 +543,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // start()
-  // =========================================================================
   describe('start', () => {
     function wireStart(exercise: any, opts: { existing?: number } = {}) {
       exerciseModel.findById.mockReturnValue(chain(exercise));
@@ -622,9 +588,6 @@ describe('AttemptsService', () => {
     });
   });
 
-  // =========================================================================
-  // grade()
-  // =========================================================================
   describe('grade', () => {
     function wireGrade(opts: {
       attempt?: any;
@@ -641,7 +604,6 @@ describe('AttemptsService', () => {
       attemptModel.findById.mockReturnValue(chain(attempt));
       studentQuestionModel.find.mockReturnValue(chain(opts.studentQuestions));
       exerciseQuestionModel.find.mockReturnValue(chain(opts.links));
-      // questionModel.find({type: essay}).select().lean()
       const essayDocs = (opts.essayQuestionIds ?? []).map((id) => ({ _id: new Types.ObjectId(id) }));
       questionModel.find.mockReturnValue(chain(essayDocs));
       settingsModel.findOne.mockImplementation(() => chain({ academic: { scoreScale: 10, passThreshold: 5 } }));

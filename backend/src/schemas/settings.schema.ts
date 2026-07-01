@@ -58,7 +58,6 @@ export class Settings {
   @ApiProperty({ type: Object })
   misc: { allowGoogleLogin: boolean };
 
-  // Cấu hình đánh giá (thang điểm, ngưỡng đạt, làm tròn…).
   @Prop({
     type: {
       scoreScale: { type: Number, default: 10 },
@@ -79,7 +78,6 @@ export class Settings {
     showScoreImmediately: boolean;
   };
 
-  // Bảo mật & đăng nhập.
   @Prop({
     type: {
       twoFactor: { type: Boolean, default: false },
@@ -100,7 +98,6 @@ export class Settings {
     ssoEnabled: boolean;
   };
 
-  // Thông báo hệ thống.
   @Prop({
     type: {
       emailOnSubmit: { type: Boolean, default: true },
@@ -113,7 +110,6 @@ export class Settings {
   @ApiProperty({ type: Object })
   notifications: { emailOnSubmit: boolean; remindUngraded: boolean; weeklyDigest: boolean };
 
-  // Tích hợp (SMTP, lưu trữ, API key).
   @Prop({
     type: {
       smtpHost: { type: String, default: null },
@@ -136,7 +132,6 @@ export class Settings {
     apiKey: string | null;
   };
 
-  // Dữ liệu & sao lưu.
   @Prop({
     type: {
       autoBackup: { type: Boolean, default: false },
@@ -149,7 +144,6 @@ export class Settings {
   @ApiProperty({ type: Object })
   data: { autoBackup: boolean; backupFrequency: string; encryptBackups: boolean };
 
-  // Nội dung trang chủ công khai (admin tự chỉnh thay vì fix cứng trong code).
   @Prop({
     type: {
       badge: { type: String, default: 'TÀI NGUYÊN NGỮ VĂN · MIỄN PHÍ' },
@@ -167,7 +161,6 @@ export class Settings {
   @ApiProperty({ type: Object })
   homepage: { badge: string; heroTitle: string; heroSubtitle: string; ctaLabel: string };
 
-  // Thông tin SEO cho trang công khai.
   @Prop({
     type: {
       title: { type: String, default: 'Vườn Văn — Học liệu Ngữ văn / Tiếng Việt Tiểu học' },

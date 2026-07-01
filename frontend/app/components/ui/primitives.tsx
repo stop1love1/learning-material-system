@@ -497,9 +497,7 @@ export function Segmented({
   value: any;
   onChange: (value: any) => void;
 }) {
-  // antd Segmented only allows string|number values, but the LMS passes booleans
-  // (e.g. dark on/off). Encode each option's real value to a stable string key,
-  // decode on change so callers still receive their original value/type.
+  // antd Segmented values are string|number; encode booleans for LMS callers.
   const enc = (v: any) => (typeof v === 'boolean' ? `b:${v}` : `v:${String(v)}`);
   const map = new Map<string, any>();
   const antOptions = options.map((o) => {
