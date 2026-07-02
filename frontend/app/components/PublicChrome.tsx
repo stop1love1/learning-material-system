@@ -43,7 +43,7 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
             <div className="font-lms-heading text-lg font-bold text-lms-ink">Vườn Văn</div>
           </div>
           <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
-            Kho học liệu mở miễn phí — tài liệu, đề thi, bài giảng và bài tập cho học sinh, phụ huynh và thầy cô.
+            Kho học liệu mở miễn phí — tài liệu, đề thi và bài tập cho học sinh, phụ huynh và thầy cô.
           </p>
           <div className="mt-4 flex gap-[9px]">
             {['globe', 'message', 'send'].map((ic) => (

@@ -91,10 +91,10 @@ export function UserHome({ p, t, setRoute, go }) {
             <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ'}
           </span>
           <h1 className="m-0 max-w-[620px] font-lms-heading text-[clamp(30px,4.4vw,50px)] font-extrabold leading-[1.04] tracking-[-1.4px] text-lms-ink">
-            {hp?.heroTitle || 'Học tập nhẹ nhàng, tài liệu mở cho tất cả.'}
+            {hp?.heroTitle || 'Học Tiếng Việt nhẹ nhàng, kho tài liệu mở cho tất cả.'}
           </h1>
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
-            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.'}
+            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
           <form onSubmit={(e) => { e.preventDefault(); submitHeroSearch(); }} className="flex max-w-[540px] flex-wrap gap-2.5">
             <Field p={p} icon="search" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
@@ -745,7 +745,7 @@ export function SDocs({ p, t, go }) {
           Kho tài liệu <span className="text-lms-accent">học tập</span>
         </h2>
         <p className="mt-2 mb-[18px] max-w-[520px] text-sm leading-normal text-lms-sub">
-          Tìm tài liệu, đề thi, sơ đồ tư duy và bài giảng để đọc, ôn tập và làm bài.
+          Tìm tài liệu, đề thi và sơ đồ tư duy để đọc, ôn tập và làm bài.
         </p>
         <div className="max-w-[560px]">
           <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm theo tên tài liệu, chủ đề…" className="h-[46px]" />

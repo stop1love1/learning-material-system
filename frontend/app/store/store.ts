@@ -8,7 +8,7 @@ const QTYPES: Rec[] = [
   { id: 'multi', label: 'Trắc nghiệm nhiều đáp án', icon: 'check', short: 'Nhiều đáp án' },
   { id: 'truefalse', label: 'Đúng / Sai', icon: 'target', short: 'Đúng/Sai' },
   { id: 'fill', label: 'Điền khuyết', icon: 'pen', short: 'Điền khuyết' },
-  { id: 'essay', label: 'Tự luận (tập làm văn)', icon: 'docs', short: 'Tự luận' },
+  { id: 'essay', label: 'Tự luận (viết đoạn, bài văn)', icon: 'docs', short: 'Tự luận' },
   { id: 'match', label: 'Nối / kéo thả', icon: 'link', short: 'Nối/kéo thả' },
 ];
 const LEVELS: Rec[] = [

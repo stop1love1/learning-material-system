@@ -39,7 +39,7 @@ const descHtml = (folder, name) => {
   // then a category-specific explanation.
   const tail = {
     'Bảng kiểm': 'Bảng kiểm tự đánh giá &amp; chỉnh sửa bài viết — giúp học sinh tự rà soát bài theo từng tiêu chí trước khi nộp (lớp 4–5, Kết nối tri thức).',
-    'Đề bài': 'Đề bài Tập làm văn lớp 4–5 (bộ Kết nối tri thức). Học sinh đọc kĩ đề, lập dàn ý rồi viết bài hoàn chỉnh.',
+    'Đề bài': 'Đề bài Hoạt động Viết lớp 4–5 (bộ Kết nối tri thức). Học sinh đọc kĩ đề, lập dàn ý rồi viết bài hoàn chỉnh.',
     'Tiêu chí đánh giá': 'Bảng tiêu chí chấm bài — dùng để giáo viên và học sinh đánh giá bài viết theo thang điểm rõ ràng.',
     'Phiếu học tập': 'Phiếu học tập luyện Tiếng Việt, có kèm phần đáp án để học sinh tự đối chiếu sau khi làm.',
     'Ngữ liệu mẫu': 'Ngữ liệu đọc tham khảo — dùng cho hoạt động đọc hiểu, cảm thụ văn học hoặc đọc mở rộng.',
@@ -93,7 +93,7 @@ async function main() {
       try {
         await api('POST', '/files', {
           name, fileType: fileTypeOf(name), source: 'external', url,
-          folderId, subject: grp.subject || 'Tiếng Việt', tags: [grp.folder],
+          folderId, subject: grp.subject || 'Tiếng Việt', grade: 'Lớp 4–5', tags: [grp.folder],
           description: descHtml(grp.folder, name),
         });
         nFiles++;

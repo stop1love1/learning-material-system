@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsMongoId, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateTopicDto {
-  @ApiProperty({ example: 'Ngữ pháp Tiếng Việt' })
+  @ApiProperty({ example: 'Luyện từ và câu — Lớp 4' })
   @IsString()
   @MinLength(1)
   title: string;

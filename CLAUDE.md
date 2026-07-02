@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A **monorepo** (single git repo, pushed to `github.com/stop1love1/learning-material-system`) for the **Vườn Văn / Học Viện LMS** — học liệu Ngữ văn / Tiếng Việt Tiểu học. Two apps, both pnpm:
+A **monorepo** (single git repo, pushed to `github.com/stop1love1/learning-material-system`) for the **Vườn Văn / Học Viện LMS** — học liệu môn Tiếng Việt Tiểu học (ở tiểu học môn này gọi là "Tiếng Việt", không gọi "Ngữ văn"). Two apps, both pnpm:
 
 - `frontend/` — Next.js 16 (App Router, React 19, TypeScript, Tailwind v4, antd installed).
 - `backend/` — NestJS 11 + MongoDB (Mongoose), JWT auth.

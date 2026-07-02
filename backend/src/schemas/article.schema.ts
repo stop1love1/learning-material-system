@@ -34,7 +34,7 @@ export class Article {
   images: string[];
 
   @Prop({ type: String, default: null, trim: true, index: true })
-  @ApiProperty({ type: String, nullable: true, example: 'Tập làm văn' })
+  @ApiProperty({ type: String, nullable: true, example: 'Hoạt động Viết' })
   category: string | null;
 
   @Prop({ type: String, default: 'clay' })

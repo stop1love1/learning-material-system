@@ -27,7 +27,7 @@ export class CreateArticleDto {
   @IsString({ each: true })
   images?: string[];
 
-  @ApiPropertyOptional({ type: String, example: 'Tập làm văn' })
+  @ApiPropertyOptional({ type: String, example: 'Hoạt động Viết' })
   @IsOptional()
   @IsString()
   category?: string;

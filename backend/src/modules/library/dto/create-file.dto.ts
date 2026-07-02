@@ -3,7 +3,7 @@ import { IsArray, IsEnum, IsMongoId, IsOptional, IsString, MinLength } from 'cla
 import { FileSource, FileType } from '../../../enums';
 
 export class CreateFileDto {
-  @ApiProperty({ example: 'Giáo án Tập đọc - Tuần 1' })
+  @ApiProperty({ example: 'Giáo án Hoạt động Đọc - Tuần 1' })
   @IsString()
   @MinLength(1)
   name: string;

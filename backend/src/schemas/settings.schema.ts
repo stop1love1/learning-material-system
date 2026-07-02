@@ -147,11 +147,11 @@ export class Settings {
   @Prop({
     type: {
       badge: { type: String, default: 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ' },
-      heroTitle: { type: String, default: 'Học tập nhẹ nhàng, tài liệu mở cho tất cả.' },
+      heroTitle: { type: String, default: 'Học Tiếng Việt nhẹ nhàng, kho tài liệu mở cho tất cả.' },
       heroSubtitle: {
         type: String,
         default:
-          'Mình chia sẻ miễn phí kho tài liệu, đề thi, bài giảng và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.',
+          'Mình chia sẻ miễn phí kho tài liệu, đề thi và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.',
       },
       ctaLabel: { type: String, default: 'Khám phá' },
     },
@@ -167,9 +167,9 @@ export class Settings {
       description: {
         type: String,
         default:
-          'Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập cho mọi môn học.',
+          'Hệ thống LMS — học liệu, đề thi và bài tập cho mọi môn học.',
       },
-      keywords: { type: [String], default: ['học liệu', 'tiểu học', 'đề thi', 'bài giảng', 'lms'] },
+      keywords: { type: [String], default: ['học liệu', 'tiểu học', 'tiếng việt', 'đề thi', 'lms'] },
       ogImage: { type: String, default: null },
     },
     default: {},

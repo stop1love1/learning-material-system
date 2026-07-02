@@ -1,7 +1,7 @@
 // Real teaching materials from the user's Google Drive (KNTT Tiếng Việt 4-5).
 // Each entry: [fileName, driveViewUrl]. fileType is derived from the extension.
 export const DRIVE = [
-  { folder: 'Bảng kiểm', subject: 'Tập làm văn', files: [
+  { folder: 'Bảng kiểm', subject: 'Hoạt động Viết', files: [
     ['Bảng kiểm tự đánh giá và chỉnh sửa bài viết nêu ý kiến về một câu chuyện.pdf', 'https://drive.google.com/file/d/1eGSPNXXidwkS4Ggo7g8af_GLTLlv1Bh1/view'],
     ['Bảng kiểm tự đánh giá và chỉnh sửa bài viết nêu ý kiến về một hiện tượng.pdf', 'https://drive.google.com/file/d/1QSlePcyUUusrIML3nVOf45HYVTWW5aow/view'],
     ['Bảng kiểm tự đánh giá và chỉnh sửa bài viết thư.pdf', 'https://drive.google.com/file/d/18Dsd3tn6F08k83ewQsk0jmKQs5ofwAHK/view'],
@@ -23,7 +23,7 @@ export const DRIVE = [
     ['Bảng kiểm tự đánh giá và chỉnh sửa đoạn-bài văn miêu tả cảnh.pdf', 'https://drive.google.com/file/d/10opxW0MUaAvn7gRLiQiHe66Cd53ozOQB/view'],
     ['Bảng kiểm tự đánh giá và chỉnh sửa đơn theo mẫu.pdf', 'https://drive.google.com/file/d/18gE3dluGhCWo2TJsT_fjiWEmQfbvKDwN/view'],
   ]},
-  { folder: 'Đề bài', subject: 'Tập làm văn', files: [
+  { folder: 'Đề bài', subject: 'Hoạt động Viết', files: [
     ['Đề bài: Viết bài văn kể lại một câu chuyện đã đọc hoặc đã nghe.pdf', 'https://drive.google.com/file/d/1MU9QPP0TBKnxNGaj2-Jvb31gHkSd9Pk-/view'],
     ['Đề bài: Viết bài văn kể lại một câu chuyện, trong đó có chi tiết sáng tạo.pdf', 'https://drive.google.com/file/d/1vVItSck21JQHG4vHlWVRAgSIt-t6VixV/view'],
     ['Đề bài: Viết bài văn miêu tả con vật.pdf', 'https://drive.google.com/file/d/1JBuHsQhruFCW0GMSlx2sKksVEU3pBh3t/view'],
@@ -41,7 +41,7 @@ export const DRIVE = [
     ['Đề bài: Viết đoạn văn nêu ý kiến tán thành hoặc phản đối một hiện tượng.pdf', 'https://drive.google.com/file/d/1iEaQlPxQXF2LVkmO7BIKUmS9drqhwWWA/view'],
     ['Đề bài: Viết đoạn văn tưởng tượng dựa vào một câu chuyện đã đọc hoặc đã nghe.pdf', 'https://drive.google.com/file/d/1SxMVfIGxN7kwHOQeo0_wg7_NeBiSbNVB/view'],
   ]},
-  { folder: 'Tiêu chí đánh giá', subject: 'Tập làm văn', files: [
+  { folder: 'Tiêu chí đánh giá', subject: 'Hoạt động Viết', files: [
     ['Bảng tiêu chí đánh giá bài tả cảnh.pdf', 'https://drive.google.com/file/d/1n3a9RLwxGVA0nL_SDMHhhL-xD8ptThPK/view'],
     ['Bảng tiêu chí đánh giá đoạn văn nêu tình cảm.pdf', 'https://drive.google.com/file/d/1nBoncLZxTPWJMHsEvLto80UrbVwe4-TW/view'],
     ['Bảng tiêu chí đánh giá bài thuật lại một sự việc.pdf', 'https://drive.google.com/file/d/1Nbm1-TRxYJ8BP8lb2m9mqUycge0hqbl6/view'],
@@ -118,7 +118,7 @@ export const DRIVE = [
     ['Mẫu bài viết của học sinh 2.jpg', 'https://drive.google.com/file/d/13yBKAGHtK33l4svsadU3vVG0LvoK7ajb/view'],
     ['Ngữ liệu mẫu của học sinh.png', 'https://drive.google.com/file/d/1C0MnjJH7XN4wOg4S7IPSLPsLKywz5htI/view'],
   ]},
-  { folder: 'Sơ đồ tư duy', subject: 'Tập làm văn', files: [
+  { folder: 'Sơ đồ tư duy', subject: 'Hoạt động Viết', files: [
     ['Sơ đồ: Biên bản.jpg', 'https://drive.google.com/file/d/1vDfXXLcJpB37sGRPaMjVx2u5cU2xPfQE/view'],
     ['Sơ đồ: Bảo vệ môi trường.png', 'https://drive.google.com/file/d/1e-PGlgdIHcFXf45k1iJUp-I7NK6tn1BC/view'],
     ['Sơ đồ: Cốt truyện.jpg', 'https://drive.google.com/file/d/1DDYnS-OqsLAG2QmY_qQAlNS39uGCZmZ_/view'],

@@ -18,7 +18,7 @@
 
 Một `pre('validate')` hook đảm bảo: external → phải có `url`; internal → phải có `fileKey`. Nhờ vậy **không cần xây dựng hệ thống lưu trữ tài liệu** — chỉ lưu link. Khi nào cần host file thật thì bật `source = internal` mà không phải đổi schema.
 
-Tài liệu được sắp xếp theo cây thư mục `MaterialFolder` (materialized-path: `parentId` + `ancestors[]` + `depth`) cho các nhóm như *Giáo án, Tập đọc, Thơ, Đề thi…*; ngoài ra còn `category`, `subject`, `grade`, `tags[]` để lọc/tìm (`materials` có text index trên `title/tags/category`).
+Tài liệu được sắp xếp theo cây thư mục `MaterialFolder` (materialized-path: `parentId` + `ancestors[]` + `depth`) cho các nhóm như *Giáo án, Phiếu học tập, Đề bài, Sơ đồ tư duy…*; ngoài ra còn `category`, `subject`, `grade`, `tags[]` để lọc/tìm (`materials` có text index trên `title/tags/category`).
 
 ## Các collection
 

@@ -160,14 +160,14 @@ export function ABlog({ p, t, setRoute, go }) {
   const [mode, setMode] = React.useState('list');
   const [editId, setEditId] = React.useState(null);
   const [title, setTitle] = React.useState('');
-  const [cat, setCat] = React.useState('Tập làm văn');
+  const [cat, setCat] = React.useState('Hoạt động Viết');
   const [body, setBody] = React.useState('');
   const [kw, setKw] = React.useState('');
-  const cats = ['Tập làm văn', 'Luyện từ & câu', 'Chính tả', 'Cùng con học', 'Tin tức'];
+  const cats = ['Hoạt động Viết', 'Luyện từ & câu', 'Chính tả', 'Cùng con học', 'Tin tức'];
   const openCompose = (a) => {
     setEditId(a ? a.id : null);
     setTitle(a ? a.title || '' : '');
-    setCat(a ? a.cat || 'Tập làm văn' : 'Tập làm văn');
+    setCat(a ? a.cat || 'Hoạt động Viết' : 'Hoạt động Viết');
     setBody(a ? a.html || '' : '');
     setMode('compose');
   };

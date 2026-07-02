@@ -522,7 +522,7 @@ export function TBankEdit({ p, t, setRoute }) {
               <div className="mt-[18px]">
                 <label className={lblClass()}>CHẤM BẰNG</label>
                 <Select p={p} value={essayGrading} onChange={setEssayGrading} className="mt-2.5 max-w-[360px]"
-                  options={[{ value: 'rubric', label: 'Rubric Tập làm văn (tả – kể)' }, { value: 'manual', label: 'Cho điểm thủ công' }]} />
+                  options={[{ value: 'rubric', label: 'Rubric Hoạt động Viết (tả – kể)' }, { value: 'manual', label: 'Cho điểm thủ công' }]} />
               </div>
             )}
 
@@ -561,7 +561,7 @@ export function TBankEdit({ p, t, setRoute }) {
                     options={[{ value: '', label: '— Không gán chủ đề —' },
                       ...DB.TOPIC_TREE.map((tp: TreeNode) => ({ value: tp.id, label: tp.name }))]} />
                 ) : (
-                  <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Ngữ pháp N4" className="mt-2.5" />
+                  <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Luyện từ và câu — Lớp 4" className="mt-2.5" />
                 )}
               </div>
             </div>

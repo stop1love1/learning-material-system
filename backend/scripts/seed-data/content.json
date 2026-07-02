@@ -1177,8 +1177,8 @@
  ],
  "rubrics": [
   {
-   "name": "Rubric chấm bài văn tả con vật (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn miêu tả con vật theo chương trình GDPT 2018, bộ Kết nối tri thức với cuộc sống, lớp 4-5. Dùng cho các đề tả con vật nuôi hoặc con vật em yêu thích.",
+   "name": "Tiêu chí đánh giá đoạn/bài văn tả cảnh",
+   "description": "Bảng tiêu chí đánh giá đoạn/bài văn tả cảnh — thang Likert 4 mức (1 Chưa đạt, 2 Tối thiểu, 3 Đạt yêu cầu, 4 Tốt); 10 tiêu chí thuộc 3 nhóm Trình bày · Nội dung · Diễn đạt, mỗi tiêu chí 1→4 điểm. Dùng cho Hoạt động Viết, Tiếng Việt lớp 4–5.",
    "levels": [
     {
      "name": "Tốt",
@@ -1186,63 +1186,147 @@
      "order": 1
     },
     {
-     "name": "Khá",
+     "name": "Đạt yêu cầu",
      "percentage": 75,
      "order": 2
     },
     {
-     "name": "Đạt",
+     "name": "Tối thiểu",
      "percentage": 50,
      "order": 3
     },
     {
-     "name": "Cần cố gắng",
+     "name": "Chưa đạt",
      "percentage": 25,
      "order": 4
     }
    ],
    "criterions": [
     {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Bài viết đủ ba phần rõ ràng: mở bài giới thiệu con vật, thân bài tả chi tiết, kết bài nêu tình cảm. Các phần cân đối, có liên kết.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và ý tả",
-     "note": "Tả được hình dáng (đầu, mình, chân, lông/da, màu sắc) và hoạt động, thói quen tiêu biểu của con vật. Ý phong phú, chọn lọc đặc điểm nổi bật, đúng đặc điểm loài.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Tả theo trình tự hợp lí (bao quát đến chi tiết, hoặc hình dáng đến hoạt động). Câu văn nối kết mạch lạc, không lộn xộn, không lặp ý.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ gợi tả, gợi cảm, đúng nghĩa; đặt câu đúng ngữ pháp, đủ thành phần; biết dùng câu có hình ảnh.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Sáng tạo và cảm xúc",
-     "note": "Biết dùng so sánh, nhân hoá; bộc lộ tình cảm yêu quý, gắn bó với con vật một cách chân thật, tự nhiên; có cách diễn đạt riêng.",
+     "name": "Cấu trúc ba phần",
+     "note": "Trình bày · Mức Tốt: 3 phần rõ ràng, mạch lạc",
      "weight": 10,
-     "order": 5
+     "order": 1,
+     "items": [
+      "1 – Chưa đạt: Không rõ mở – thân – kết",
+      "2 – Tối thiểu: Có đủ 3 phần nhưng rời rạc",
+      "3 – Đạt yêu cầu: Có 3 phần rõ, tương đối hợp lí",
+      "4 – Tốt: 3 phần rõ ràng, mạch lạc"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, đúng dấu câu, chữ viết rõ ràng, trình bày sạch đẹp, đúng quy cách đoạn văn/bài văn.",
+     "name": "Chính tả",
+     "note": "Trình bày · Mức Tốt: Không lỗi",
      "weight": 10,
-     "order": 6
+     "order": 2,
+     "items": [
+      "1 – Chưa đạt: Trên 5 lỗi",
+      "2 – Tối thiểu: 3–4 lỗi",
+      "3 – Đạt yêu cầu: 1–2 lỗi",
+      "4 – Tốt: Không lỗi"
+     ]
+    },
+    {
+     "name": "Chữ viết",
+     "note": "Trình bày · Mức Tốt: Rõ ràng, trình bày đẹp",
+     "weight": 10,
+     "order": 3,
+     "items": [
+      "1 – Chưa đạt: Khó đọc",
+      "2 – Tối thiểu: Đọc được nhưng chưa rõ",
+      "3 – Đạt yêu cầu: Rõ ràng, tương đối đều",
+      "4 – Tốt: Rõ ràng, trình bày đẹp"
+     ]
+    },
+    {
+     "name": "Xác định và miêu tả cảnh",
+     "note": "Nội dung · Mức Tốt: Rõ ràng, chi tiết nổi bật",
+     "weight": 10,
+     "order": 4,
+     "items": [
+      "1 – Chưa đạt: Lạc đề/không rõ cảnh",
+      "2 – Tối thiểu: Có cảnh nhưng mơ hồ",
+      "3 – Đạt yêu cầu: Xác định rõ, có chi tiết cơ bản",
+      "4 – Tốt: Rõ ràng, chi tiết nổi bật"
+     ]
+    },
+    {
+     "name": "Mở bài/mở đoạn",
+     "note": "Nội dung · Mức Tốt: Mở bài gián tiếp, giới thiệu hay, hấp dẫn về cảnh tả",
+     "weight": 10,
+     "order": 5,
+     "items": [
+      "1 – Chưa đạt: Mở bài chưa giới thiệu được cảnh cần tả",
+      "2 – Tối thiểu: Mở bài trực tiếp, giới thiệu đúng về cảnh tả",
+      "3 – Đạt yêu cầu: Mở bài gián tiếp, giới thiệu đúng về cảnh tả",
+      "4 – Tốt: Mở bài gián tiếp, giới thiệu hay, hấp dẫn về cảnh tả"
+     ]
+    },
+    {
+     "name": "Trình tự miêu tả",
+     "note": "Nội dung · Mức Tốt: Tả được những nét chính, đặc sắc của cảnh; nêu được những chi tiết nổi bật minh họa cho nét chính; sắp xếp các chi tiết theo trình tự thời gian hoặc không gian; đan xen trong tả có kể, có thể hiện tình cảm, thái độ của bản thân",
+     "weight": 10,
+     "order": 6,
+     "items": [
+      "1 – Chưa đạt: Chưa nêu được các nét chính, chi tiết nổi bật của cảnh tả; sắp xếp các chi tiết lộn xộn; chưa thể hiện tình cảm, thái độ trong bài viết",
+      "2 – Tối thiểu: Sắp xếp các chi tiết chưa thật logic; đan xen trong tả có kể, có thể hiện tình cảm, thái độ nhưng chưa hay",
+      "3 – Đạt yêu cầu: Tả được những nét chính của cảnh nhưng chưa nêu được rõ nét các chi tiết minh họa cho nét chính; sắp xếp các chi tiết theo trình tự thời gian hoặc không gian; đan xen trong tả có kể, có thể hiện tình cảm, thái độ của bản thân",
+      "4 – Tốt: Tả được những nét chính, đặc sắc của cảnh; nêu được những chi tiết nổi bật minh họa cho nét chính; sắp xếp các chi tiết theo trình tự thời gian hoặc không gian; đan xen trong tả có kể, có thể hiện tình cảm, thái độ của bản thân"
+     ]
+    },
+    {
+     "name": "Kết bài/kết đoạn",
+     "note": "Nội dung · Mức Tốt: Kết bài mở rộng, sâu sắc; có liên kết với nội dung thân bài; nêu được ý nghĩa của cảnh đối với bản thân/cộng đồng; nêu được nhận xét, cảm nghĩ, ý kiến bản thân về cảnh tả",
+     "weight": 10,
+     "order": 7,
+     "items": [
+      "1 – Chưa đạt: Kết bài không mở rộng; mối liên kết với nội dung thân bài chưa rõ nét",
+      "2 – Tối thiểu: Kết bài không mở rộng; có liên kết nội dung thân bài",
+      "3 – Đạt yêu cầu: Kết bài mở rộng; có liên kết với nội dung thân bài; nêu được ý nghĩa của cảnh đối với bản thân/cộng đồng; nêu được nhận xét, cảm nghĩ, ý kiến bản thân về cảnh tả",
+      "4 – Tốt: Kết bài mở rộng, sâu sắc; có liên kết với nội dung thân bài; nêu được ý nghĩa của cảnh đối với bản thân/cộng đồng; nêu được nhận xét, cảm nghĩ, ý kiến bản thân về cảnh tả"
+     ]
+    },
+    {
+     "name": "Viết câu",
+     "note": "Diễn đạt · Mức Tốt: Câu đa dạng, rõ ràng, giàu cảm xúc",
+     "weight": 10,
+     "order": 8,
+     "items": [
+      "1 – Chưa đạt: Câu sai, rời rạc",
+      "2 – Tối thiểu: Câu đơn giản, còn lỗi",
+      "3 – Đạt yêu cầu: Câu đúng, tương đối rõ, có cảm xúc",
+      "4 – Tốt: Câu đa dạng, rõ ràng, giàu cảm xúc"
+     ]
+    },
+    {
+     "name": "Từ ngữ",
+     "note": "Diễn đạt · Mức Tốt: Từ ngữ phong phú",
+     "weight": 10,
+     "order": 9,
+     "items": [
+      "1 – Chưa đạt: Dùng từ sai nhiều",
+      "2 – Tối thiểu: Từ ngữ hạn chế",
+      "3 – Đạt yêu cầu: Từ ngữ phù hợp",
+      "4 – Tốt: Từ ngữ phong phú"
+     ]
+    },
+    {
+     "name": "Liên kết và biện pháp nghệ thuật",
+     "note": "Diễn đạt · Mức Tốt: Mạch lạc, có nghệ thuật",
+     "weight": 10,
+     "order": 10,
+     "items": [
+      "1 – Chưa đạt: Không có",
+      "2 – Tối thiểu: Yếu",
+      "3 – Đạt yêu cầu: Có cơ bản",
+      "4 – Tốt: Mạch lạc, có nghệ thuật"
+     ]
     }
    ]
   },
   {
-   "name": "Rubric chấm bài văn tả cây cối (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn miêu tả cây cối (cây ăn quả, cây bóng mát, cây hoa) theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
+   "name": "Tiêu chí đánh giá đoạn văn nêu tình cảm, cảm xúc về nhân vật trong văn học",
+   "description": "Bảng tiêu chí đánh giá đoạn văn nêu tình cảm, cảm xúc về nhân vật trong văn học — thang Likert 4 mức (1 Chưa đạt, 2 Tối thiểu, 3 Đạt yêu cầu, 4 Tốt); 10 tiêu chí thuộc 3 nhóm Trình bày · Nội dung · Diễn đạt, mỗi tiêu chí 1→4 điểm. Dùng cho Hoạt động Viết, Tiếng Việt lớp 4–5.",
    "levels": [
     {
      "name": "Tốt",
@@ -1250,63 +1334,147 @@
      "order": 1
     },
     {
-     "name": "Khá",
+     "name": "Đạt yêu cầu",
      "percentage": 75,
      "order": 2
     },
     {
-     "name": "Đạt",
+     "name": "Tối thiểu",
      "percentage": 50,
      "order": 3
     },
     {
-     "name": "Cần cố gắng",
+     "name": "Chưa đạt",
      "percentage": 25,
      "order": 4
     }
    ],
    "criterions": [
     {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Đủ ba phần: mở bài giới thiệu cây, thân bài tả các bộ phận hoặc tả theo thời kì, kết bài nêu ích lợi và tình cảm. Bố cục cân đối, liên kết.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và ý tả",
-     "note": "Tả được các bộ phận của cây (gốc, thân, cành, lá, hoa, quả) hoặc tả theo mùa/thời kì phát triển; nêu đặc điểm nổi bật, đúng thực tế của cây.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Tả theo trình tự hợp lí (từ bao quát đến chi tiết, từ gốc đến ngọn hoặc theo mùa). Diễn đạt mạch lạc, các ý liền mạch.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ gợi tả màu sắc, hình dáng, hương vị; đặt câu đúng ngữ pháp, có hình ảnh sinh động.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Sáng tạo và cảm xúc",
-     "note": "Biết dùng so sánh, nhân hoá để cây thêm sinh động; thể hiện tình cảm gắn bó, kỉ niệm với cây một cách chân thật.",
+     "name": "Cấu trúc ba phần",
+     "note": "Trình bày · Mức Tốt: 3 phần rõ ràng, mạch lạc",
      "weight": 10,
-     "order": 5
+     "order": 1,
+     "items": [
+      "1 – Chưa đạt: Không rõ mở – thân – kết",
+      "2 – Tối thiểu: Có đủ 3 phần nhưng rời rạc",
+      "3 – Đạt yêu cầu: Có 3 phần rõ, tương đối hợp lí",
+      "4 – Tốt: 3 phần rõ ràng, mạch lạc"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ viết rõ ràng; trình bày sạch đẹp, đúng quy cách bài văn.",
+     "name": "Chính tả",
+     "note": "Trình bày · Mức Tốt: Không lỗi",
      "weight": 10,
-     "order": 6
+     "order": 2,
+     "items": [
+      "1 – Chưa đạt: Trên 5 lỗi",
+      "2 – Tối thiểu: 3–4 lỗi",
+      "3 – Đạt yêu cầu: 1–2 lỗi",
+      "4 – Tốt: Không lỗi"
+     ]
+    },
+    {
+     "name": "Chữ viết",
+     "note": "Trình bày · Mức Tốt: Rõ ràng, trình bày đẹp",
+     "weight": 10,
+     "order": 3,
+     "items": [
+      "1 – Chưa đạt: Khó đọc",
+      "2 – Tối thiểu: Đọc được nhưng chưa rõ",
+      "3 – Đạt yêu cầu: Rõ ràng, tương đối đều",
+      "4 – Tốt: Rõ ràng, trình bày đẹp"
+     ]
+    },
+    {
+     "name": "Xác định nhân vật và nội dung cảm xúc",
+     "note": "Nội dung · Mức Tốt: Xác định rõ nhân vật, cảm xúc rõ ràng, có điểm nhấn",
+     "weight": 10,
+     "order": 4,
+     "items": [
+      "1 – Chưa đạt: Lạc đề/không xác định rõ nhân vật",
+      "2 – Tối thiểu: Xác định được nhân vật nhưng cảm xúc mơ hồ",
+      "3 – Đạt yêu cầu: Xác định rõ nhân vật, nêu được cảm xúc chính",
+      "4 – Tốt: Xác định rõ nhân vật, cảm xúc rõ ràng, có điểm nhấn"
+     ]
+    },
+    {
+     "name": "Mở đoạn",
+     "note": "Nội dung · Mức Tốt: Mở đoạn gián tiếp, hấp dẫn, gợi cảm xúc",
+     "weight": 10,
+     "order": 5,
+     "items": [
+      "1 – Chưa đạt: Chưa giới thiệu được nhân vật hoặc cảm xúc",
+      "2 – Tối thiểu: Giới thiệu trực tiếp, đúng nhân vật",
+      "3 – Đạt yêu cầu: Giới thiệu gián tiếp, phù hợp",
+      "4 – Tốt: Mở đoạn gián tiếp, hấp dẫn, gợi cảm xúc"
+     ]
+    },
+    {
+     "name": "Triển khai nội dung và lí giải cảm xúc",
+     "note": "Nội dung · Mức Tốt: Nêu được đặc điểm nổi bật; lí giải rõ ràng, có dẫn chứng cụ thể, thuyết phục",
+     "weight": 10,
+     "order": 6,
+     "items": [
+      "1 – Chưa đạt: Không nêu được đặc điểm/chi tiết của nhân vật; không lí giải cảm xúc",
+      "2 – Tối thiểu: Có nêu đặc điểm/chi tiết nhưng rời rạc; lí giải đơn giản",
+      "3 – Đạt yêu cầu: Nêu được đặc điểm/chi tiết tiêu biểu; lí giải cảm xúc hợp lí",
+      "4 – Tốt: Nêu được đặc điểm nổi bật; lí giải rõ ràng, có dẫn chứng cụ thể, thuyết phục"
+     ]
+    },
+    {
+     "name": "Kết đoạn",
+     "note": "Nội dung · Mức Tốt: Kết đoạn mở rộng, sâu sắc; thể hiện rõ cảm nhận cá nhân",
+     "weight": 10,
+     "order": 7,
+     "items": [
+      "1 – Chưa đạt: Không có kết đoạn hoặc không liên kết",
+      "2 – Tối thiểu: Có kết đoạn nhưng chưa rõ",
+      "3 – Đạt yêu cầu: Kết đoạn có liên kết, nêu cảm nghĩ",
+      "4 – Tốt: Kết đoạn mở rộng, sâu sắc; thể hiện rõ cảm nhận cá nhân"
+     ]
+    },
+    {
+     "name": "Viết câu",
+     "note": "Diễn đạt · Mức Tốt: Câu đa dạng, rõ ràng, giàu cảm xúc",
+     "weight": 10,
+     "order": 8,
+     "items": [
+      "1 – Chưa đạt: Câu sai, rời rạc",
+      "2 – Tối thiểu: Câu đơn giản, còn lỗi",
+      "3 – Đạt yêu cầu: Câu đúng, rõ, có cảm xúc",
+      "4 – Tốt: Câu đa dạng, rõ ràng, giàu cảm xúc"
+     ]
+    },
+    {
+     "name": "Từ ngữ",
+     "note": "Diễn đạt · Mức Tốt: Từ ngữ phong phú, biểu cảm",
+     "weight": 10,
+     "order": 9,
+     "items": [
+      "1 – Chưa đạt: Dùng từ sai nhiều",
+      "2 – Tối thiểu: Từ ngữ hạn chế",
+      "3 – Đạt yêu cầu: Từ ngữ phù hợp",
+      "4 – Tốt: Từ ngữ phong phú, biểu cảm"
+     ]
+    },
+    {
+     "name": "Liên kết và biểu đạt cảm xúc",
+     "note": "Diễn đạt · Mức Tốt: Liên kết mạch lạc, cảm xúc tự nhiên, có sức gợi",
+     "weight": 10,
+     "order": 10,
+     "items": [
+      "1 – Chưa đạt: Không có liên kết, cảm xúc không rõ",
+      "2 – Tối thiểu: Liên kết yếu, cảm xúc mờ nhạt",
+      "3 – Đạt yêu cầu: Có liên kết cơ bản, thể hiện được cảm xúc",
+      "4 – Tốt: Liên kết mạch lạc, cảm xúc tự nhiên, có sức gợi"
+     ]
     }
    ]
   },
   {
-   "name": "Rubric chấm bài văn tả cảnh (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn miêu tả cảnh vật (cảnh đẹp quê hương, cảnh trường, cảnh một buổi trong ngày, cảnh thiên nhiên) theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
+   "name": "Tiêu chí đánh giá bài thuật lại một sự việc",
+   "description": "Bảng tiêu chí đánh giá bài thuật lại một sự việc — thang Likert 4 mức (1 Chưa đạt, 2 Tối thiểu, 3 Đạt yêu cầu, 4 Tốt); 10 tiêu chí thuộc 3 nhóm Trình bày · Nội dung · Diễn đạt, mỗi tiêu chí 1→4 điểm. Dùng cho Hoạt động Viết, Tiếng Việt lớp 4–5.",
    "levels": [
     {
      "name": "Tốt",
@@ -1314,63 +1482,147 @@
      "order": 1
     },
     {
-     "name": "Khá",
+     "name": "Đạt yêu cầu",
      "percentage": 75,
      "order": 2
     },
     {
-     "name": "Đạt",
+     "name": "Tối thiểu",
      "percentage": 50,
      "order": 3
     },
     {
-     "name": "Cần cố gắng",
+     "name": "Chưa đạt",
      "percentage": 25,
      "order": 4
     }
    ],
    "criterions": [
     {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Đủ ba phần: mở bài giới thiệu cảnh và thời điểm quan sát, thân bài tả cảnh theo trình tự, kết bài nêu cảm nghĩ. Bố cục rõ, cân đối.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và ý tả",
-     "note": "Tả được cảnh bao quát và các chi tiết tiêu biểu (bầu trời, cây cối, con người, âm thanh, ánh sáng...); chọn được đặc điểm nổi bật, giàu hình ảnh, đúng cảnh thực.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Tả theo trình tự không gian (xa đến gần, bao quát đến cụ thể) hoặc thời gian hợp lí; chuyển ý mạch lạc, liên kết tốt.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ gợi tả, gợi cảm; biết huy động nhiều giác quan; đặt câu đúng ngữ pháp, có hình ảnh đẹp.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Sáng tạo và cảm xúc",
-     "note": "Biết dùng so sánh, nhân hoá làm cảnh thêm sinh động; bộc lộ cảm xúc, tình yêu thiên nhiên, quê hương chân thật, có nét riêng.",
+     "name": "Cấu trúc ba phần",
+     "note": "Trình bày · Mức Tốt: 3 phần rõ ràng, mạch lạc",
      "weight": 10,
-     "order": 5
+     "order": 1,
+     "items": [
+      "1 – Chưa đạt: Không rõ mở – thân – kết",
+      "2 – Tối thiểu: Có đủ 3 phần nhưng rời rạc",
+      "3 – Đạt yêu cầu: Có 3 phần rõ, tương đối hợp lí",
+      "4 – Tốt: 3 phần rõ ràng, mạch lạc"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ rõ ràng; trình bày sạch đẹp, đúng quy cách bài văn.",
+     "name": "Chính tả",
+     "note": "Trình bày · Mức Tốt: Không lỗi",
      "weight": 10,
-     "order": 6
+     "order": 2,
+     "items": [
+      "1 – Chưa đạt: Trên 5 lỗi",
+      "2 – Tối thiểu: 3–4 lỗi",
+      "3 – Đạt yêu cầu: 1–2 lỗi",
+      "4 – Tốt: Không lỗi"
+     ]
+    },
+    {
+     "name": "Chữ viết",
+     "note": "Trình bày · Mức Tốt: Rõ ràng, trình bày đẹp",
+     "weight": 10,
+     "order": 3,
+     "items": [
+      "1 – Chưa đạt: Khó đọc",
+      "2 – Tối thiểu: Đọc được nhưng chưa rõ",
+      "3 – Đạt yêu cầu: Rõ ràng, tương đối đều",
+      "4 – Tốt: Rõ ràng, trình bày đẹp"
+     ]
+    },
+    {
+     "name": "Xác định và thuật lại sự việc",
+     "note": "Nội dung · Mức Tốt: Sự việc rõ, đầy đủ, có chi tiết",
+     "weight": 10,
+     "order": 4,
+     "items": [
+      "1 – Chưa đạt: Lạc đề/không rõ sự việc",
+      "2 – Tối thiểu: Có sự việc nhưng thiếu nhiều chi tiết",
+      "3 – Đạt yêu cầu: Sự việc rõ, tương đối đầy đủ",
+      "4 – Tốt: Sự việc rõ, đầy đủ, có chi tiết"
+     ]
+    },
+    {
+     "name": "Mở bài (giới thiệu sự việc)",
+     "note": "Nội dung · Mức Tốt: Mở bài gián tiếp",
+     "weight": 10,
+     "order": 5,
+     "items": [
+      "1 – Chưa đạt: Không có/không rõ",
+      "2 – Tối thiểu: Có nhưng sơ sài",
+      "3 – Đạt yêu cầu: Mở bài trực tiếp",
+      "4 – Tốt: Mở bài gián tiếp"
+     ]
+    },
+    {
+     "name": "Trình tự sự việc",
+     "note": "Nội dung · Mức Tốt: Rõ ràng, mạch lạc, hợp lí",
+     "weight": 10,
+     "order": 6,
+     "items": [
+      "1 – Chưa đạt: Lộn xộn, khó theo dõi",
+      "2 – Tối thiểu: Có trình tự nhưng chưa hợp lí",
+      "3 – Đạt yêu cầu: Tương đối mạch lạc, hợp lí",
+      "4 – Tốt: Rõ ràng, mạch lạc, hợp lí"
+     ]
+    },
+    {
+     "name": "Kết bài (kết thúc, cảm nghĩ)",
+     "note": "Nội dung · Mức Tốt: Kết bài mở rộng",
+     "weight": 10,
+     "order": 7,
+     "items": [
+      "1 – Chưa đạt: Không có",
+      "2 – Tối thiểu: Có nhưng rời rạc",
+      "3 – Đạt yêu cầu: Kết bài không mở rộng",
+      "4 – Tốt: Kết bài mở rộng"
+     ]
+    },
+    {
+     "name": "Viết câu",
+     "note": "Diễn đạt · Mức Tốt: Câu đa dạng, rõ ràng",
+     "weight": 10,
+     "order": 8,
+     "items": [
+      "1 – Chưa đạt: Câu sai, rời rạc",
+      "2 – Tối thiểu: Câu đơn giản, còn lỗi",
+      "3 – Đạt yêu cầu: Câu đúng, tương đối rõ",
+      "4 – Tốt: Câu đa dạng, rõ ràng"
+     ]
+    },
+    {
+     "name": "Từ ngữ",
+     "note": "Diễn đạt · Mức Tốt: Từ ngữ phong phú",
+     "weight": 10,
+     "order": 9,
+     "items": [
+      "1 – Chưa đạt: Dùng từ sai nhiều",
+      "2 – Tối thiểu: Từ ngữ hạn chế",
+      "3 – Đạt yêu cầu: Từ ngữ phù hợp",
+      "4 – Tốt: Từ ngữ phong phú"
+     ]
+    },
+    {
+     "name": "Liên kết/mạch kể",
+     "note": "Diễn đạt · Mức Tốt: Liên kết tốt, mạch kể rõ",
+     "weight": 10,
+     "order": 10,
+     "items": [
+      "1 – Chưa đạt: Không có liên kết",
+      "2 – Tối thiểu: Liên kết yếu",
+      "3 – Đạt yêu cầu: Có liên kết cơ bản",
+      "4 – Tốt: Liên kết tốt, mạch kể rõ"
+     ]
     }
    ]
   },
   {
-   "name": "Rubric chấm bài văn tả người (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn miêu tả người (người thân, thầy cô, bạn bè, người em quý mến) theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
+   "name": "Tiêu chí đánh giá bài viết kể lại một câu chuyện",
+   "description": "Bảng tiêu chí đánh giá bài viết kể lại một câu chuyện — thang Likert 4 mức (1 Chưa đạt, 2 Tối thiểu, 3 Đạt yêu cầu, 4 Tốt); 10 tiêu chí thuộc 3 nhóm Trình bày · Nội dung · Diễn đạt, mỗi tiêu chí 1→4 điểm. Dùng cho Hoạt động Viết, Tiếng Việt lớp 4–5.",
    "levels": [
     {
      "name": "Tốt",
@@ -1378,313 +1630,141 @@
      "order": 1
     },
     {
-     "name": "Khá",
+     "name": "Đạt yêu cầu",
      "percentage": 75,
      "order": 2
     },
     {
-     "name": "Đạt",
+     "name": "Tối thiểu",
      "percentage": 50,
      "order": 3
     },
     {
-     "name": "Cần cố gắng",
+     "name": "Chưa đạt",
      "percentage": 25,
      "order": 4
     }
    ],
    "criterions": [
     {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Đủ ba phần: mở bài giới thiệu người được tả, thân bài tả ngoại hình và hoạt động/tính tình, kết bài nêu tình cảm. Bố cục cân đối, liên kết.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và ý tả",
-     "note": "Tả được ngoại hình tiêu biểu (khuôn mặt, mái tóc, dáng người, ánh mắt, nụ cười) và hoạt động, tính tình, lời nói, cử chỉ; chọn được nét riêng làm nổi bật con người.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Tả theo trình tự hợp lí (ngoại hình đến tính tình/hoạt động); kết hợp tả với kể; diễn đạt mạch lạc, không lặp ý.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ gợi tả chính xác, sinh động; đặt câu đúng ngữ pháp; biết dùng câu miêu tả có hình ảnh.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Sáng tạo và cảm xúc",
-     "note": "Biết dùng so sánh; lồng kỉ niệm, chi tiết riêng; bộc lộ tình cảm kính trọng, yêu quý người được tả một cách chân thật.",
+     "name": "Cấu trúc ba phần",
+     "note": "Trình bày · Mức Tốt: 3 phần rõ ràng, mạch lạc",
      "weight": 10,
-     "order": 5
+     "order": 1,
+     "items": [
+      "1 – Chưa đạt: Không rõ mở – thân – kết",
+      "2 – Tối thiểu: Có đủ 3 phần nhưng rời rạc",
+      "3 – Đạt yêu cầu: Có 3 phần rõ, tương đối hợp lí",
+      "4 – Tốt: 3 phần rõ ràng, mạch lạc"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ rõ ràng; trình bày sạch đẹp, đúng quy cách bài văn.",
+     "name": "Chính tả",
+     "note": "Trình bày · Mức Tốt: Không lỗi",
      "weight": 10,
-     "order": 6
-    }
-   ]
-  },
-  {
-   "name": "Rubric chấm bài văn thuật lại một sự việc (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn thuật lại (kể lại) một sự việc, một hoạt động đã chứng kiến hoặc tham gia theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
-   "levels": [
-    {
-     "name": "Tốt",
-     "percentage": 100,
-     "order": 1
+     "order": 2,
+     "items": [
+      "1 – Chưa đạt: Trên 5 lỗi",
+      "2 – Tối thiểu: 3–4 lỗi",
+      "3 – Đạt yêu cầu: 1–2 lỗi",
+      "4 – Tốt: Không lỗi"
+     ]
     },
     {
-     "name": "Khá",
-     "percentage": 75,
-     "order": 2
-    },
-    {
-     "name": "Đạt",
-     "percentage": 50,
-     "order": 3
-    },
-    {
-     "name": "Cần cố gắng",
-     "percentage": 25,
-     "order": 4
-    }
-   ],
-   "criterions": [
-    {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Đủ ba phần: mở bài giới thiệu sự việc (khi nào, ở đâu), thân bài thuật lại diễn biến, kết bài nêu kết quả và cảm nghĩ. Bố cục rõ ràng.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và ý (diễn biến sự việc)",
-     "note": "Thuật đúng, đủ các sự việc chính theo diễn biến; nêu rõ thời gian, địa điểm, người tham gia; chi tiết cụ thể, chân thật, làm rõ hoạt động.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Kể theo trình tự thời gian (mở đầu - diễn biến - kết thúc) hợp lí; các sự việc liên kết, chuyển ý mạch lạc, không bỏ sót hay đảo lộn.",
-     "weight": 20,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ chỉ trình tự, hoạt động chính xác; đặt câu đúng ngữ pháp; lời kể tự nhiên, sinh động.",
-     "weight": 15,
-     "order": 4
-    },
-    {
-     "name": "Cảm xúc và sáng tạo",
-     "note": "Lồng được cảm xúc, suy nghĩ trước sự việc; có chi tiết ấn tượng, cách kể hấp dẫn, có nét riêng.",
+     "name": "Chữ viết",
+     "note": "Trình bày · Mức Tốt: Rõ ràng, trình bày đẹp",
      "weight": 10,
-     "order": 5
+     "order": 3,
+     "items": [
+      "1 – Chưa đạt: Khó đọc",
+      "2 – Tối thiểu: Đọc được nhưng chưa rõ",
+      "3 – Đạt yêu cầu: Rõ ràng, tương đối đều",
+      "4 – Tốt: Rõ ràng, trình bày đẹp"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ rõ ràng; trình bày sạch đẹp, đúng quy cách bài văn.",
+     "name": "Xác định và kể lại câu chuyện",
+     "note": "Nội dung · Mức Tốt: Câu chuyện rõ, đầy đủ, hấp dẫn",
      "weight": 10,
-     "order": 6
-    }
-   ]
-  },
-  {
-   "name": "Rubric chấm bài văn kể lại một câu chuyện (có sáng tạo) (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn kể lại một câu chuyện đã đọc, đã nghe (có thể thêm chi tiết sáng tạo, thay đổi kết thúc, đóng vai nhân vật) theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
-   "levels": [
-    {
-     "name": "Tốt",
-     "percentage": 100,
-     "order": 1
+     "order": 4,
+     "items": [
+      "1 – Chưa đạt: Lạc đề/không rõ câu chuyện",
+      "2 – Tối thiểu: Có câu chuyện nhưng thiếu chi tiết",
+      "3 – Đạt yêu cầu: Câu chuyện rõ, tương đối đầy đủ",
+      "4 – Tốt: Câu chuyện rõ, đầy đủ, hấp dẫn"
+     ]
     },
     {
-     "name": "Khá",
-     "percentage": 75,
-     "order": 2
-    },
-    {
-     "name": "Đạt",
-     "percentage": 50,
-     "order": 3
-    },
-    {
-     "name": "Cần cố gắng",
-     "percentage": 25,
-     "order": 4
-    }
-   ],
-   "criterions": [
-    {
-     "name": "Bố cục (mở - thân - kết)",
-     "note": "Đủ ba phần: mở bài giới thiệu câu chuyện/nhân vật, thân bài kể diễn biến, kết bài nêu kết thúc và ý nghĩa. Bố cục rõ ràng, cân đối.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung và cốt truyện",
-     "note": "Kể đủ các sự việc chính, đúng cốt truyện gốc; nhân vật, tình tiết rõ ràng; nêu được ý nghĩa câu chuyện.",
-     "weight": 25,
-     "order": 2
-    },
-    {
-     "name": "Trình tự và mạch lạc",
-     "note": "Kể theo trình tự hợp lí (thời gian/diễn biến); các sự việc liên kết chặt chẽ, chuyển ý mạch lạc.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Sáng tạo",
-     "note": "Có chi tiết sáng tạo hợp lí (thêm tả, thêm lời thoại, đổi ngôi kể, tưởng tượng kết thúc mới) mà không làm sai lệch ý nghĩa câu chuyện.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Dùng từ, đặt câu và cảm xúc",
-     "note": "Dùng từ sinh động, có lời kể, lời thoại tự nhiên; đặt câu đúng ngữ pháp; bộc lộ cảm xúc với nhân vật, sự việc.",
-     "weight": 15,
-     "order": 5
-    },
-    {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu (kể cả dấu ngoặc kép, gạch ngang khi có lời thoại); chữ rõ ràng; trình bày sạch đẹp.",
+     "name": "Mở bài (giới thiệu câu chuyện)",
+     "note": "Nội dung · Mức Tốt: Mở bài gián tiếp, thu hút",
      "weight": 10,
-     "order": 6
-    }
-   ]
-  },
-  {
-   "name": "Rubric chấm đoạn văn nêu tình cảm, cảm xúc (KNTT 4-5)",
-   "description": "Tiêu chí chấm đoạn văn nêu tình cảm, cảm xúc về một người, một nhân vật, một bài thơ, một cảnh đẹp theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
-   "levels": [
-    {
-     "name": "Tốt",
-     "percentage": 100,
-     "order": 1
+     "order": 5,
+     "items": [
+      "1 – Chưa đạt: Không có/không rõ",
+      "2 – Tối thiểu: Có nhưng sơ sài",
+      "3 – Đạt yêu cầu: Mở bài trực tiếp",
+      "4 – Tốt: Mở bài gián tiếp, thu hút"
+     ]
     },
     {
-     "name": "Khá",
-     "percentage": 75,
-     "order": 2
-    },
-    {
-     "name": "Đạt",
-     "percentage": 50,
-     "order": 3
-    },
-    {
-     "name": "Cần cố gắng",
-     "percentage": 25,
-     "order": 4
-    }
-   ],
-   "criterions": [
-    {
-     "name": "Cấu trúc đoạn văn (mở - triển khai - kết)",
-     "note": "Viết đúng hình thức một đoạn văn: câu mở đoạn giới thiệu đối tượng và tình cảm chung, các câu triển khai, câu kết đoạn. Lùi đầu dòng, viết liền mạch.",
-     "weight": 15,
-     "order": 1
-    },
-    {
-     "name": "Nội dung (lí do của tình cảm)",
-     "note": "Nêu rõ tình cảm, cảm xúc đối với đối tượng; giải thích được vì sao (đặc điểm, kỉ niệm, ý nghĩa) khiến em có tình cảm đó. Ý chân thật, đúng đối tượng.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Mạch lạc và liên kết câu",
-     "note": "Các câu trong đoạn liên kết chặt, sắp xếp hợp lí, tập trung làm rõ tình cảm chủ đạo, không lan man, không lạc ý.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu",
-     "note": "Dùng từ ngữ thể hiện cảm xúc (yêu quý, biết ơn, xúc động...) chính xác; đặt câu đúng ngữ pháp, có hình ảnh.",
-     "weight": 20,
-     "order": 4
-    },
-    {
-     "name": "Cảm xúc chân thật và sáng tạo",
-     "note": "Cảm xúc tự nhiên, sâu sắc, không sáo rỗng; có cách diễn đạt riêng, biết dùng so sánh/từ ngữ gợi cảm.",
+     "name": "Diễn biến câu chuyện",
+     "note": "Nội dung · Mức Tốt: Kể được diễn biến truyện theo trình tự hợp lí; đầy đủ các chi tiết quan trọng; kể được các chi tiết cụ thể của truyện; đan xen kể có tả, có thể hiện suy nghĩ, thái độ",
      "weight": 10,
-     "order": 5
+     "order": 6,
+     "items": [
+      "1 – Chưa đạt: Kể không theo trình tự hợp lí; chưa đầy đủ các chi tiết quan trọng; chưa biết cách đan xen tả, thể hiện suy nghĩ, thái độ",
+      "2 – Tối thiểu: Kể được diễn biến truyện theo trình tự hợp lí nhưng chưa đủ các chi tiết quan trọng; đan xen kể có thể hiện suy nghĩ, thái độ",
+      "3 – Đạt yêu cầu: Kể được diễn biến truyện theo trình tự hợp lí; đầy đủ các chi tiết quan trọng; đan xen kể có tả, có thể hiện suy nghĩ, thái độ",
+      "4 – Tốt: Kể được diễn biến truyện theo trình tự hợp lí; đầy đủ các chi tiết quan trọng; kể được các chi tiết cụ thể của truyện; đan xen kể có tả, có thể hiện suy nghĩ, thái độ"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ rõ ràng; trình bày đúng hình thức đoạn văn, sạch đẹp.",
+     "name": "Kết bài/kết đoạn",
+     "note": "Nội dung · Mức Tốt: Kết bài mở rộng, sâu sắc; có liên kết với nội dung thân bài; nêu được kết luận, nhận xét, cảm nghĩ, ý kiến bản thân về ý nghĩa, bài học của câu chuyện",
      "weight": 10,
-     "order": 6
-    }
-   ]
-  },
-  {
-   "name": "Rubric chấm bài viết thư (KNTT 4-5)",
-   "description": "Tiêu chí chấm bài Tập làm văn viết thư (thư thăm hỏi, thư cảm ơn, thư trao đổi với người thân, bạn bè) theo bộ Kết nối tri thức với cuộc sống, lớp 4-5.",
-   "levels": [
-    {
-     "name": "Tốt",
-     "percentage": 100,
-     "order": 1
+     "order": 7,
+     "items": [
+      "1 – Chưa đạt: Kết bài không mở rộng; mối liên kết với nội dung thân bài chưa rõ nét",
+      "2 – Tối thiểu: Kết bài không mở rộng; có liên kết nội dung thân bài",
+      "3 – Đạt yêu cầu: Kết bài mở rộng; có liên kết nội dung thân bài; nêu được kết luận, nhận xét, cảm nghĩ, ý kiến bản thân về ý nghĩa, bài học của câu chuyện",
+      "4 – Tốt: Kết bài mở rộng, sâu sắc; có liên kết với nội dung thân bài; nêu được kết luận, nhận xét, cảm nghĩ, ý kiến bản thân về ý nghĩa, bài học của câu chuyện"
+     ]
     },
     {
-     "name": "Khá",
-     "percentage": 75,
-     "order": 2
-    },
-    {
-     "name": "Đạt",
-     "percentage": 50,
-     "order": 3
-    },
-    {
-     "name": "Cần cố gắng",
-     "percentage": 25,
-     "order": 4
-    }
-   ],
-   "criterions": [
-    {
-     "name": "Hình thức bức thư (bố cục)",
-     "note": "Đủ các phần của một bức thư: địa điểm và thời gian viết thư; lời thưa gửi (xưng hô với người nhận); nội dung; lời chúc, lời chào, kí tên cuối thư.",
-     "weight": 20,
-     "order": 1
-    },
-    {
-     "name": "Nội dung thư",
-     "note": "Nội dung đúng mục đích (thăm hỏi/cảm ơn/trao đổi...); nêu được lí do viết thư, thông tin về bản thân và hỏi thăm/trao đổi với người nhận; ý đầy đủ, phù hợp.",
-     "weight": 30,
-     "order": 2
-    },
-    {
-     "name": "Mạch lạc và trình tự",
-     "note": "Các ý trong thư sắp xếp hợp lí, chuyển ý tự nhiên; thông tin trao đổi rõ ràng, liền mạch.",
-     "weight": 15,
-     "order": 3
-    },
-    {
-     "name": "Dùng từ, đặt câu và xưng hô",
-     "note": "Xưng hô đúng vai, lịch sự, thân mật phù hợp người nhận; dùng từ đúng, đặt câu đúng ngữ pháp; lời lẽ tự nhiên.",
-     "weight": 15,
-     "order": 4
-    },
-    {
-     "name": "Tình cảm chân thật",
-     "note": "Bức thư thể hiện tình cảm chân thành, gần gũi với người nhận; lời thăm hỏi, lời chúc tự nhiên, không khuôn sáo.",
+     "name": "Viết câu",
+     "note": "Diễn đạt · Mức Tốt: Câu đa dạng, rõ ràng",
      "weight": 10,
-     "order": 5
+     "order": 8,
+     "items": [
+      "1 – Chưa đạt: Câu sai, rời rạc",
+      "2 – Tối thiểu: Câu đơn giản, còn lỗi",
+      "3 – Đạt yêu cầu: Câu đúng, tương đối rõ",
+      "4 – Tốt: Câu đa dạng, rõ ràng"
+     ]
     },
     {
-     "name": "Chính tả và trình bày",
-     "note": "Viết đúng chính tả, dấu câu; chữ rõ ràng; trình bày đúng hình thức bức thư, sạch đẹp.",
+     "name": "Từ ngữ",
+     "note": "Diễn đạt · Mức Tốt: Từ ngữ phong phú",
      "weight": 10,
-     "order": 6
+     "order": 9,
+     "items": [
+      "1 – Chưa đạt: Dùng từ sai nhiều",
+      "2 – Tối thiểu: Từ ngữ hạn chế",
+      "3 – Đạt yêu cầu: Từ ngữ phù hợp",
+      "4 – Tốt: Từ ngữ phong phú"
+     ]
+    },
+    {
+     "name": "Liên kết/mạch kể",
+     "note": "Diễn đạt · Mức Tốt: Liên kết tốt, mạch kể rõ",
+     "weight": 10,
+     "order": 10,
+     "items": [
+      "1 – Chưa đạt: Không có liên kết",
+      "2 – Tối thiểu: Liên kết yếu",
+      "3 – Đạt yêu cầu: Có liên kết cơ bản",
+      "4 – Tốt: Liên kết tốt, mạch kể rõ"
+     ]
     }
    ]
   }
@@ -1694,7 +1774,7 @@
    "title": "Tả con vật nuôi em yêu thích",
    "description": "Đề bài: Viết bài văn tả một con vật nuôi trong nhà mà em yêu thích (con chó, con mèo, con gà, con chim...). Yêu cầu: Bài văn có đủ ba phần (mở bài, thân bài, kết bài). Thân bài tả được hình dáng (đầu, mình, chân, bộ lông, màu sắc...) và hoạt động, thói quen tiêu biểu của con vật theo trình tự hợp lí. Biết dùng từ ngữ gợi tả, có hình ảnh so sánh hoặc nhân hoá; bộc lộ tình cảm của em với con vật. Viết đúng chính tả, trình bày sạch đẹp. Độ dài khoảng 15-20 câu.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1702,7 +1782,7 @@
    "title": "Tả một loài chim em từng quan sát",
    "description": "Đề bài: Hãy viết bài văn tả một loài chim mà em đã có dịp quan sát (chim sẻ, chim bồ câu, chim chích bông, gà con...). Yêu cầu: Bài có ba phần rõ ràng. Mở bài giới thiệu con vật và hoàn cảnh em quan sát. Thân bài tả bao quát rồi tả chi tiết hình dáng (mỏ, mắt, lông, cánh, chân) và hoạt động (bay, hót, kiếm mồi...). Kết bài nêu tình cảm của em. Dùng từ gợi tả, có so sánh hoặc nhân hoá; viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1710,7 +1790,7 @@
    "title": "Tả một cây ăn quả mà em thích",
    "description": "Đề bài: Viết bài văn tả một cây ăn quả mà em yêu thích (cây xoài, cây ổi, cây bưởi, cây nhãn...). Yêu cầu: Bài văn đủ ba phần. Mở bài giới thiệu cây (cây gì, trồng ở đâu). Thân bài tả các bộ phận của cây (gốc, thân, cành, lá, hoa, quả) hoặc tả cây theo từng mùa, theo trình tự hợp lí. Kết bài nêu ích lợi của cây và tình cảm của em. Biết dùng từ ngữ gợi tả màu sắc, hình dáng, hương vị; có so sánh hoặc nhân hoá. Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1718,7 +1798,7 @@
    "title": "Tả cây bóng mát ở sân trường",
    "description": "Đề bài: Viết bài văn tả một cây bóng mát ở sân trường em (cây phượng, cây bàng, cây xà cừ...). Yêu cầu: Bài đủ ba phần. Thân bài tả được hình dáng cây (gốc, thân, tán lá, cành...) và sự thay đổi của cây qua các mùa hoặc theo thời gian trong ngày; gắn cây với những kỉ niệm tuổi học trò. Biết dùng so sánh, nhân hoá làm cây thêm sinh động; bộc lộ tình cảm gắn bó. Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1726,7 +1806,7 @@
    "title": "Tả cảnh đẹp quê hương em",
    "description": "Đề bài: Viết bài văn tả một cảnh đẹp ở quê hương hoặc nơi em sống (cánh đồng lúa, dòng sông, con đường làng, bãi biển, khu phố...). Yêu cầu: Bài đủ ba phần. Mở bài giới thiệu cảnh và thời điểm quan sát. Thân bài tả bao quát rồi tả chi tiết theo trình tự không gian hoặc thời gian; biết huy động nhiều giác quan (nhìn, nghe...). Kết bài nêu cảm nghĩ, tình yêu quê hương. Dùng từ gợi tả, gợi cảm, có so sánh, nhân hoá. Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1734,7 +1814,7 @@
    "title": "Tả cảnh một buổi sáng trên quê hương em",
    "description": "Đề bài: Hãy viết bài văn tả cảnh một buổi sáng (hoặc buổi chiều) trên quê hương em. Yêu cầu: Bài có ba phần. Thân bài tả cảnh vật theo trình tự thời gian từ lúc trời còn mờ sáng đến khi mặt trời lên; tả bầu trời, cây cối, con người, âm thanh, ánh sáng... với những hình ảnh tiêu biểu. Biết dùng từ ngữ gợi tả, so sánh, nhân hoá; bộc lộ cảm xúc trước cảnh đẹp. Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1742,7 +1822,7 @@
    "title": "Tả một người thân trong gia đình em",
    "description": "Đề bài: Viết bài văn tả một người thân trong gia đình mà em yêu quý (ông, bà, bố, mẹ, anh, chị...). Yêu cầu: Bài đủ ba phần. Mở bài giới thiệu người được tả. Thân bài tả ngoại hình tiêu biểu (khuôn mặt, mái tóc, dáng người, ánh mắt, nụ cười...) kết hợp tả hoạt động, tính tình, cử chỉ, lời nói; chọn nét riêng làm nổi bật con người đó. Kết bài nêu tình cảm của em. Biết dùng từ gợi tả, so sánh; lồng kỉ niệm. Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1750,7 +1830,7 @@
    "title": "Tả thầy giáo (cô giáo) mà em kính mến",
    "description": "Đề bài: Hãy viết bài văn tả thầy giáo hoặc cô giáo đã để lại cho em nhiều ấn tượng và tình cảm sâu sắc. Yêu cầu: Bài có ba phần. Thân bài tả ngoại hình và đặc biệt tả hoạt động khi thầy/cô giảng bài, quan tâm, dạy dỗ học sinh; làm nổi bật tính tình và tấm lòng của thầy/cô. Kết hợp tả với kể một kỉ niệm. Bộc lộ lòng kính trọng, biết ơn. Dùng từ chính xác, sinh động; viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1758,7 +1838,7 @@
    "title": "Thuật lại một hoạt động ở trường mà em tham gia",
    "description": "Đề bài: Viết bài văn thuật lại một hoạt động (buổi sinh hoạt, buổi lao động, hội diễn văn nghệ, ngày hội đọc sách, chuyến tham quan...) mà em đã tham gia hoặc chứng kiến ở trường. Yêu cầu: Bài đủ ba phần. Mở bài giới thiệu hoạt động (diễn ra khi nào, ở đâu). Thân bài thuật lại diễn biến các sự việc theo trình tự thời gian, nêu rõ người tham gia và những việc làm cụ thể. Kết bài nêu kết quả và cảm nghĩ của em. Lời kể tự nhiên, sinh động; viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1766,7 +1846,7 @@
    "title": "Kể lại một câu chuyện đã đọc, đã nghe (có sáng tạo)",
    "description": "Đề bài: Hãy kể lại một câu chuyện cổ tích hoặc câu chuyện em đã đọc, đã nghe mà em yêu thích; em có thể thêm vào một vài chi tiết tả, lời thoại hoặc tưởng tượng một kết thúc mới cho câu chuyện. Yêu cầu: Bài đủ ba phần. Kể đủ các sự việc chính, đúng cốt truyện và nêu được ý nghĩa câu chuyện; phần sáng tạo phải hợp lí, không làm sai lệch ý nghĩa. Dùng lời kể, lời thoại tự nhiên; viết đúng dấu câu khi có lời nhân vật (dấu ngoặc kép, gạch ngang). Viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1774,7 +1854,7 @@
    "title": "Đóng vai một nhân vật kể lại câu chuyện",
    "description": "Đề bài: Em hãy đóng vai một nhân vật trong câu chuyện em đã học để kể lại câu chuyện đó (ví dụ: đóng vai cô bé bán diêm, vai chú Dế Mèn, vai người em trong truyện Cây khế...). Yêu cầu: Kể chuyện ở ngôi thứ nhất (xưng tôi/em), giữ đúng cốt truyện và ý nghĩa; có thể thêm cảm xúc, suy nghĩ của nhân vật cho sinh động. Bài đủ ba phần, các sự việc kể theo trình tự, mạch lạc. Dùng từ phù hợp với nhân vật; viết đúng chính tả, trình bày sạch đẹp.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1782,7 +1862,7 @@
    "title": "Viết thư thăm hỏi ông bà (người thân ở xa)",
    "description": "Đề bài: Em hãy viết một bức thư thăm hỏi ông bà hoặc một người thân đang ở xa. Yêu cầu: Bức thư có đủ các phần: ghi địa điểm và thời gian viết thư; lời thưa gửi (xưng hô phù hợp với người nhận); phần nội dung (lí do viết thư, hỏi thăm sức khoẻ và cuộc sống của người nhận, kể về bản thân và gia đình); cuối thư có lời chúc, lời chào và kí tên. Xưng hô đúng vai, lịch sự, thân mật; thể hiện tình cảm chân thành. Viết đúng chính tả, trình bày đúng hình thức bức thư.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1790,7 +1870,7 @@
    "title": "Viết thư cảm ơn (hoặc chia sẻ với bạn)",
    "description": "Đề bài: Em hãy viết một bức thư gửi một người bạn để cảm ơn bạn về một việc tốt bạn đã làm cho em, hoặc để chia sẻ với bạn về việc học tập, vui chơi của em. Yêu cầu: Thư đủ các phần (thời gian, địa điểm; lời thưa gửi; nội dung; lời chúc, lời chào, kí tên). Nội dung đúng mục đích, nêu rõ lí do viết thư và bày tỏ tình cảm. Xưng hô thân mật, phù hợp; lời lẽ tự nhiên, chân thành. Viết đúng chính tả, trình bày đúng hình thức bức thư.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1798,7 +1878,7 @@
    "title": "Viết đoạn văn nêu tình cảm với một người thân",
    "description": "Đề bài: Viết đoạn văn (khoảng 5-7 câu) nêu tình cảm, cảm xúc của em đối với một người thân (ông, bà, bố, mẹ, anh, chị...). Yêu cầu: Viết đúng hình thức một đoạn văn (câu mở đoạn giới thiệu người và tình cảm chung, các câu triển khai nêu lí do, câu kết đoạn). Nêu rõ tình cảm và giải thích vì sao em có tình cảm đó (qua việc làm, kỉ niệm, sự quan tâm của người ấy). Dùng từ ngữ thể hiện cảm xúc; cảm xúc chân thật. Viết đúng chính tả, lùi đầu dòng câu mở đoạn.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 4",
    "points": 10
   },
@@ -1806,7 +1886,7 @@
    "title": "Viết đoạn văn nêu cảm xúc về một bài thơ em yêu thích",
    "description": "Đề bài: Viết đoạn văn (khoảng 6-8 câu) nêu tình cảm, cảm xúc của em về một bài thơ (hoặc một khổ thơ) mà em yêu thích trong các bài đã học. Yêu cầu: Viết đúng hình thức đoạn văn. Câu mở đoạn giới thiệu tên bài thơ (tác giả nếu nhớ) và ấn tượng chung. Các câu triển khai nêu những hình ảnh, từ ngữ trong bài khiến em xúc động và nói rõ cảm xúc của em. Câu kết đoạn khẳng định tình cảm. Dùng từ gợi cảm, cảm xúc chân thật; viết đúng chính tả, trình bày đúng hình thức đoạn văn.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1814,7 +1894,7 @@
    "title": "Viết đoạn văn nêu cảm nghĩ về một nhân vật trong câu chuyện",
    "description": "Đề bài: Viết đoạn văn (khoảng 6-8 câu) nêu tình cảm, cảm nghĩ của em về một nhân vật mà em yêu thích trong một câu chuyện đã đọc, đã học. Yêu cầu: Viết đúng hình thức đoạn văn. Giới thiệu nhân vật và tình cảm chung; nêu rõ những đặc điểm, việc làm của nhân vật khiến em yêu quý/khâm phục và nói lên cảm nghĩ của em; rút ra điều em học được. Cảm xúc chân thật, không sáo rỗng; dùng từ chính xác, có hình ảnh. Viết đúng chính tả, trình bày đúng hình thức đoạn văn.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1822,7 +1902,7 @@
    "title": "Viết đoạn văn nêu ý kiến về một câu chuyện hoặc nhân vật",
    "description": "Đề bài: Viết đoạn văn nêu ý kiến của em về một câu chuyện em đã đọc (hoặc về việc làm của một nhân vật trong truyện): em thích/đồng tình hay không đồng tình, vì sao? Yêu cầu: Viết đúng hình thức đoạn văn. Câu mở đoạn nêu rõ ý kiến của em. Các câu tiếp theo đưa ra lí do, dẫn chứng từ câu chuyện để bảo vệ ý kiến. Câu kết đoạn khẳng định lại ý kiến. Lập luận hợp lí, mạch lạc; dùng từ chính xác. Viết đúng chính tả, trình bày đúng hình thức đoạn văn.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   },
@@ -1830,7 +1910,7 @@
    "title": "Viết đoạn văn nêu ý kiến về một hiện tượng trong cuộc sống",
    "description": "Đề bài: Viết đoạn văn nêu ý kiến của em về một hiện tượng, một việc làm trong cuộc sống (ví dụ: giữ gìn vệ sinh trường lớp, bảo vệ cây xanh, giúp đỡ bạn bè, tiết kiệm điện nước...). Yêu cầu: Viết đúng hình thức đoạn văn. Câu mở đoạn nêu rõ ý kiến (tán thành hay không tán thành, hoặc đề nghị việc nên làm). Các câu triển khai đưa ra lí do và ví dụ cụ thể để thuyết phục. Câu kết đoạn khẳng định lại ý kiến hoặc đưa ra lời kêu gọi. Lập luận mạch lạc; viết đúng chính tả, trình bày đúng hình thức đoạn văn.",
    "type": "essay",
-   "subject": "Tập làm văn",
+   "subject": "Hoạt động Viết",
    "grade": "Lớp 5",
    "points": 10
   }
@@ -1840,11 +1920,11 @@
    "title": "Cách viết mở bài và kết bài hấp dẫn cho bài văn tiểu học",
    "excerpt": "Mở bài là cánh cửa dẫn người đọc bước vào bài văn, còn kết bài là dư âm đọng lại. Bài viết gợi ý những cách mở và kết bài tự nhiên, sinh động cho học sinh lớp 4-5.",
    "content": "Trong một bài văn, mở bài và kết bài tuy ngắn nhưng lại quyết định ấn tượng đầu tiên và cuối cùng của người đọc. Nhiều em học sinh lớp 4-5 viết phần thân bài rất tốt nhưng mở bài thì khô khan kiểu \"Em xin tả con mèo nhà em\", còn kết bài chỉ vỏn vẹn \"Em rất yêu con mèo\". Để bài văn thêm cuốn hút, các em cần học cách mở và kết bài một cách có nghệ thuật hơn.\n\nCó hai kiểu mở bài quen thuộc trong chương trình Tiếng Việt: mở bài trực tiếp và mở bài gián tiếp. Mở bài trực tiếp là giới thiệu thẳng vào đối tượng cần tả hoặc kể. Mở bài gián tiếp thì nói về một chuyện khác có liên quan rồi mới dẫn đến đối tượng. Ví dụ, thay vì viết ngay \"Em tả cây bàng trước sân trường\", em có thể bắt đầu bằng một câu thơ, một câu hỏi, hay một kỉ niệm: \"Mỗi lần nghe tiếng ve râm ran, em lại nhớ đến cây bàng già nơi góc sân trường thân thuộc.\"\n\nMột mẹo nhỏ để mở bài hấp dẫn là dùng câu hỏi gợi mở, dùng hình ảnh thiên nhiên, hoặc nhắc đến một kỉ niệm gắn với đối tượng. Cách này khiến người đọc tò mò, muốn đọc tiếp để biết câu chuyện sẽ ra sao. Tuy nhiên, em cần chú ý mở bài gián tiếp không nên quá dài dòng, lan man, mà phải khéo léo dẫn về đúng đối tượng cần tả hoặc kể.\n\nVới kết bài, các em cũng có hai cách: kết bài không mở rộng và kết bài mở rộng. Kết bài không mở rộng chỉ khép lại bằng một câu nêu cảm nghĩ. Kết bài mở rộng thì sau khi nêu cảm nghĩ, em liên hệ thêm tới một suy nghĩ, một lời hứa, hay một mong ước. Chẳng hạn: \"Em mong cây bàng mãi xanh tươi để che bóng mát cho bao thế hệ học trò, và em tự nhủ sẽ cùng các bạn giữ gìn sân trường thật sạch đẹp.\"\n\nĐiều quan trọng là mở bài và kết bài phải \"ăn khớp\" với thân bài và với cảm xúc thật của em. Đừng dùng những câu mở bài học thuộc lòng, rập khuôn cho mọi bài văn. Hãy quan sát kĩ đối tượng, chọn một chi tiết em yêu thích nhất để khơi gợi ở mở bài, rồi nhắc lại hoặc nâng nó lên thành cảm xúc ở kết bài. Khi đầu và cuối bài cùng hướng về một hình ảnh, bài văn sẽ trở nên trọn vẹn và có chiều sâu.\n\nĐể luyện tập, thầy cô có thể cho học sinh viết nhiều mở bài và kết bài khác nhau cho cùng một đề, rồi cùng nhau bình chọn cách hay nhất. Qua việc so sánh, các em sẽ dần nhận ra thế nào là một mở bài gợi cảm xúc, một kết bài để lại dư âm. Viết mở bài và kết bài hấp dẫn không khó, chỉ cần các em chịu quan sát, chịu cảm nhận và dám viết bằng giọng văn của chính mình.",
-   "category": "Tập làm văn",
+   "category": "Hoạt động Viết",
    "cover": "clay",
    "readMinutes": 6,
    "tags": [
-    "Tập làm văn",
+    "Hoạt động Viết",
     "Mở bài",
     "Kết bài",
     "Lớp 4",
@@ -1855,7 +1935,7 @@
   {
    "title": "Phân biệt từ đồng âm và từ đa nghĩa: mẹo nhớ cho học sinh lớp 5",
    "excerpt": "Từ đồng âm và từ đa nghĩa đều có cách viết, cách đọc giống nhau nên dễ gây nhầm lẫn. Bài viết chỉ ra điểm khác biệt cốt lõi và cách nhận biết nhanh.",
-   "content": "Trong phân môn Luyện từ và câu lớp 5, từ đồng âm và từ đa nghĩa là hai khái niệm khiến nhiều học sinh bối rối. Cả hai loại từ này đều có chung một điểm: chúng được viết giống nhau và đọc giống nhau. Chính vì vậy mà các em thường nhầm lẫn, không biết đâu là đồng âm, đâu là đa nghĩa. Muốn phân biệt, ta phải xét đến nghĩa của chúng có liên quan với nhau hay không.\n\nTừ đồng âm là những từ giống nhau về âm thanh nhưng nghĩa hoàn toàn khác nhau, không có chút liên hệ nào. Ví dụ, từ \"đường\" trong \"con đường\" (lối đi) và \"đường\" trong \"đường ăn\" (chất ngọt) là hai từ đồng âm. Hai nghĩa này không hề liên quan: một bên là lối đi để đến nơi nào đó, một bên là thứ gia vị có vị ngọt. Chúng chỉ tình cờ giống nhau về mặt âm thanh mà thôi.\n\nNgược lại, từ đa nghĩa là một từ có nhiều nghĩa, nhưng các nghĩa đó có mối liên hệ với nhau. Trong đó có một nghĩa gốc và các nghĩa chuyển được phát triển từ nghĩa gốc. Hãy lấy từ \"chân\" làm ví dụ: \"chân người\" (bộ phận để đi) là nghĩa gốc, còn \"chân bàn\", \"chân núi\", \"chân tường\" là nghĩa chuyển. Tất cả đều chỉ phần dưới cùng, phần nâng đỡ một vật, nên chúng có liên hệ với nhau. Đây chính là từ đa nghĩa.\n\nMẹo nhận biết đơn giản nhất là tự hỏi: \"Các nghĩa của từ này có dính dáng gì đến nhau không?\" Nếu các nghĩa hoàn toàn xa lạ, không liên quan, đó là từ đồng âm. Nếu các nghĩa có một sợi dây liên hệ, có thể suy ra từ một nghĩa gốc, đó là từ đa nghĩa. Ví dụ từ \"lá\": \"lá cây\", \"lá phổi\", \"lá cờ\", \"lá thư\" đều gợi đến vật mỏng, dẹt như chiếc lá, nên đây là từ đa nghĩa.\n\nMột lưu ý nhỏ là khi làm bài, các em nên đặt từ vào câu cụ thể để xét nghĩa, đừng xét từ một cách trơ trọi. Bởi cùng một âm \"bàn\" có thể là đồng âm (\"cái bàn\" và \"bàn bạc\"), nhưng nghĩa lại chỉ rõ khi nằm trong câu. Vì thế, thói quen đặt câu, đọc kĩ ngữ cảnh là chìa khóa giúp các em làm đúng dạng bài này.\n\nĐể ghi nhớ lâu, học sinh có thể tự lập một bảng nhỏ: cột bên trái ghi cặp từ đồng âm, cột bên phải ghi từ đa nghĩa và các nghĩa của nó. Mỗi ngày bổ sung vài ví dụ từ chính cuộc sống quanh mình. Khi đã quen mắt, các em sẽ nhận ra rằng tiếng Việt vô cùng phong phú và thú vị: chỉ một âm thanh quen thuộc cũng có thể mở ra biết bao tầng nghĩa khác nhau.",
+   "content": "Trong phần Luyện từ và câu lớp 5, từ đồng âm và từ đa nghĩa là hai khái niệm khiến nhiều học sinh bối rối. Cả hai loại từ này đều có chung một điểm: chúng được viết giống nhau và đọc giống nhau. Chính vì vậy mà các em thường nhầm lẫn, không biết đâu là đồng âm, đâu là đa nghĩa. Muốn phân biệt, ta phải xét đến nghĩa của chúng có liên quan với nhau hay không.\n\nTừ đồng âm là những từ giống nhau về âm thanh nhưng nghĩa hoàn toàn khác nhau, không có chút liên hệ nào. Ví dụ, từ \"đường\" trong \"con đường\" (lối đi) và \"đường\" trong \"đường ăn\" (chất ngọt) là hai từ đồng âm. Hai nghĩa này không hề liên quan: một bên là lối đi để đến nơi nào đó, một bên là thứ gia vị có vị ngọt. Chúng chỉ tình cờ giống nhau về mặt âm thanh mà thôi.\n\nNgược lại, từ đa nghĩa là một từ có nhiều nghĩa, nhưng các nghĩa đó có mối liên hệ với nhau. Trong đó có một nghĩa gốc và các nghĩa chuyển được phát triển từ nghĩa gốc. Hãy lấy từ \"chân\" làm ví dụ: \"chân người\" (bộ phận để đi) là nghĩa gốc, còn \"chân bàn\", \"chân núi\", \"chân tường\" là nghĩa chuyển. Tất cả đều chỉ phần dưới cùng, phần nâng đỡ một vật, nên chúng có liên hệ với nhau. Đây chính là từ đa nghĩa.\n\nMẹo nhận biết đơn giản nhất là tự hỏi: \"Các nghĩa của từ này có dính dáng gì đến nhau không?\" Nếu các nghĩa hoàn toàn xa lạ, không liên quan, đó là từ đồng âm. Nếu các nghĩa có một sợi dây liên hệ, có thể suy ra từ một nghĩa gốc, đó là từ đa nghĩa. Ví dụ từ \"lá\": \"lá cây\", \"lá phổi\", \"lá cờ\", \"lá thư\" đều gợi đến vật mỏng, dẹt như chiếc lá, nên đây là từ đa nghĩa.\n\nMột lưu ý nhỏ là khi làm bài, các em nên đặt từ vào câu cụ thể để xét nghĩa, đừng xét từ một cách trơ trọi. Bởi cùng một âm \"bàn\" có thể là đồng âm (\"cái bàn\" và \"bàn bạc\"), nhưng nghĩa lại chỉ rõ khi nằm trong câu. Vì thế, thói quen đặt câu, đọc kĩ ngữ cảnh là chìa khóa giúp các em làm đúng dạng bài này.\n\nĐể ghi nhớ lâu, học sinh có thể tự lập một bảng nhỏ: cột bên trái ghi cặp từ đồng âm, cột bên phải ghi từ đa nghĩa và các nghĩa của nó. Mỗi ngày bổ sung vài ví dụ từ chính cuộc sống quanh mình. Khi đã quen mắt, các em sẽ nhận ra rằng tiếng Việt vô cùng phong phú và thú vị: chỉ một âm thanh quen thuộc cũng có thể mở ra biết bao tầng nghĩa khác nhau.",
    "category": "Luyện từ và câu",
    "cover": "teal",
    "readMinutes": 6,
@@ -1886,11 +1966,11 @@
    "title": "Lập dàn ý bài văn tả con vật: ba phần rõ ràng, ý không bị sót",
    "excerpt": "Một dàn ý tốt giúp bài văn tả con vật đầy đủ, có thứ tự và sinh động. Bài viết hướng dẫn cách lập dàn ý ba phần dễ áp dụng cho học sinh lớp 4.",
    "content": "Tả con vật là một đề bài quen thuộc và được nhiều học sinh yêu thích, bởi ai cũng từng gắn bó với một con vật nuôi nào đó. Tuy nhiên, không ít em khi viết lại tả lộn xộn, lúc nói về cái đầu, lúc nhảy sang cái đuôi, rồi lại quay về cái mắt. Nguyên nhân là các em chưa có thói quen lập dàn ý trước khi viết. Dàn ý chính là bộ khung giúp bài văn đầy đủ ý và sắp xếp có trật tự.\n\nMột dàn ý bài văn tả con vật gồm ba phần: mở bài, thân bài và kết bài. Phần mở bài, em giới thiệu con vật định tả: đó là con gì, của nhà em hay em được nhìn thấy ở đâu, vì sao em chọn tả nó. Em có thể mở bài trực tiếp hoặc gián tiếp đều được, miễn là dẫn dắt tự nhiên đến con vật mình yêu thích.\n\nPhần thân bài là phần quan trọng nhất và thường được chia làm hai ý lớn: tả hình dáng và tả hoạt động, thói quen của con vật. Khi tả hình dáng, em nên tả theo trình tự từ bao quát đến chi tiết: nhìn chung con vật to hay nhỏ, lông màu gì, rồi mới tả đến đầu, mắt, tai, mũi, chân, đuôi. Em chọn những đặc điểm nổi bật, đáng yêu nhất để tả kĩ, không cần liệt kê tất cả một cách khô khan.\n\nÝ thứ hai trong thân bài là tả hoạt động và thói quen. Đây là phần làm con vật trở nên sống động trong mắt người đọc. Em hãy kể con vật ăn uống ra sao, chơi đùa thế nào, có thói quen gì ngộ nghĩnh, nó quấn quýt với em ra sao. Một vài kỉ niệm nhỏ giữa em và con vật sẽ khiến bài văn giàu cảm xúc hơn nhiều so với việc chỉ tả vẻ ngoài.\n\nPhần kết bài, em nêu tình cảm của mình đối với con vật và cách em chăm sóc, bảo vệ nó. Em có thể kết bài mở rộng bằng một mong ước hoặc lời hứa, chẳng hạn mong con vật luôn khỏe mạnh, hứa sẽ chăm sóc nó thật chu đáo. Kết bài chân thật sẽ để lại ấn tượng đẹp trong lòng người đọc.\n\nĐể luyện kĩ năng này, thầy cô nên cho học sinh tập lập dàn ý bằng những gạch đầu dòng ngắn gọn trước khi viết thành bài hoàn chỉnh. Khi đã quen, các em chỉ cần nhìn vào dàn ý là biết mình phải viết gì tiếp theo, không còn lo lạc ý hay thiếu ý. Lập dàn ý tuy mất vài phút nhưng lại giúp tiết kiệm thời gian và nâng chất lượng bài văn lên rất nhiều.",
-   "category": "Tập làm văn",
+   "category": "Hoạt động Viết",
    "cover": "grass",
    "readMinutes": 6,
    "tags": [
-    "Tập làm văn",
+    "Hoạt động Viết",
     "Văn tả con vật",
     "Dàn ý",
     "Lớp 4",
@@ -1917,11 +1997,11 @@
    "title": "Cách viết đoạn văn nêu tình cảm, cảm xúc chân thật",
    "excerpt": "Viết đoạn văn nêu tình cảm, cảm xúc đòi hỏi sự chân thành và biết cách diễn đạt. Bài viết hướng dẫn cấu trúc và cách chọn từ ngữ bộc lộ cảm xúc.",
    "content": "Đoạn văn nêu tình cảm, cảm xúc là một dạng bài mới và khá quan trọng trong chương trình Tiếng Việt theo bộ sách Kết nối tri thức với cuộc sống. Ở dạng bài này, các em không tả hay kể nhiều mà chủ yếu bộc lộ những rung động trong lòng mình trước một người, một sự vật, một câu chuyện hay một cảnh đẹp. Vì thế, điều cốt lõi của đoạn văn là sự chân thật trong cảm xúc.\n\nMột đoạn văn nêu tình cảm, cảm xúc thường có ba phần: câu mở đoạn, các câu thân đoạn và câu kết đoạn. Câu mở đoạn giới thiệu đối tượng và nêu ấn tượng, cảm xúc chung của em về đối tượng đó. Ví dụ, khi viết về người bà, em có thể mở đoạn: \"Trong gia đình, bà là người em yêu quý và kính trọng nhất.\" Câu mở đoạn cần ngắn gọn nhưng nói rõ được tình cảm chủ đạo.\n\nCác câu thân đoạn là phần triển khai, nêu cụ thể vì sao em lại có tình cảm ấy. Em hãy kể ra những chi tiết, những việc làm, những kỉ niệm khiến em xúc động. Chẳng hạn, em nhớ bàn tay bà gầy guộc, nhớ những câu chuyện cổ tích bà kể mỗi tối, nhớ bát canh bà nấu lúc em ốm. Chính những chi tiết nhỏ và thật này mới làm cảm xúc của em trở nên thuyết phục, chạm đến trái tim người đọc.\n\nĐể bộc lộ cảm xúc, em nên dùng các từ ngữ chỉ tình cảm như \"yêu thương\", \"kính trọng\", \"biết ơn\", \"xúc động\", \"tự hào\", \"nhớ mãi\". Bên cạnh đó, các câu cảm thán cũng giúp giọng văn giàu cảm xúc hơn, ví dụ: \"Ôi, em yêu bà biết bao!\". Tuy nhiên, em đừng dùng quá nhiều câu cảm thán hay những lời sáo rỗng, bởi cảm xúc thật mới là điều quý giá nhất.\n\nCâu kết đoạn dùng để khẳng định lại tình cảm hoặc nêu mong ước, lời hứa của em. Ví dụ: \"Em mong bà luôn mạnh khỏe để mãi ở bên em, và em tự hứa sẽ chăm ngoan, học giỏi để bà vui lòng.\" Câu kết khép lại đoạn văn một cách trọn vẹn, đồng thời để lại dư âm ấm áp trong lòng người đọc.\n\nKhi luyện viết, thầy cô nên khuyến khích học sinh viết về những điều gần gũi với chính các em, đừng bắt các em \"vay mượn\" cảm xúc từ bài văn mẫu. Một đoạn văn dù câu chữ còn vụng về nhưng chứa đựng tình cảm thật sẽ luôn hay hơn một đoạn văn bóng bẩy mà giả tạo. Dạy các em viết cảm xúc cũng chính là dạy các em biết quan sát, biết rung động và biết trân trọng những điều bình dị quanh mình.",
-   "category": "Tập làm văn",
+   "category": "Hoạt động Viết",
    "cover": "amber",
    "readMinutes": 6,
    "tags": [
-    "Tập làm văn",
+    "Hoạt động Viết",
     "Đoạn văn",
     "Tình cảm cảm xúc",
     "Lớp 4",
@@ -1946,12 +2026,12 @@
   {
    "title": "Hướng dẫn viết thư: bố cục và lời lẽ chân tình",
    "excerpt": "Viết thư là kĩ năng giúp học sinh biết bày tỏ tình cảm và trao đổi thông tin. Bài viết hướng dẫn bố cục một lá thư và cách viết lời lẽ phù hợp.",
-   "content": "Viết thư là một dạng bài quen thuộc trong phân môn Tập làm văn ở tiểu học. Dù ngày nay người ta thường nhắn tin, gọi điện, nhưng một lá thư viết tay vẫn mang giá trị riêng: nó chứa đựng sự chân thành, cẩn thận và tình cảm sâu sắc của người viết. Học cách viết thư cũng là học cách bày tỏ suy nghĩ, tình cảm một cách mạch lạc và lịch sự.\n\nMột lá thư thông thường gồm ba phần: phần đầu thư, phần nội dung chính và phần cuối thư. Phần đầu thư, em ghi địa điểm và thời gian viết thư ở góc phải, sau đó là lời xưng hô với người nhận. Lời xưng hô cần phù hợp với mối quan hệ: viết cho bà thì \"Bà kính yêu của cháu\", viết cho bạn thì \"Lan thân mến\". Cách xưng hô đúng mực tạo thiện cảm ngay từ những dòng đầu tiên.\n\nTiếp theo phần đầu thư là vài câu hỏi thăm sức khỏe, tình hình của người nhận. Đây là nét đẹp trong văn hóa viết thư của người Việt, thể hiện sự quan tâm chân thành. Ví dụ: \"Dạo này bà có khỏe không ạ? Vườn rau sau nhà bà chắc đã xanh tốt lắm rồi bà nhỉ?\". Những câu hỏi thăm tự nhiên, cụ thể sẽ khiến lá thư trở nên ấm áp và gần gũi.\n\nPhần nội dung chính là phần quan trọng nhất, nơi em trình bày lí do viết thư và những điều muốn nói. Em có thể kể về tình hình học tập, sinh hoạt của mình, chia sẻ một niềm vui, một câu chuyện, hoặc bày tỏ một mong muốn nào đó. Em nên viết theo thứ tự, mỗi ý một đoạn cho rõ ràng, dùng lời lẽ chân tình như đang trò chuyện trực tiếp với người nhận. Đừng viết quá khô khan kiểu liệt kê, cũng đừng lan man dài dòng.\n\nPhần cuối thư, em viết lời chúc, lời hứa hoặc lời nhắn nhủ tới người nhận, rồi kí tên. Chẳng hạn: \"Cháu chúc bà luôn mạnh khỏe, sống lâu trăm tuổi. Hè này cháu nhất định sẽ về thăm bà. Cháu của bà, Minh.\" Lời kết thư cần ngắn gọn, ấm áp, để lại tình cảm tốt đẹp trong lòng người đọc thư.\n\nKhi hướng dẫn học sinh viết thư, thầy cô nên nhắc các em chú ý đến đối tượng nhận thư để chọn cách xưng hô và giọng điệu cho phù hợp. Viết thư cho người lớn cần lễ phép, kính trọng; viết cho bạn bè có thể thân mật, vui tươi. Trên hết, một lá thư hay không nằm ở câu chữ cầu kì mà ở tấm lòng chân thật của người viết. Khi các em viết bằng cả tình cảm của mình, lá thư sẽ tự nhiên trở nên đáng quý và đầy sức lay động.",
-   "category": "Tập làm văn",
+   "content": "Viết thư là một dạng bài quen thuộc trong Hoạt động Viết ở tiểu học. Dù ngày nay người ta thường nhắn tin, gọi điện, nhưng một lá thư viết tay vẫn mang giá trị riêng: nó chứa đựng sự chân thành, cẩn thận và tình cảm sâu sắc của người viết. Học cách viết thư cũng là học cách bày tỏ suy nghĩ, tình cảm một cách mạch lạc và lịch sự.\n\nMột lá thư thông thường gồm ba phần: phần đầu thư, phần nội dung chính và phần cuối thư. Phần đầu thư, em ghi địa điểm và thời gian viết thư ở góc phải, sau đó là lời xưng hô với người nhận. Lời xưng hô cần phù hợp với mối quan hệ: viết cho bà thì \"Bà kính yêu của cháu\", viết cho bạn thì \"Lan thân mến\". Cách xưng hô đúng mực tạo thiện cảm ngay từ những dòng đầu tiên.\n\nTiếp theo phần đầu thư là vài câu hỏi thăm sức khỏe, tình hình của người nhận. Đây là nét đẹp trong văn hóa viết thư của người Việt, thể hiện sự quan tâm chân thành. Ví dụ: \"Dạo này bà có khỏe không ạ? Vườn rau sau nhà bà chắc đã xanh tốt lắm rồi bà nhỉ?\". Những câu hỏi thăm tự nhiên, cụ thể sẽ khiến lá thư trở nên ấm áp và gần gũi.\n\nPhần nội dung chính là phần quan trọng nhất, nơi em trình bày lí do viết thư và những điều muốn nói. Em có thể kể về tình hình học tập, sinh hoạt của mình, chia sẻ một niềm vui, một câu chuyện, hoặc bày tỏ một mong muốn nào đó. Em nên viết theo thứ tự, mỗi ý một đoạn cho rõ ràng, dùng lời lẽ chân tình như đang trò chuyện trực tiếp với người nhận. Đừng viết quá khô khan kiểu liệt kê, cũng đừng lan man dài dòng.\n\nPhần cuối thư, em viết lời chúc, lời hứa hoặc lời nhắn nhủ tới người nhận, rồi kí tên. Chẳng hạn: \"Cháu chúc bà luôn mạnh khỏe, sống lâu trăm tuổi. Hè này cháu nhất định sẽ về thăm bà. Cháu của bà, Minh.\" Lời kết thư cần ngắn gọn, ấm áp, để lại tình cảm tốt đẹp trong lòng người đọc thư.\n\nKhi hướng dẫn học sinh viết thư, thầy cô nên nhắc các em chú ý đến đối tượng nhận thư để chọn cách xưng hô và giọng điệu cho phù hợp. Viết thư cho người lớn cần lễ phép, kính trọng; viết cho bạn bè có thể thân mật, vui tươi. Trên hết, một lá thư hay không nằm ở câu chữ cầu kì mà ở tấm lòng chân thật của người viết. Khi các em viết bằng cả tình cảm của mình, lá thư sẽ tự nhiên trở nên đáng quý và đầy sức lay động.",
+   "category": "Hoạt động Viết",
    "cover": "teal",
    "readMinutes": 6,
    "tags": [
-    "Tập làm văn",
+    "Hoạt động Viết",
     "Viết thư",
     "Lớp 4",
     "Lớp 5",

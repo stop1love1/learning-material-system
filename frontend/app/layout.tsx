@@ -19,7 +19,7 @@ const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "
 export async function generateMetadata(): Promise<Metadata> {
   const fallback: Metadata = {
     title: { default: "Vườn Văn · Nền tảng học liệu", template: "%s · Vườn Văn" },
-    description: "Hệ thống LMS — học liệu, đề thi, bài giảng và bài tập cho mọi môn học.",
+    description: "Hệ thống LMS — học liệu, đề thi và bài tập cho mọi môn học.",
   };
   try {
     // Server-side fetch: gọi thẳng backend nội bộ (NEXT_PUBLIC_API_URL có thể là

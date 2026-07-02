@@ -24,7 +24,7 @@
 Mô hình cây thư mục/tập tin: **folders** lồng nhau, **files** nằm trong folder (file = link ngoài).
 | Bảng | Field chính |
 |------|-------------|
-| **folders** | name, parentId(→folders), ancestors[], depth, userId, isPublic *(cây thư mục: Giáo án, Tập đọc, Thơ…)* |
+| **folders** | name, parentId(→folders), ancestors[], depth, userId, isPublic *(cây thư mục: Giáo án, Phiếu học tập, Đề bài…)* |
 | **files** | name, description, fileType(`pdf\|doc\|slide\|image\|audio\|video\|link\|other`), **source(`external\|internal`)**, **url(match http)**, fileKey(dự phòng host nội bộ), thumbnailUrl, folderId(→folders, null=gốc), size, sizeLabel, mimeType, subject, grade, tags[], userId, downloadCount, viewCount, isPublic |
 | **downloads** *(màn "Của tôi" — tài liệu đã tải/đã lưu)* | userId, fileId, kind(`download\|save`), createdAt *(unique (userId,fileId,kind))* |
 
