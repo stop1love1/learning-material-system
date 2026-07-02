@@ -12,7 +12,7 @@ import { MatchQuestion } from '../../schemas/question-bank/match-question.schema
 import { NumberQuestion } from '../../schemas/question-bank/number-question.schema';
 import { SortQuestion } from '../../schemas/question-bank/sort-question.schema';
 import { TableSelectionQuestion } from '../../schemas/question-bank/table-selection-question.schema';
-import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
+import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
 import { QuestionModel, QuestionType, UserRole } from '../../enums';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -86,14 +86,15 @@ export class QuestionsService {
 
   async list(userId: string, dto: ListQuestionsDto) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
-    const safeKeyword = parseKeyword(keyword);
+    // keyword is already regex-escaped by PaginationQueryDto's @Transform(parseKeyword);
+    // escaping again here double-escapes metacharacters and breaks the search.
     const query: Record<string, any> = {
       userId: convertStringToObjectId(userId),
-      ...(safeKeyword
+      ...(keyword
         ? {
             $or: [
-              { title: { $regex: safeKeyword, $options: 'i' } },
-              { content: { $regex: safeKeyword, $options: 'i' } },
+              { title: { $regex: keyword, $options: 'i' } },
+              { content: { $regex: keyword, $options: 'i' } },
             ],
           }
         : {}),

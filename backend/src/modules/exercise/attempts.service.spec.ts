@@ -17,8 +17,9 @@ import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { User } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
+import { Notification } from '../../schemas/notification.schema';
 import { MailService } from '../../global/mail.service';
-import { QuestionType } from '../../enums';
+import { QuestionType, UserRole } from '../../enums';
 
 const oid = () => new Types.ObjectId().toHexString();
 const ATTEMPT_ID = oid();
@@ -109,6 +110,7 @@ describe('AttemptsService', () => {
         { provide: getModelToken(StudentQuestion.name), useValue: studentQuestionModel },
         { provide: getModelToken(User.name), useValue: userModel },
         { provide: getModelToken(Settings.name), useValue: settingsModel },
+        { provide: getModelToken(Notification.name), useValue: { create: jest.fn().mockResolvedValue({}) } },
         { provide: MailService, useValue: mail },
       ],
     }).compile();
@@ -602,6 +604,8 @@ describe('AttemptsService', () => {
           studentId: new Types.ObjectId(STUDENT_ID),
         };
       attemptModel.findById.mockReturnValue(chain(attempt));
+      // grade() now verifies the grader owns the exercise (unless Admin); OWNER_ID is the owner.
+      exerciseModel.findById.mockReturnValue(chain({ userId: new Types.ObjectId(OWNER_ID) }));
       studentQuestionModel.find.mockReturnValue(chain(opts.studentQuestions));
       exerciseQuestionModel.find.mockReturnValue(chain(opts.links));
       const essayDocs = (opts.essayQuestionIds ?? []).map((id) => ({ _id: new Types.ObjectId(id) }));
@@ -618,6 +622,19 @@ describe('AttemptsService', () => {
       await expect(
         service.grade(ATTEMPT_ID, { answers: [] } as any, OWNER_ID),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rejects a non-Admin grader who does not own the exercise', async () => {
+      wireGrade({ studentQuestions: [], links: [] });
+      await expect(
+        service.grade(ATTEMPT_ID, { answers: [] } as any, oid()),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('lets an Admin grade an exercise they do not own', async () => {
+      wireGrade({ studentQuestions: [], links: [] });
+      const res: any = await service.grade(ATTEMPT_ID, { answers: [] } as any, oid(), UserRole.Admin);
+      expect(res).toBeDefined();
     });
 
     it('sets isGraded=true when no waiting grades remain', async () => {

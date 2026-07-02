@@ -12,6 +12,9 @@ import { FileItem } from '../../schemas/library/file.schema';
 import { Article } from '../../schemas/article.schema';
 import { Topic } from '../../schemas/question-bank/topic.schema';
 import { Rubric } from '../../schemas/rubric/rubric.schema';
+import { RubricGroup } from '../../schemas/rubric/rubric-group.schema';
+import { RubricLevel } from '../../schemas/rubric/rubric-level.schema';
+import { RubricCriterion } from '../../schemas/rubric/rubric-criterion.schema';
 import { User } from '../../schemas/user.schema';
 import { Exercise } from '../../schemas/exercise/exercise.schema';
 import { Attempt } from '../../schemas/exercise/attempt.schema';
@@ -31,6 +34,9 @@ export class MaintenanceService {
     @InjectModel(Article.name) private readonly articleModel: Model<Article>,
     @InjectModel(Topic.name) private readonly topicModel: Model<Topic>,
     @InjectModel(Rubric.name) private readonly rubricModel: Model<Rubric>,
+    @InjectModel(RubricGroup.name) private readonly rubricGroupModel: Model<RubricGroup>,
+    @InjectModel(RubricLevel.name) private readonly rubricLevelModel: Model<RubricLevel>,
+    @InjectModel(RubricCriterion.name) private readonly rubricCriterionModel: Model<RubricCriterion>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Exercise.name) private readonly exerciseModel: Model<Exercise>,
     @InjectModel(Attempt.name) private readonly attemptModel: Model<Attempt>,
@@ -65,6 +71,10 @@ export class MaintenanceService {
         articles: await this.articleModel.find().lean(),
         topics: await this.topicModel.find().lean(),
         rubrics: await this.rubricModel.find().lean(),
+        // Rubric criteria/levels/groups live in their own collections — back them up too.
+        'rubric-groups': await this.rubricGroupModel.find().lean(),
+        'rubric-levels': await this.rubricLevelModel.find().lean(),
+        'rubric-criterions': await this.rubricCriterionModel.find().lean(),
       };
       const snapshot = {
         version: 1,

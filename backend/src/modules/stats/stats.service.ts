@@ -78,15 +78,18 @@ export class StatsService {
     ]);
 
     const series = await this.attemptsSeries(30);
-    const activityTotal = series.reduce((s, x) => s + x.count, 0);
     const [attemptsCurr, attemptsPrev] = await Promise.all([
       this.countIn(this.attemptModel, d30, now),
       this.countIn(this.attemptModel, d60, d30),
     ]);
+    // Keep the activity total on the same 30-day window as the trend basis
+    // (countIn(d30, now)); the day-bucket series covers now-29d..now-0d and
+    // could otherwise diverge by one boundary day.
+    const activityTotal = attemptsCurr;
     const activityTrend = this.trendPct(attemptsCurr, attemptsPrev);
 
     const topFiles = await this.fileModel
-      .find({ isActive: { $ne: false } })
+      .find({})
       .sort({ viewCount: -1, downloadCount: -1, createdAt: -1 })
       .limit(5)
       .select('name fileType viewCount downloadCount tags')

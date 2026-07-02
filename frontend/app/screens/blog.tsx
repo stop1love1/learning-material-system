@@ -11,7 +11,7 @@ import { hydrateFor } from '@/app/lib/sync/hydrate';
 import RichEditor from '@/app/components/RichEditor';
 import { Pagination } from '@/app/components/Pagination';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
-import { mapArticle } from '@/app/lib/sync/load-articles';
+import { mapArticle, loadArticle } from '@/app/lib/sync/load-articles';
 import { ROUTES } from '@/app/configs/routes.config';
 import { withKeyword } from '@/app/helpers/related-href';
 
@@ -117,13 +117,39 @@ export function SBlog({ p, t }) {
 }
 
 export function SArticle({ p, t, ctx }) {
-  const a = DB.ARTICLES.find((x) => x.id === ctx.article) || DB.ARTICLES[0];
+  useLMS();
+  const id = ctx.article;
+  // Fetch the exact article by id on mount: this both loads articles missing
+  // from the first-100 list AND triggers the backend viewCount $inc (GET /:id).
+  const [loading, setLoading] = React.useState(() => !DB.ARTICLES.find((x: any) => x.id === id));
+  React.useEffect(() => {
+    let alive = true;
+    if (!DB.ARTICLES.find((x: any) => x.id === id)) setLoading(true);
+    loadArticle(id).finally(() => {
+      if (!alive) return;
+      LMS.bump();
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [id]);
+
+  const a = DB.ARTICLES.find((x) => x.id === id);
+  // Still fetching and nothing to show yet: render the loading state rather than
+  // an unrelated article. A genuinely missing id resolves to the not-found state.
+  if (loading && !a) return (
+    <div className="flex min-h-[55vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3.5">
+        <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-lms-line border-t-lms-accent" />
+        <span className="text-[13px] text-lms-sub">Đang tải bài viết…</span>
+      </div>
+    </div>
+  );
   if (!a) return (
     <EmptyState
       p={p}
       icon="docs"
-      label="Không có bài viết"
-      sub="Chưa có nội dung."
+      label="Không tìm thấy bài viết"
+      sub="Bài viết không tồn tại hoặc đã bị gỡ."
       action={(
         <Link href={ROUTES.blog} className="lms-btn mt-1 inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent no-underline">
           <Icon name="arrowLeft" size={15} stroke={p.accent} sw={1.9} /> Về blog

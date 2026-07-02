@@ -207,8 +207,10 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
       const ex: any = await exercisesApi.create(body);
       const exId = ex?._id ?? ex?.id;
       if (exId && kind === 'quiz') {
-        for (const questionId of picked) {
-          try { await exercisesApi.addQuestion(exId, { questionId }); } catch { /* skip invalid ids */ }
+        // Pass an explicit incrementing order so ExerciseQuestion rows keep the picked
+        // sequence instead of all defaulting to 0.
+        for (let i = 0; i < picked.length; i++) {
+          try { await exercisesApi.addQuestion(exId, { questionId: picked[i], order: i }); } catch { /* skip invalid ids */ }
         }
       }
       await hydrateFor('assignments');

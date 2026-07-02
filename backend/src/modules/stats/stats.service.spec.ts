@@ -101,13 +101,16 @@ describe('StatsService', () => {
       expect(typeof res.activity.total).toBe('number');
       expect(res.topFiles).toEqual([{ name: 'f1', viewCount: 100 }]);
 
-      // topFiles query excludes inactive files
-      expect(fileModel.find).toHaveBeenCalledWith({ isActive: { $ne: false } });
+      // topFiles query has no phantom filter (FileItem has no isActive field)
+      expect(fileModel.find).toHaveBeenCalledWith({});
     });
 
     it('densifies the activity series from sparse aggregate rows', async () => {
       const today = new Date().toISOString().slice(0, 10);
       attemptModel.aggregate.mockResolvedValue([{ _id: today, count: 3 }]);
+      // activity.total is derived from the 30-day trend window (countIn),
+      // not the series sum, so it tracks countDocuments here.
+      attemptModel.countDocuments.mockResolvedValue(11);
       fileModel.find.mockReturnValue({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
@@ -118,7 +121,7 @@ describe('StatsService', () => {
       const res = await service.overview();
       const todayRow = res.activity.series.find((s: any) => s.date === today);
       expect(todayRow?.count).toBe(3);
-      expect(res.activity.total).toBe(3);
+      expect(res.activity.total).toBe(11);
     });
   });
 

@@ -10,7 +10,7 @@ import { Attempt } from '../../schemas/exercise/attempt.schema';
 import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
-import { UserRole } from '../../enums';
+import { ExerciseStatus, UserRole } from '../../enums';
 
 /**
  * Unit tests for ExercisesService — list() query building + enrichment counts
@@ -109,15 +109,31 @@ describe('ExercisesService', () => {
       expect(query.$or).toBeUndefined();
     });
 
-    it('anonymous, student, teacher and admin all get the same unscoped query', async () => {
+    it('hides drafts from anonymous & non-owners, shows admins everything and owners their own drafts', async () => {
+      // anonymous (no status) → drafts excluded via status:{$ne:'draft'}, no $or, no userId scope
+      await service.list({} as any, undefined);
+      const anon = exerciseModel.find.mock.calls[0][0];
+      expect(anon.status).toEqual({ $ne: ExerciseStatus.Draft });
+      expect(anon.$or).toBeUndefined();
+      expect(anon.userId).toBeUndefined();
+
+      // logged-in student/teacher (no status) → own drafts allowed via $or
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Student });
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Teacher });
-      await service.list({} as any, { userId: oid().toString(), role: UserRole.Admin });
-
-      for (const call of exerciseModel.find.mock.calls) {
-        expect(call[0].classId).toBeUndefined();
-        expect(call[0].$or).toBeUndefined();
+      for (const call of [exerciseModel.find.mock.calls[1][0], exerciseModel.find.mock.calls[2][0]]) {
+        expect(call.$or).toEqual([
+          { status: { $ne: ExerciseStatus.Draft } },
+          { userId: expect.anything() },
+        ]);
+        expect(call.status).toBeUndefined();
       }
+
+      // admin → no draft scoping at all
+      await service.list({} as any, { userId: oid().toString(), role: UserRole.Admin });
+      const admin = exerciseModel.find.mock.calls[3][0];
+      expect(admin.$or).toBeUndefined();
+      expect(admin.status).toBeUndefined();
+      expect(admin.classId).toBeUndefined();
     });
 
     it('combines other filters (type/status/subject/grade)', async () => {

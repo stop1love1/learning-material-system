@@ -160,7 +160,7 @@ export class AuthService {
     // Chống dò mã: khoá bước OTP khi nhập sai quá nhiều lần trong cửa sổ.
     if (this.isOtpLocked(email)) {
       throw new UnauthorizedException(
-        'Nhập sai mã quá nhiều lần. Vui lòng đăng nhập lại để nhận mã mới.',
+        'Bạn đã nhập sai mã quá nhiều lần, vui lòng thử lại sau ít phút.',
       );
     }
 
@@ -208,19 +208,41 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, dto: { name?: string; email?: string; avatar?: string }) {
-    const patch: Record<string, unknown> = {};
-    if (dto.name) patch.name = dto.name;
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new UnauthorizedException();
+
+    if (dto.name) user.name = dto.name;
+    if (dto.avatar !== undefined) user.avatar = dto.avatar;
+
+    let verifyLink: string | undefined;
+    let verificationDelivered = true;
     if (dto.email) {
       const email = dto.email.toLowerCase();
       if (await this.userModel.exists({ email, _id: { $ne: userId } })) {
         throw new ConflictException('Email đã được sử dụng');
       }
-      patch.email = email;
+      const emailChanged = email !== user.email;
+      user.email = email;
+      // Đổi email trên tài khoản local buộc xác thực lại: hạ emailVerified và gửi
+      // liên kết mới (login gate dùng `emailVerified === false`). Tài khoản google
+      // đã được Google xác thực nên giữ nguyên.
+      if (emailChanged && user.provider !== 'google') {
+        const rawToken = randomBytes(32).toString('hex');
+        user.emailVerified = false;
+        user.verifyToken = this.hashToken(rawToken);
+        user.verifyExpires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        verifyLink = `${frontendUrl}/xac-thuc-email?token=${rawToken}`;
+        verificationDelivered = await this.mail.sendVerification(email, verifyLink);
+      }
     }
-    if (dto.avatar !== undefined) patch.avatar = dto.avatar;
-    const user = await this.userModel.findByIdAndUpdate(userId, patch, { new: true });
-    if (!user) throw new UnauthorizedException();
-    return this.sanitize(user);
+
+    await user.save();
+    const result = this.sanitize(user);
+    if (verifyLink && !verificationDelivered) {
+      (result as Record<string, unknown>).devVerifyLink = verifyLink;
+    }
+    return result;
   }
 
   logout() {

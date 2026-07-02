@@ -21,8 +21,12 @@ export class AttemptsController {
   @Get()
   @Roles([UserRole.Teacher, UserRole.Admin])
   @ApiOperation({ summary: 'Danh sách lượt làm cần chấm (lọc exerciseId/studentId/pendingOnly)' })
-  list(@Query() dto: ListAttemptsDto) {
-    return this.attemptsService.listForGrading(dto);
+  list(
+    @Query() dto: ListAttemptsDto,
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.attemptsService.listForGrading(dto, userId, role);
   }
 
   @Get('me')
@@ -60,7 +64,8 @@ export class AttemptsController {
     @Param('attemptId') attemptId: string,
     @Body() dto: GradeAttemptDto,
     @CurrentUser('sub') graderId: string,
+    @CurrentUser('role') role: UserRole,
   ) {
-    return this.attemptsService.grade(attemptId, dto, graderId);
+    return this.attemptsService.grade(attemptId, dto, graderId, role);
   }
 }

@@ -9,6 +9,9 @@ import { FileItem } from '../../schemas/library/file.schema';
 import { Article } from '../../schemas/article.schema';
 import { Topic } from '../../schemas/question-bank/topic.schema';
 import { Rubric } from '../../schemas/rubric/rubric.schema';
+import { RubricGroup } from '../../schemas/rubric/rubric-group.schema';
+import { RubricLevel } from '../../schemas/rubric/rubric-level.schema';
+import { RubricCriterion } from '../../schemas/rubric/rubric-criterion.schema';
 
 // The full set of default groups the service backfills.
 const DEFAULT_GROUPS: any = {
@@ -32,6 +35,9 @@ describe('SettingsService', () => {
   let articleModel: any;
   let topicModel: any;
   let rubricModel: any;
+  let rubricGroupModel: any;
+  let rubricLevelModel: any;
+  let rubricCriterionModel: any;
 
   const makeSimpleModel = () => ({ find: jest.fn(), updateOne: jest.fn() });
 
@@ -50,6 +56,9 @@ describe('SettingsService', () => {
     articleModel = makeSimpleModel();
     topicModel = makeSimpleModel();
     rubricModel = makeSimpleModel();
+    rubricGroupModel = makeSimpleModel();
+    rubricLevelModel = makeSimpleModel();
+    rubricCriterionModel = makeSimpleModel();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +69,9 @@ describe('SettingsService', () => {
         { provide: getModelToken(Article.name), useValue: articleModel },
         { provide: getModelToken(Topic.name), useValue: topicModel },
         { provide: getModelToken(Rubric.name), useValue: rubricModel },
+        { provide: getModelToken(RubricGroup.name), useValue: rubricGroupModel },
+        { provide: getModelToken(RubricLevel.name), useValue: rubricLevelModel },
+        { provide: getModelToken(RubricCriterion.name), useValue: rubricCriterionModel },
       ],
     }).compile();
 
@@ -149,7 +161,16 @@ describe('SettingsService', () => {
 
   describe('exportBackup', () => {
     it('reads all backup collections into a versioned snapshot', async () => {
-      for (const m of [folderModel, fileModel, articleModel, topicModel, rubricModel]) {
+      for (const m of [
+        folderModel,
+        fileModel,
+        articleModel,
+        topicModel,
+        rubricModel,
+        rubricGroupModel,
+        rubricLevelModel,
+        rubricCriterionModel,
+      ]) {
         m.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([{ _id: '1' }]) });
       }
 
@@ -157,7 +178,16 @@ describe('SettingsService', () => {
 
       expect(snap.version).toBe(1);
       expect(typeof snap.exportedAt).toBe('string');
-      expect(Object.keys(snap.collections)).toEqual(['folders', 'files', 'articles', 'topics', 'rubrics']);
+      expect(Object.keys(snap.collections)).toEqual([
+        'folders',
+        'files',
+        'articles',
+        'topics',
+        'rubrics',
+        'rubric-groups',
+        'rubric-levels',
+        'rubric-criterions',
+      ]);
       expect(snap.collections.folders).toEqual([{ _id: '1' }]);
     });
   });

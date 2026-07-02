@@ -7,6 +7,9 @@ import { FileItem } from '../../schemas/library/file.schema';
 import { Article } from '../../schemas/article.schema';
 import { Topic } from '../../schemas/question-bank/topic.schema';
 import { Rubric } from '../../schemas/rubric/rubric.schema';
+import { RubricGroup } from '../../schemas/rubric/rubric-group.schema';
+import { RubricLevel } from '../../schemas/rubric/rubric-level.schema';
+import { RubricCriterion } from '../../schemas/rubric/rubric-criterion.schema';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 const SETTING_GROUPS = [
@@ -25,7 +28,18 @@ const SETTING_GROUPS = [
 
 // Collections included in an admin content backup (export/import). Users, attempts and
 // submissions are intentionally excluded — backup nội dung, không kèm dữ liệu cá nhân.
-const BACKUP_COLLECTIONS = ['folders', 'files', 'articles', 'topics', 'rubrics'] as const;
+// Rubric criteria/levels/groups live in their own collections, so they must be backed up
+// alongside 'rubrics' or a restore loses all criteria/levels.
+const BACKUP_COLLECTIONS = [
+  'folders',
+  'files',
+  'articles',
+  'topics',
+  'rubrics',
+  'rubric-groups',
+  'rubric-levels',
+  'rubric-criterions',
+] as const;
 
 @Injectable()
 export class SettingsService {
@@ -36,6 +50,9 @@ export class SettingsService {
     @InjectModel(Article.name) private readonly articleModel: Model<Article>,
     @InjectModel(Topic.name) private readonly topicModel: Model<Topic>,
     @InjectModel(Rubric.name) private readonly rubricModel: Model<Rubric>,
+    @InjectModel(RubricGroup.name) private readonly rubricGroupModel: Model<RubricGroup>,
+    @InjectModel(RubricLevel.name) private readonly rubricLevelModel: Model<RubricLevel>,
+    @InjectModel(RubricCriterion.name) private readonly rubricCriterionModel: Model<RubricCriterion>,
   ) {}
 
   private backupModel(key: (typeof BACKUP_COLLECTIONS)[number]): Model<any> {
@@ -50,6 +67,12 @@ export class SettingsService {
         return this.topicModel;
       case 'rubrics':
         return this.rubricModel;
+      case 'rubric-groups':
+        return this.rubricGroupModel;
+      case 'rubric-levels':
+        return this.rubricLevelModel;
+      case 'rubric-criterions':
+        return this.rubricCriterionModel;
     }
   }
 
@@ -72,7 +95,43 @@ export class SettingsService {
     if (result.integration) {
       result.integration.apiKey = null;
     }
+    // TODO(follow-up): GET /settings is @Public() and JwtAuthGuard skips public routes, so
+    // the service can't tell an admin from an anonymous caller here. Until the controller
+    // (settings.controller.ts) + guard support optional auth and pass the user, this returns
+    // the full doc so the admin form keeps working. Anonymous reads should instead go through
+    // toPublicView(result) (defined below) to strip smtp/storageProvider/apiKey and the
+    // security/data/notifications/academic groups.
     return result;
+  }
+
+  /**
+   * Public-facing subset of the settings doc. GET /settings is @Public() so anonymous
+   * callers must NOT see the smtp/storageProvider/apiKey fields or the security, data,
+   * notifications and academic groups — only site-facing config plus the two intentionally
+   * public Google client keys (Google Picker/Sign-In run in the browser).
+   */
+  private toPublicView(doc: any) {
+    const integration = doc?.integration || {};
+    return {
+      org: doc?.org,
+      appearance: doc?.appearance,
+      homepage: doc?.homepage,
+      seo: doc?.seo,
+      pages: doc?.pages,
+      misc: doc?.misc,
+      // academic policy (score scale / pass threshold) is not secret and the grading UI
+      // needs scoreScale, so it stays in the public view.
+      academic: doc?.academic,
+      integration: {
+        googleClientId: integration.googleClientId ?? null,
+        googleApiKey: integration.googleApiKey ?? null,
+      },
+    };
+  }
+
+  /** Public (unauthenticated / non-admin) view — strips admin-only groups + secrets. */
+  async getPublicView() {
+    return this.toPublicView(await this.getOrCreate());
   }
 
   async update(dto: UpdateSettingsDto) {
@@ -81,6 +140,13 @@ export class SettingsService {
       const value = (dto as any)[group];
       if (value && typeof value === 'object') {
         for (const [field, fieldValue] of Object.entries(value)) {
+          // Defense-in-depth: GET /settings redacts integration.apiKey to null, so a form
+          // that reloaded and re-sent the whole integration object would $set null over the
+          // real key. Treat a null/empty apiKey as "no change" — the dedicated regenerate
+          // path saves a real key on its own.
+          if (group === 'integration' && field === 'apiKey' && (fieldValue == null || fieldValue === '')) {
+            continue;
+          }
           flattened[`${group}.${field}`] = fieldValue;
         }
       }

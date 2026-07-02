@@ -97,6 +97,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   const items = (NAV_BY_ROLE.user[0] && NAV_BY_ROLE.user[0].items) || [];
   const activeKey = resolvePath(pathname).navKey;
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
   const mainRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     setMenuOpen(false);
@@ -109,8 +110,9 @@ export function PublicChrome({ children }: { children: ReactNode }) {
       <Link
         key={it.key}
         href={routeToHref(it.key)}
+        aria-current={on ? 'page' : undefined}
         style={{ color: on ? p.accent : p.sub, background: on ? p.accentSoft : undefined }}
-        className={`lms-btn flex cursor-pointer items-center gap-2 rounded-[9px] border-0 no-underline px-3.5 font-sans text-sm ${
+        className={`lms-btn lms-row flex cursor-pointer items-center gap-2 rounded-[10px] border-0 no-underline px-3.5 font-sans text-sm transition-colors ${
           block ? 'h-11 w-full justify-start' : 'h-9 justify-center'
         } ${on ? 'font-semibold' : 'font-medium'}`}
       >
@@ -122,23 +124,25 @@ export function PublicChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-lms-bg font-sans text-lms-ink">
-      <header className="z-30 shrink-0 border-b border-lms-line-soft bg-(--lms-surface-glass) backdrop-blur-md backdrop-saturate-[1.4]">
-        <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
-          <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline" aria-label={brand.name}>
+      <header
+        className={`z-30 shrink-0 border-b bg-(--lms-surface-glass) backdrop-blur-md backdrop-saturate-[1.4] transition-[box-shadow,border-color] duration-200 ${
+          scrolled ? 'border-lms-line shadow-[0_6px_24px_-8px_rgba(80,55,30,0.14)]' : 'border-lms-line-soft'
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-6">
+          <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline transition-opacity hover:opacity-80" aria-label={brand.name}>
             <BrandLogo className="h-[38px]! w-[38px]!" />
-            {/* Home page hero already carries the branding — show the name only on other pages. */}
-            {activeKey !== 'home' && (
-              <div className="lms-hide-sm">
-                <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">{brand.name}</div>
-                <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
-              </div>
-            )}
+            <div className="lms-hide-sm">
+              <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">{brand.name}</div>
+              <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
+            </div>
           </Link>
-          <nav className="lms-hide-sm ml-3.5 flex items-center gap-1">
+          <nav className="lms-hide-sm flex items-center gap-0.5">
             {items.map((it) => navLink(it, false))}
           </nav>
           <div className="flex-1" />
-          <IconBtn name={dark ? 'sun' : 'moon'} p={p} variant="filled" onClick={() => setDark(!dark)} title="Sáng/tối" />
+          <div className="flex items-center gap-1.5">
+            <IconBtn name={dark ? 'sun' : 'moon'} p={p} variant="filled" size={36} onClick={() => setDark(!dark)} title="Sáng/tối" />
           {auth?.ready && (auth.loggedIn ? (
             <Popover
               trigger="click"
@@ -182,11 +186,16 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <button
                 title={auth.name}
                 aria-label="Tài khoản"
-                className="lms-btn lms-row lms-hide-sm flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink"
+                className="lms-btn lms-hide-sm flex h-10 cursor-pointer items-center gap-2 rounded-full border border-lms-line bg-lms-surface py-1 pl-1 pr-3 text-left transition-shadow hover:shadow-[0_2px_10px_-3px_rgba(80,55,30,0.18)]"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-lms-accent-soft font-lms-heading text-xs font-bold text-lms-accent">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lms-accent font-lms-heading text-[11px] font-bold text-white shadow-[0_1px_4px_-1px_rgba(63,157,92,0.6)]">
                   {auth.initials}
-                </div>
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="max-w-[160px] truncate text-[12.5px] font-semibold leading-tight text-lms-ink">{auth.name}</span>
+                  <span className="max-w-[160px] truncate text-[11px] leading-tight text-lms-sub">{ROLE_LABEL_VI[auth.role] || 'Người dùng'}</span>
+                </span>
+                <Icon name="chevronDown" size={15} stroke={p.faint} />
               </button>
             </Popover>
           ) : (
@@ -200,15 +209,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <Icon name="logout" size={15} stroke="#fff" /> Đăng nhập
             </button>
           ))}
-          {auth?.isStaff && (
-            <button
-              onClick={() => push(ROUTES.dashboard)}
-              className="lms-btn lms-row lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink text-lms-sub"
-              title="Khu vực quản trị"
-            >
-              <Icon name="settings" size={16} stroke={p.sub} />
-            </button>
-          )}
+          </div>
           <button
             className="lms-hamburger lms-btn lms-row hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink"
             onClick={() => setMenuOpen((o) => !o)}
@@ -248,7 +249,11 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           </div>
         )}
       </header>
-      <div className="lms-scroll lms-page-scroll flex flex-1 flex-col overflow-y-auto" ref={mainRef}>
+      <div
+        className="lms-scroll lms-page-scroll flex flex-1 flex-col overflow-y-auto"
+        ref={mainRef}
+        onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}
+      >
         <main className="flex-1">{children}</main>
         <PublicFooter p={p} topics={topics} />
       </div>

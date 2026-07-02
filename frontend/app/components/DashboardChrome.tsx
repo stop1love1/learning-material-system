@@ -29,24 +29,30 @@ function NotifyBell({ p }: { p: any }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState<any[]>([]);
+  // Accurate unread total from the backend (may exceed the 20-item page); null when
+  // the response is a bare array without unreadCount → fall back to the filtered length.
+  const [unreadCount, setUnreadCount] = React.useState<number | null>(null);
 
   const refresh = React.useCallback(async () => {
     try {
       const res: any = await notificationsApi.me(20);
       const list: any[] = Array.isArray(res) ? res : res?.records ?? [];
       setItems(list);
+      setUnreadCount(Array.isArray(res) ? null : (typeof res?.unreadCount === 'number' ? res.unreadCount : null));
     } catch {
       setItems([]);
+      setUnreadCount(null);
     }
   }, []);
 
   React.useEffect(() => { refresh(); }, [refresh]);
 
-  const unread = items.filter((n) => !n.isRead).length;
+  const unread = unreadCount ?? items.filter((n) => !n.isRead).length;
 
   const onItemClick = async (n: any) => {
     if (!n.isRead) {
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+      setUnreadCount((c) => (c == null ? c : Math.max(0, c - 1)));
       try { await notificationsApi.markRead(n.id); } catch { /* best-effort */ }
     }
     if (n.link) { setOpen(false); router.push(n.link); }
@@ -55,6 +61,7 @@ function NotifyBell({ p }: { p: any }) {
   const onMarkAll = async () => {
     if (!unread) return;
     setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
+    setUnreadCount((c) => (c == null ? c : 0));
     try { await notificationsApi.markAllRead(); } catch { /* best-effort */ }
   };
 

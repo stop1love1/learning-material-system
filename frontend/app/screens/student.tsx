@@ -25,6 +25,10 @@ function taskTone(p, s) { return { todo: p.accent, done: p.info, graded: p.ok }[
 function taskLabel(s) { return { todo: 'Cần làm', done: 'Đã nộp', graded: 'Đã chấm' }[s] || s; }
 function taskIconBg(s: string) { return { todo: 'bg-lms-accent-soft', done: 'bg-lms-info/12', graded: 'bg-lms-ok/12' }[s] || 'bg-lms-accent-soft'; }
 
+// Grading/display uses the global academic score scale (settings.academic.scoreScale),
+// NOT exercise.points. Fall back to 10 when settings are unavailable.
+const DEFAULT_SCORE_SCALE = 10;
+
 const TASK_TABS = ['todo', 'done', 'all'] as const;
 type TaskTab = (typeof TASK_TABS)[number];
 
@@ -476,7 +480,17 @@ function mapApiQuestion(link: any): any {
     } else if (q.type === 'fill') {
       answer = detail.answers ?? [];
     } else if (q.type === 'match') {
-      pairs = (detail.pairs ?? []).map((pr: any) => [pr.left, pr.right] as [string, string]);
+      if (Array.isArray(detail.pairs)) {
+        // Owner-preview: full pairs available.
+        pairs = detail.pairs.map((pr: any) => [pr.left, pr.right] as [string, string]);
+      } else {
+        // Non-owner: server strips pairs and sends lefts[] (real labels) + rightOptions[]
+        // (shuffled pool). Rebuild MatchBoard's [left, right] shape: pr[0] = left prompt,
+        // pr[1] feeds the draggable pool.
+        const lefts: string[] = detail.lefts ?? [];
+        const rightOptions: string[] = detail.rightOptions ?? [];
+        pairs = lefts.map((l: string, i: number) => [l, rightOptions[i]] as [string, string]);
+      }
     }
   } catch { /* tolerate malformed questionDetail */ }
   return {
@@ -527,6 +541,7 @@ export function STask({ p, t, ctx, auth }) {
   const [ws, setWs] = React.useState(null);
   const [materials, setMaterials] = React.useState<any[]>([]);
   const [remaining, setRemaining] = React.useState<number | null>(null);
+  const [scoreScale, setScoreScale] = React.useState(DEFAULT_SCORE_SCALE);
   const autoSubmittedRef = React.useRef(false);
   const submitNowRef = React.useRef<() => void>(() => {});
 
@@ -576,6 +591,10 @@ export function STask({ p, t, ctx, auth }) {
   }, [remaining == null, result]);
 
   React.useEffect(() => { if (auth && !auth.loggedIn) auth.open(); }, [auth?.loggedIn]);
+
+  React.useEffect(() => {
+    settingsApi.get().then((s) => { const sc = s?.academic?.scoreScale; if (sc) setScoreScale(sc); }).catch(() => {});
+  }, []);
 
   if (auth && !auth.loggedIn) {
     return (
@@ -659,10 +678,10 @@ export function STask({ p, t, ctx, auth }) {
         </p>
         <div className="mb-[26px] flex gap-[22px]">
           <div className={`${cardClass(20)} min-w-[120px] p-[18px]`}>
-            <div className={`font-lms-heading text-[30px] font-extrabold ${result.score != null && result.score >= (task.points || 10) * 0.8 ? 'text-lms-ok' : 'text-lms-ink'}`}>
+            <div className={`font-lms-heading text-[30px] font-extrabold ${result.score != null && result.score >= scoreScale * 0.8 ? 'text-lms-ok' : 'text-lms-ink'}`}>
               {result.score != null ? result.score : `${result.correct}/${result.total}`}
             </div>
-            <div className="mt-1 text-xs text-lms-faint">{result.score != null ? `điểm / ${task.points}` : 'câu đúng'}</div>
+            <div className="mt-1 text-xs text-lms-faint">{result.score != null ? `điểm / ${scoreScale}` : 'câu đúng'}</div>
           </div>
           <div className={`${cardClass(20)} flex min-w-[120px] flex-col items-center justify-center gap-2 p-[18px]`}>
             <Ring value={pct} size={56} thickness={6} p={p} color={p.accent} label={`${pct}%`} />
@@ -1059,9 +1078,10 @@ export function SSelfCheck({ p, t }) {
   const works = React.useMemo(() => {
     const tasks = (DB.ASSIGNMENTS || [])
       .filter((e: any) => e.rubric && rubrics.some((r: any) => r.id === e.rubric))
-      .map((e: any) => ({ id: e.id, title: e.title, rubricId: e.rubric }));
+      .map((e: any) => ({ id: e.id, title: e.title, rubricId: e.rubric, isExercise: true, exerciseId: e.id }));
     if (tasks.length) return tasks;
-    return rubrics.map((r: any) => ({ id: r.id, title: r.name, rubricId: r.id }));
+    // Rubric-only fallback: w.id is a RUBRIC id, not an exercise — do not persist exerciseId.
+    return rubrics.map((r: any) => ({ id: r.id, title: r.name, rubricId: r.id, isExercise: false }));
   }, [DB.ASSIGNMENTS, rubrics]);
   const [workId, setWorkId] = React.useState<string>('');
   const work = works.find((w: any) => w.id === workId) || works[0];
@@ -1104,7 +1124,8 @@ export function SSelfCheck({ p, t }) {
 
       await selfAssessmentsApi.create({
         rubricId: rubric.id,
-        source: 'text',
+        source: work?.isExercise ? 'exercise' : 'text',
+        ...(work?.isExercise && work.exerciseId ? { exerciseId: work.exerciseId } : {}),
         totalPercent: selfScore != null ? Math.round(selfScore * 10) : undefined,
         ...(scores.length ? { scores } : {}),
         note,

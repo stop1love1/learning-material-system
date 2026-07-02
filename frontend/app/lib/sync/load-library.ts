@@ -39,7 +39,9 @@ export function mapFile(f: Record<string, any>): Record<string, any> {
 
 export async function loadLibrary(): Promise<void> {
   try {
-    const foldersRes: any = await foldersApi.list();
+    // Fetch every visible folder (not just root) so sub-folders enter the tree
+    // and 'Thêm thư mục con' works; auth is sent when logged in (owner's own folders).
+    const foldersRes: any = await foldersApi.listAll();
     const folders: any[] = Array.isArray(foldersRes) ? foldersRes : (foldersRes?.records ?? []);
     const folderMap: Record<string, string> = {};
     folders.forEach((x: Record<string, any>) => { folderMap[String(x._id)] = x.name; });
@@ -50,6 +52,11 @@ export async function loadLibrary(): Promise<void> {
       parentId: f.parentId ? String(f.parentId?._id ?? f.parentId) : null,
     }));
 
+    // NOTE: this snapshot only feeds the per-folder count badges (resources.tsx reads
+    // the paginated list separately). filesApi.list is a @Public read that omits auth,
+    // so counts reflect only guest-visible files (capped at 200) — an owner's private
+    // files are not counted here. Making counts auth/owner-aware needs a dedicated
+    // count endpoint; left as-is for now.
     const filesRes: any = await filesApi.list({ pageSize: 200 });
     const files: any[] = filesRes?.records ?? [];
     DB.DOCS = files.map((f: Record<string, any>) => {

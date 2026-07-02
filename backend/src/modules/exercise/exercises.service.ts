@@ -9,7 +9,7 @@ import { Participant } from '../../schemas/exercise/participant.schema';
 import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { buildPagination, convertStringToObjectId, getPagination, parseKeyword } from '../../common/utils';
-import { UserRole } from '../../enums';
+import { ExerciseStatus, UserRole } from '../../enums';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { ListExercisesDto } from './dto/list-exercises.dto';
@@ -38,6 +38,21 @@ export class ExercisesService {
       ...(dto.grade ? { grade: dto.grade } : {}),
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
+
+    // Bài tập nháp (draft) chỉ chủ sở hữu / Admin được thấy — khách & học viên bị ẩn.
+    const isAdmin = viewer?.role === UserRole.Admin;
+    const viewerId = viewer?.userId ? convertStringToObjectId(viewer.userId) : null;
+    if (!isAdmin) {
+      if (dto.status === ExerciseStatus.Draft) {
+        // Lọc rõ theo 'draft': chỉ trả về draft DO MÌNH sở hữu (khách → không có gì).
+        if (viewerId) query.userId = viewerId;
+        else query._id = { $in: [] };
+      } else if (!dto.status) {
+        // Không lọc status: ẩn draft, nhưng vẫn cho chủ thấy draft của chính mình (màn giao bài).
+        if (viewerId) query.$or = [{ status: { $ne: ExerciseStatus.Draft } }, { userId: viewerId }];
+        else query.status = { $ne: ExerciseStatus.Draft };
+      }
+    }
 
     const SORT_FIELD: Record<string, string> = { date: 'createdAt', points: 'points', name: 'title' };
     const sortField = SORT_FIELD[dto.sortBy as string] || 'createdAt';

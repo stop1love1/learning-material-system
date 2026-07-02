@@ -59,6 +59,39 @@ export class NotificationsService {
     return { records, unreadCount };
   }
 
+  /**
+   * Tạo một thông báo cá nhân cho người dùng. Best-effort — nuốt lỗi để không bao giờ
+   * chặn hành động chính (nộp bài / chấm bài...). Khớp các field của notification.schema.
+   */
+  async create(
+    userId: string,
+    payload: {
+      title: string;
+      body?: string;
+      tag?: string;
+      icon?: string;
+      link?: string;
+      refId?: string;
+      refType?: string;
+    },
+  ): Promise<void> {
+    try {
+      await this.notificationModel.create({
+        userId: convertStringToObjectId(userId),
+        title: payload.title,
+        ...(payload.body !== undefined ? { body: payload.body } : {}),
+        ...(payload.tag !== undefined ? { tag: payload.tag } : {}),
+        ...(payload.icon !== undefined ? { icon: payload.icon } : {}),
+        ...(payload.link !== undefined ? { link: payload.link } : {}),
+        ...(payload.refId !== undefined ? { refId: convertStringToObjectId(payload.refId) } : {}),
+        ...(payload.refType !== undefined ? { refType: payload.refType } : {}),
+        isRead: false,
+      });
+    } catch {
+      // Không throw: thất bại tạo thông báo không được ảnh hưởng luồng chính.
+    }
+  }
+
   /** Đánh dấu một thông báo đã đọc (chỉ chủ sở hữu). */
   async markRead(id: string, userId: string) {
     const res = await this.notificationModel.findOneAndUpdate(

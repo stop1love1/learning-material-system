@@ -656,7 +656,7 @@ export function TBankEdit({ p, t, setRoute }) {
                 detail = { pairs: ps.length ? ps : [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };
               }
               try {
-                const topicField = topicId ? { topic: topicId } : {};
+                const topicField = topicId ? { topicId } : {};
                 if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 await hydrateFor('bank');

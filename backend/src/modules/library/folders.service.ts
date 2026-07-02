@@ -30,8 +30,10 @@ export class FoldersService {
   }
 
   async list(dto: ListFoldersDto, viewer?: { userId?: string; role?: UserRole }) {
+    // all=true returns the full visible flat list (for building the sub-folder tree);
+    // otherwise scope to one level (parentId, default = root).
     const query: Record<string, any> = {
-      parentId: dto.parentId ? convertStringToObjectId(dto.parentId) : null,
+      ...(dto.all ? {} : { parentId: dto.parentId ? convertStringToObjectId(dto.parentId) : null }),
       ...this.visibilityFilter(viewer),
     };
     return this.folderModel.find(query).sort({ name: 1 }).lean();

@@ -126,7 +126,12 @@ export function TDocs({ p, t, auth }) {
     await hydrateFor('docs');
     paged.reload();
   };
-  const doDownload = (id: string) => { LMS && LMS.download(id); filesApi.download(id).catch(() => {}); };
+  const doDownload = (d: any) => {
+    if (d.url) window.open(d.url, '_blank', 'noopener');
+    LMS && LMS.download(d.id);
+    // Refresh once the download is recorded so the shown ↓ count reflects the bump.
+    filesApi.download(d.id).then(() => paged.reload()).catch(() => {});
+  };
 
   const [menuFor, setMenuFor] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -147,7 +152,7 @@ export function TDocs({ p, t, auth }) {
       {[
         { ic: 'eye', lab: 'Mở tài liệu', fn: () => openDoc(d), disabled: !d.url },
         { ic: 'link', lab: 'Sao chép liên kết', fn: () => copyLink(d), disabled: !d.url },
-        { ic: 'download', lab: 'Tải về', fn: () => doDownload(d.id) },
+        { ic: 'download', lab: 'Tải về', fn: () => doDownload(d) },
         { ic: 'trash', lab: 'Xoá', fn: () => deleteDoc(d), danger: true },
       ].map((m) => (
         <button key={m.lab} disabled={m.disabled} onClick={() => { setMenuFor(null); m.fn(); }}
@@ -236,7 +241,7 @@ export function TDocs({ p, t, auth }) {
                       <span>👁 {d.views ?? 0}</span><span>↓ {d.downloads}</span>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d.id)}>Tải về</Btn>
+                      <Btn p={p} variant="soft" size="sm" icon="download" full onClick={() => doDownload(d)}>Tải về</Btn>
                       <div className="relative" onClick={(e) => e.stopPropagation()}>
                         <IconBtn name="more" p={p} size={34} onClick={() => setMenuFor(menuFor === d.id ? null : d.id)} />
                         {menuFor === d.id && <DocMenu d={d} up />}
@@ -261,7 +266,7 @@ export function TDocs({ p, t, auth }) {
                   </div>
                   <div className="lms-hide-xs w-[110px] text-xs text-lms-sub">{d.updated}</div>
                   <div className="lms-hide-xs w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>
-                  <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
+                  <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d)}>Tải</Btn>
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <IconBtn name="more" p={p} size={34} onClick={() => setMenuFor(menuFor === d.id ? null : d.id)} />
                     {menuFor === d.id && <DocMenu d={d} />}
@@ -385,8 +390,11 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
         <Btn p={p} icon="check" onClick={async () => {
           const body = {
             name: rubric.name,
-            levels: (rubric.scale || []).map((s: any, i: number) => ({ name: s.label, percentage: s.pct ?? 0, order: i })),
-            criterions: (rubric.criteria || []).map((c: any, i: number) => ({ name: c.name, note: c.desc || '', weight: c.weight ?? 0, order: i })),
+            // Round-trip persisted _id (and each criterion's items) so an in-place
+            // edit updates rather than delete+reinsert — which would wipe items.
+            // Genuinely-new rows have no id, so _id is omitted and the backend inserts.
+            levels: (rubric.scale || []).map((s: any, i: number) => ({ ...(s.levelId ? { _id: s.levelId } : {}), name: s.label, percentage: s.pct ?? 0, order: i })),
+            criterions: (rubric.criteria || []).map((c: any, i: number) => ({ ...(c.criterionId ? { _id: c.criterionId } : {}), name: c.name, note: c.desc || '', weight: c.weight ?? 0, order: i, items: c.items ?? [] })),
           };
           try {
             if (ctx.rubric) await rubricsApi.update(rubric.id, body);

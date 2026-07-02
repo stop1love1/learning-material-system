@@ -17,9 +17,10 @@ import { Submission } from '../../schemas/exercise/submission.schema';
 import { StudentQuestion } from '../../schemas/exercise/student-question.schema';
 import { User } from '../../schemas/user.schema';
 import { Settings } from '../../schemas/settings.schema';
+import { Notification } from '../../schemas/notification.schema';
 import { MailService } from '../../global/mail.service';
 import { buildPagination, convertStringToObjectId, getPagination } from '../../common/utils';
-import { QuestionType, UserRole } from '../../enums';
+import { ExerciseStatus, QuestionType, UserRole } from '../../enums';
 import { StartAttemptDto } from './dto/start-attempt.dto';
 import { SubmitAttemptDto } from './dto/submit-attempt.dto';
 import { GradeAttemptDto } from './dto/grade-attempt.dto';
@@ -47,8 +48,31 @@ export class AttemptsService {
     @InjectModel(StudentQuestion.name) private readonly studentQuestionModel: Model<StudentQuestion>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Settings.name) private readonly settingsModel: Model<Settings>,
+    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
     private readonly mail: MailService,
   ) {}
+
+  /** Tạo thông báo cá nhân (best-effort — không bao giờ chặn hành động chính). */
+  private async createNotification(
+    userId: Types.ObjectId | string,
+    payload: { title: string; body?: string; tag?: string; icon?: string; link?: string; refId?: Types.ObjectId | string; refType?: string },
+  ): Promise<void> {
+    try {
+      await this.notificationModel.create({
+        userId: convertStringToObjectId(String(userId)),
+        title: payload.title,
+        ...(payload.body !== undefined ? { body: payload.body } : {}),
+        ...(payload.tag !== undefined ? { tag: payload.tag } : {}),
+        ...(payload.icon !== undefined ? { icon: payload.icon } : {}),
+        ...(payload.link !== undefined ? { link: payload.link } : {}),
+        ...(payload.refId !== undefined ? { refId: convertStringToObjectId(String(payload.refId)) } : {}),
+        ...(payload.refType !== undefined ? { refType: payload.refType } : {}),
+        isRead: false,
+      });
+    } catch (err) {
+      this.logger.warn(`Tạo thông báo thất bại: ${(err as Error)?.message ?? err}`);
+    }
+  }
 
   private async getAcademicPolicy(): Promise<AcademicPolicy> {
     const defaults: AcademicPolicy = {
@@ -244,6 +268,9 @@ export class AttemptsService {
     const exerciseId = convertStringToObjectId(dto.exerciseId);
     const exercise = await this.exerciseModel.findById(exerciseId).lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
+    if (exercise.status === ExerciseStatus.Draft) {
+      throw new ForbiddenException('Bài tập chưa được đăng');
+    }
 
     const studentId = convertStringToObjectId(userId);
 
@@ -299,8 +326,12 @@ export class AttemptsService {
 
     const exerciseDoc = await this.exerciseModel
       .findById(attempt.exerciseId)
-      .select('maxAttempts dueDate allowLateSubmit showScoreAfter')
+      .select('maxAttempts dueDate allowLateSubmit showScoreAfter status')
       .lean();
+
+    if (exerciseDoc?.status === ExerciseStatus.Draft) {
+      throw new ForbiddenException('Bài tập chưa được đăng');
+    }
 
     if (exerciseDoc?.dueDate && !exerciseDoc.allowLateSubmit) {
       const due = new Date(exerciseDoc.dueDate).getTime();
@@ -463,17 +494,28 @@ export class AttemptsService {
 
   private async notifyOwnerOnSubmit(exerciseId: Types.ObjectId, studentId: Types.ObjectId): Promise<void> {
     try {
-      const enabled = await this.getEmailOnSubmit();
-      if (!enabled) return;
       const exercise = await this.exerciseModel.findById(exerciseId).select('userId title').lean();
       if (!exercise?.userId) return;
       const [owner, student] = await Promise.all([
         this.userModel.findById(exercise.userId).select('email name').lean(),
         this.userModel.findById(studentId).select('name email').lean(),
       ]);
-      if (!owner?.email) return;
       const studentName = student?.name || student?.email || 'Một học viên';
       const title = exercise.title || 'Bài tập';
+
+      // Thông báo cá nhân cho chủ bài tập (không phụ thuộc cấu hình email).
+      await this.createNotification(exercise.userId, {
+        title: 'Có bài nộp mới cần chấm',
+        body: `${studentName} vừa nộp bài cho bài tập "${title}".`,
+        tag: 'Chấm điểm',
+        icon: 'grade',
+        refId: exerciseId,
+        refType: 'exercise',
+      });
+
+      const enabled = await this.getEmailOnSubmit();
+      if (!enabled) return;
+      if (!owner?.email) return;
       const html = `
         <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;color:#1f2937">
           <h2 style="color:#0f766e">Có bài nộp mới</h2>
@@ -520,10 +562,21 @@ export class AttemptsService {
     return { attempt, submission, studentQuestions };
   }
 
-  async grade(attemptId: string, dto: GradeAttemptDto, graderId: string) {
+  async grade(attemptId: string, dto: GradeAttemptDto, graderId: string, role?: UserRole) {
     const id = convertStringToObjectId(attemptId);
     const attempt = await this.attemptModel.findById(id).lean();
     if (!attempt) throw new NotFoundException('Không tìm thấy lượt làm');
+
+    // Chỉ Admin hoặc chủ bài tập mới được chấm điểm lượt làm này.
+    if (role !== UserRole.Admin) {
+      const exercise = await this.exerciseModel
+        .findById(attempt.exerciseId)
+        .select('userId')
+        .lean();
+      if (!exercise || exercise.userId?.toString() !== graderId) {
+        throw new ForbiddenException('Không có quyền chấm lượt làm này');
+      }
+    }
 
     for (const ans of dto.answers) {
       const questionId = convertStringToObjectId(ans.questionId);
@@ -612,16 +665,44 @@ export class AttemptsService {
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
+    // Thông báo cho học viên rằng bài đã được chấm (best-effort).
+    if (attempt.studentId) {
+      await this.createNotification(attempt.studentId, {
+        title: 'Bài của bạn đã được chấm',
+        tag: 'Chấm điểm',
+        icon: 'grade',
+        refId: attempt.exerciseId,
+        refType: 'exercise',
+      });
+    }
+
     return submission ? submission.toObject() : null;
   }
 
-  async listForGrading(dto: ListAttemptsDto) {
+  async listForGrading(dto: ListAttemptsDto, userId?: string, role?: UserRole) {
     const { page, pageSize } = getPagination(undefined, dto.page, dto.pageSize);
     const query: Record<string, any> = {
       ...(dto.exerciseId ? { exerciseId: convertStringToObjectId(dto.exerciseId) } : {}),
       ...(dto.studentId ? { studentId: convertStringToObjectId(dto.studentId) } : {}),
       submittedAt: { $ne: null },
     };
+
+    // Owner-scoping: ngoài Admin, giáo viên chỉ thấy lượt làm của bài tập DO MÌNH sở hữu.
+    if (role !== UserRole.Admin && userId) {
+      const owned = await this.exerciseModel
+        .find({ userId: convertStringToObjectId(userId) })
+        .select('_id')
+        .lean();
+      const ownedIds = owned.map((e) => e._id);
+      // Nếu dto.exerciseId được cung cấp, giao với tập bài tập sở hữu để không lộ bài của người khác.
+      if (dto.exerciseId) {
+        const requested = convertStringToObjectId(dto.exerciseId);
+        const allowed = ownedIds.some((oid) => oid.toString() === requested.toString());
+        query.exerciseId = allowed ? requested : { $in: [] };
+      } else {
+        query.exerciseId = { $in: ownedIds };
+      }
+    }
 
     if (dto.pendingOnly === 'true') {
       const gradedSubs = await this.submissionModel.find({ isGraded: true }).select('attemptId').lean();

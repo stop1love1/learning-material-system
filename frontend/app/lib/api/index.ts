@@ -34,6 +34,9 @@ export const authApi = {
 
 export const foldersApi = {
   list: (parentId?: string) => api.get<any[]>(`/folders${qs({ parentId })}`, { auth: false }),
+  // Full visible flat list (every level) for building the sub-folder tree. Auth is sent
+  // when a token exists so an owner also sees their own private folders.
+  listAll: () => api.get<any[]>(`/folders${qs({ all: 1 })}`),
   create: (body: any) => api.post('/folders', body),
   update: (id: string, body: any) => api.patch(`/folders/${id}`, body),
   remove: (id: string) => api.del(`/folders/${id}`),

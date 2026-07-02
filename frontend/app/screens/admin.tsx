@@ -149,10 +149,14 @@ export function AUsers({ p, t }) {
 
   const roleColor = (r) => ({ 'Người dùng': p.accent, 'Quản trị viên': p.warn }[r] || p.sub);
   const [nAdmin, setNAdmin] = React.useState(0);
+  // Total users must be a stable, filter-independent count — paged.total tracks the table's
+  // keyword/role/status filters, so use a dedicated query (mirror the nAdmin one).
+  const [nUsers, setNUsers] = React.useState(0);
   React.useEffect(() => {
     usersApi.list({ role: 'admin', pageSize: 1 }).then((r: any) => setNAdmin(r?.total ?? 0)).catch(() => {});
+    usersApi.list({ pageSize: 1 }).then((r: any) => setNUsers(r?.total ?? 0)).catch(() => {});
   }, []);
-  const counts = [['Người dùng', 'users', p.accent, fmt(paged.total)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
+  const counts = [['Người dùng', 'users', p.accent, fmt(nUsers)], ['Quản trị viên', 'settings', p.warn, String(nAdmin)]];
 
   const handleDelete = async (u) => {
     if (!u?.id) return;
@@ -387,6 +391,9 @@ export function AReports({ p, t }) {
         </section>
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Học liệu theo chủ đề</h3>
+          {/* NOTE: this counts only the current paginated slice of DB.DOCS, so the per-folder
+              totals under-report once the library exceeds one page. The correct fix is a
+              backend aggregation (files grouped by folder); left as a follow-up. */}
           <div className="mt-1.5 flex flex-col gap-3">
             {DB.DOC_FOLDERS.filter((f) => f !== 'Tất cả').slice(0, 6).map((f, i) => {
               const n = DB.DOCS.filter((d) => d.folder === f).length;
@@ -813,7 +820,10 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
                 <div><label className={lblClass()}>GOOGLE API KEY</label><Field p={p} value={integration.googleApiKey || ''} onChange={(v) => setIntegration((o) => ({ ...o, googleApiKey: v }))} placeholder="AIza…" mono className="mt-2" /></div>
               </div>
             </div>
-            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, apiKey: integration.apiKey, googleClientId: integration.googleClientId, googleApiKey: integration.googleApiKey } })} />
+            {/* Omit apiKey: GET /settings redacts it to null, so re-sending it here would $set
+                null over the real stored key. The dedicated “Tạo lại” (regenApiKey) path saves
+                the key on its own. */}
+            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, googleClientId: integration.googleClientId, googleApiKey: integration.googleApiKey } })} />
           </section>
         )}
 

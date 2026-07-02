@@ -240,21 +240,23 @@ describe('QuestionsService', () => {
   // -- list ------------------------------------------------------------------
 
   describe('list', () => {
-    it('paginates and does not crash on a regex-metachar keyword', async () => {
+    it('uses the already-escaped keyword verbatim in $regex (no double-escape)', async () => {
       questionModel.find.mockReturnValue(queryStub([{ _id: '1' }]));
       questionModel.countDocuments.mockResolvedValue(1);
 
-      const res = await service.list(oid(), { keyword: 'a.*+?(x)[y]\\z', page: 1, pageSize: 10 } as any);
+      // PaginationQueryDto's @Transform(parseKeyword) escapes metacharacters upstream, so the
+      // service receives an already-safe keyword and must use it verbatim (escaping again here
+      // would double-escape and break the search).
+      const escaped = 'a\\.\\*';
+      const res = await service.list(oid(), { keyword: escaped, page: 1, pageSize: 10 } as any);
 
       expect(res.total).toBe(1);
       expect(res.records).toEqual([{ _id: '1' }]);
 
-      // the $regex value must be the ESCAPED keyword (parseKeyword), so no throw
       const query = questionModel.find.mock.calls[0][0];
-      const regex = query.$or[0].title.$regex;
-      // backslash-escaped metachars present, literal-safe
-      expect(regex).toContain('\\.');
-      expect(() => new RegExp(regex)).not.toThrow();
+      expect(query.$or[0].title.$regex).toContain('\\.');
+      expect(query.$or[1].content.$regex).toBe(query.$or[0].title.$regex);
+      expect(() => new RegExp(query.$or[0].title.$regex)).not.toThrow();
     });
 
     it('omits the $or block when there is no keyword', async () => {

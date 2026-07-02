@@ -3,11 +3,15 @@ import React from 'react';
 import { Icon, Tag, Pill, Avatar, Btn, Progress, Ring, EmptyState } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { LMS, useLMS } from '@/app/store/store';
-import { attemptsApi } from '@/app/lib/api';
+import { attemptsApi, settingsApi } from '@/app/lib/api';
 import { loadSubmissions, loadSubmissionDetail } from '@/app/lib/sync/load-submissions';
 import { confirmDialog, toastSuccess } from '@/app/lib/ui/dialogs';
 import { cardClass } from '@/app/helpers/shared';
 import { RubricMatrix } from '@/app/screens/resources';
+
+// Grading is against the global academic score scale (settings.academic.scoreScale),
+// NOT exercise.points. Fall back to 10 when settings are unavailable.
+const DEFAULT_SCORE_SCALE = 10;
 
 
 export function TGrade({ p, t, go }) {
@@ -124,8 +128,13 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
   const [score, setScore] = React.useState('');
   const [fb, setFb] = React.useState('');
   const [draftSaved, setDraftSaved] = React.useState(false);
+  const [scoreScale, setScoreScale] = React.useState(DEFAULT_SCORE_SCALE);
   const [, bump] = React.useReducer((n) => n + 1, 0);
   const rubricStyle = t.rubricStyle || 'matrix';
+
+  React.useEffect(() => {
+    settingsApi.get().then((s) => { const sc = s?.academic?.scoreScale; if (sc) setScoreScale(sc); }).catch(() => {});
+  }, []);
 
   // List endpoint has meta only; result endpoint has answer content.
   React.useEffect(() => {
@@ -335,10 +344,10 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
               <div className="flex items-baseline gap-1">
                 <input value={score} onChange={(e) => setScore(e.target.value)} placeholder="—"
                   className="w-[70px] border-none bg-transparent font-lms-heading text-[40px] font-semibold tracking-[-1px] text-lms-accent outline-none" />
-                <span className="text-lg text-lms-faint">/ {a.points}</span>
+                <span className="text-lg text-lms-faint">/ {scoreScale}</span>
               </div>
             </div>
-            <Ring value={score ? (Number(score) / a.points) * 100 : 0} size={62} thickness={7} p={p} color={p.accent}
+            <Ring value={score ? (Number(score) / scoreScale) * 100 : 0} size={62} thickness={7} p={p} color={p.accent}
               label={score ? Number(score).toFixed(1) : '—'} />
           </div>
           <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">NHẬN XÉT</div>

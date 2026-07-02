@@ -30,3 +30,23 @@ export async function loadArticles(): Promise<void> {
     DB.ARTICLES = [];
   }
 }
+
+/**
+ * Fetch a single article by id (GET /articles/:id — also $inc's viewCount) and
+ * upsert it into DB.ARTICLES by id. Ensures the detail view shows the correct
+ * article even when it isn't in the first-100 list. Best-effort: leaves DB
+ * untouched on error.
+ */
+export async function loadArticle(id: string): Promise<void> {
+  if (!id) return;
+  try {
+    const rec: any = await articlesApi.get(id);
+    if (!rec?._id) return;
+    const mapped = mapArticle(rec);
+    const i = DB.ARTICLES.findIndex((x: any) => x.id === mapped.id);
+    if (i >= 0) DB.ARTICLES[i] = mapped;
+    else DB.ARTICLES = [...DB.ARTICLES, mapped];
+  } catch {
+    /* best-effort */
+  }
+}

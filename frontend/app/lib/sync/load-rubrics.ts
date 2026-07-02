@@ -20,6 +20,7 @@ export async function loadRubrics(): Promise<void> {
           name: c.name,
           weight: c.weight ?? 0,
           desc: c.note ?? c.desc ?? '',
+          items: Array.isArray(c.items) ? c.items : [],
         })),
         scale: levels.map((l: Record<string, any>) => ({
           levelId: l._id,
