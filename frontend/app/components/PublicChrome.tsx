@@ -98,6 +98,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   const activeKey = resolvePath(pathname).navKey;
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [acctOpen, setAcctOpen] = React.useState(false);
   const mainRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     setMenuOpen(false);
@@ -129,7 +130,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           scrolled ? 'border-lms-line shadow-[0_6px_24px_-8px_rgba(80,55,30,0.14)]' : 'border-lms-line-soft'
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-6">
+        <div className="lms-stagger mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-6">
           <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline transition-opacity hover:opacity-80" aria-label={brand.name}>
             <BrandLogo className="h-[38px]! w-[38px]!" />
             <div className="lms-hide-sm">
@@ -147,6 +148,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
             <Popover
               trigger="click"
               placement="bottomRight"
+              onOpenChange={setAcctOpen}
               content={
                 <div className="w-[244px]">
                   <div className="flex items-center gap-3 px-1 pb-3">
@@ -186,16 +188,16 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <button
                 title={auth.name}
                 aria-label="Tài khoản"
-                className="lms-btn lms-hide-sm flex h-10 cursor-pointer items-center gap-2 rounded-full border border-lms-line bg-lms-surface py-1 pl-1 pr-3 text-left transition-shadow hover:shadow-[0_2px_10px_-3px_rgba(80,55,30,0.18)]"
+                className="lms-btn lms-hide-sm group flex h-10 cursor-pointer items-center gap-2 rounded-full border border-lms-line bg-lms-surface py-1 pl-1 pr-3 text-left transition-shadow hover:shadow-[0_2px_10px_-3px_rgba(80,55,30,0.18)]"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lms-accent font-lms-heading text-[11px] font-bold text-white shadow-[0_1px_4px_-1px_rgba(63,157,92,0.6)]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lms-accent font-lms-heading text-[11px] font-bold text-white shadow-[0_1px_4px_-1px_rgba(63,157,92,0.6)] transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none">
                   {auth.initials}
                 </span>
                 <span className="flex min-w-0 flex-col">
                   <span className="max-w-[160px] truncate text-[12.5px] font-semibold leading-tight text-lms-ink">{auth.name}</span>
                   <span className="max-w-[160px] truncate text-[11px] leading-tight text-lms-sub">{ROLE_LABEL_VI[auth.role] || 'Người dùng'}</span>
                 </span>
-                <Icon name="chevronDown" size={15} stroke={p.faint} />
+                <Icon name="chevronDown" size={15} stroke={p.faint} className={`transition-transform duration-200 motion-reduce:transition-none ${acctOpen ? 'rotate-180' : ''}`} />
               </button>
             </Popover>
           ) : (
