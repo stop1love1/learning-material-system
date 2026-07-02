@@ -50,7 +50,7 @@ export type UsePagedResource<T> = {
 export function usePagedResource<T, R = any>({
   fetcher,
   mapper,
-  pageSize = 12,
+  pageSize = 20,
   initialFilters = {},
   debounceMs = 300,
 }: UsePagedResourceArgs<T, R>): UsePagedResource<T> {

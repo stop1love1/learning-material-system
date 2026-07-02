@@ -5,6 +5,7 @@ import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { exercisesApi, exerciseFoldersApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { promptDialog, confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { FolderTree } from '@/app/components/FolderTree';
 import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
@@ -47,30 +48,31 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
   const treeNodes = folders.map((f) => ({ ...f, count: folderCounts[f.id] || 0 }));
 
   const onAddRoot = async () => {
-    const name = window.prompt('Tên thư mục mới')?.trim();
+    const name = (await promptDialog({ title: 'Thư mục mới', label: 'Tên thư mục' }))?.trim();
     if (!name) return;
-    try { await exerciseFoldersApi.create({ name, parentId: null }); await refresh(); }
-    catch (e: any) { window.alert(e?.message || 'Không tạo được thư mục.'); }
+    try { await exerciseFoldersApi.create({ name, parentId: null }); await refresh(); toastSuccess('Đã tạo thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được thư mục.'); }
   };
   const onAddChild = async (parentId: string) => {
-    const name = window.prompt('Tên thư mục con')?.trim();
+    const name = (await promptDialog({ title: 'Thư mục con', label: 'Tên thư mục con' }))?.trim();
     if (!name) return;
-    try { await exerciseFoldersApi.create({ name, parentId }); await refresh(); }
-    catch (e: any) { window.alert(e?.message || 'Không tạo được thư mục.'); }
+    try { await exerciseFoldersApi.create({ name, parentId }); await refresh(); toastSuccess('Đã tạo thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được thư mục.'); }
   };
   const onRename = async (node) => {
-    const name = window.prompt('Đổi tên thư mục', node.name)?.trim();
+    const name = (await promptDialog({ title: 'Đổi tên thư mục', label: 'Tên mới', defaultValue: node.name }))?.trim();
     if (!name || name === node.name) return;
-    try { await exerciseFoldersApi.update(node.id, { name }); await refresh(); }
-    catch (e: any) { window.alert(e?.message || 'Không đổi tên được.'); }
+    try { await exerciseFoldersApi.update(node.id, { name }); await refresh(); toastSuccess('Đã đổi tên thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không đổi tên được.'); }
   };
   const onDelete = async (node) => {
-    if (!window.confirm(`Xoá thư mục "${node.name}"?`)) return;
+    if (!(await confirmDialog({ title: `Xoá thư mục “${node.name}”?`, okText: 'Xoá', danger: true }))) return;
     try {
       await exerciseFoldersApi.remove(node.id);
       if (selFolder === node.id) onSelectFolder(null);
       await refresh();
-    } catch (e: any) { window.alert(e?.message || 'Không xoá được thư mục (thư mục có thể chưa rỗng).'); }
+      toastSuccess('Đã xoá thư mục.');
+    } catch (e: any) { toastError(e?.message || 'Không xoá được thư mục (thư mục có thể chưa rỗng).'); }
   };
 
   return (

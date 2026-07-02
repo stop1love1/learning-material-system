@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Popover } from 'antd';
 import { Icon, IconBtn, Tag } from '@/app/components/ui';
+import { BrandLogo, useOrgBrand } from '@/app/components/Brand';
 import { NAV_BY_ROLE } from '@/app/configs/nav.config';
 import { ROUTES, routeToHref, resolvePath } from '@/app/configs/routes.config';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
@@ -13,18 +14,19 @@ import { DB, useLMS } from '@/app/store/store';
 
 const ROLE_LABEL_VI: Record<string, string> = { admin: 'Quản trị viên', teacher: 'Giáo viên', student: 'Học viên' };
 
-function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => void; topics: Array<{ label: string; to?: string }> }) {
-  const col = (title: string, links: Array<{ label: string; to?: string }>) => (
+function PublicFooter({ p, topics }: { p: any; topics: Array<{ label: string; href?: string }> }) {
+  const brand = useOrgBrand();
+  const col = (title: string, links: Array<{ label: string; href?: string }>) => (
     <div>
       <div className="mb-3 text-[12.5px] font-bold tracking-[0.2px] text-lms-ink">{title}</div>
       <div className="flex flex-col gap-[9px]">
         {links.map((l, i) =>
-          l.to ? (
-            <Link key={i} href={routeToHref(l.to)} className="lms-foot-link cursor-pointer text-[13px] text-lms-sub no-underline">
+          l.href ? (
+            <Link key={i} href={l.href} className="lms-foot-link text-[13px] text-lms-sub no-underline transition-colors hover:text-lms-accent">
               {l.label}
             </Link>
           ) : (
-            <span key={i} className="lms-foot-link cursor-default text-[13px] text-lms-sub">
+            <span key={i} className="text-[13px] text-lms-sub">
               {l.label}
             </span>
           ),
@@ -36,12 +38,10 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
     <footer className="mt-2 border-t border-lms-line-soft bg-lms-surface">
       <div className="lms-foot-grid mx-auto grid max-w-[1480px] grid-cols-[1.6fr_1fr_1fr_1fr] gap-8 px-[30px] pt-11 pb-7">
         <div>
-          <div className="mb-3.5 flex items-center gap-[11px]">
-            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">
-              V
-            </div>
-            <div className="font-lms-heading text-lg font-bold text-lms-ink">Vườn Văn</div>
-          </div>
+          <Link href={ROUTES.home} className="mb-3.5 flex w-fit items-center gap-[11px] no-underline">
+            <BrandLogo />
+            <div className="font-lms-heading text-lg font-bold text-lms-ink">{brand.name}</div>
+          </Link>
           <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
             Kho học liệu mở miễn phí — tài liệu, đề thi và bài tập cho học sinh, phụ huynh và thầy cô.
           </p>
@@ -54,18 +54,23 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
           </div>
         </div>
         {col('Khám phá', [
-          { label: 'Trang chủ', to: 'home' },
-          { label: 'Kho tài liệu', to: 's-docs' },
-          { label: 'Luyện tập', to: 's-tasks' },
-          { label: 'Tự đánh giá', to: 's-selfcheck' },
-          { label: 'Bài viết', to: 'blog' },
+          { label: 'Trang chủ', href: ROUTES.home },
+          { label: 'Kho tài liệu', href: ROUTES.library },
+          { label: 'Luyện tập', href: ROUTES.practice },
+          { label: 'Tự đánh giá', href: ROUTES.selfCheck },
+          { label: 'Bài viết', href: ROUTES.blog },
         ])}
         {topics.length > 0 && col('Chủ đề', topics)}
-        {col('Hỗ trợ', [{ label: 'Giới thiệu' }, { label: 'Hướng dẫn sử dụng' }, { label: 'Liên hệ' }, { label: 'Điều khoản' }])}
+        {col('Hỗ trợ', [
+          { label: 'Giới thiệu', href: ROUTES.about },
+          { label: 'Hướng dẫn sử dụng', href: ROUTES.guide },
+          { label: 'Liên hệ', href: ROUTES.contact },
+          { label: 'Điều khoản', href: ROUTES.terms },
+        ])}
       </div>
       <div className="border-t border-lms-line-soft">
         <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-[30px] py-4">
-          <span className="text-xs text-lms-faint">© 2026 Vườn Văn · Nền tảng học liệu</span>
+          <span className="text-xs text-lms-faint">© 2026 {brand.name} · Nền tảng học liệu</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-lms-faint">
             <Icon name="globe" size={13} stroke={p.faint} /> Truy cập tự do · Không cần đăng nhập
           </span>
@@ -78,6 +83,7 @@ function PublicFooter({ p, push, topics }: { p: any; push: (href: string) => voi
 export function PublicChrome({ children }: { children: ReactNode }) {
   const { p, dark, setDark } = useLmsTheme();
   const auth = useLmsAuth();
+  const brand = useOrgBrand();
   const router = useRouter();
   const pathname = usePathname();
   const push = React.useCallback((href: string) => router.push(href), [router]);
@@ -86,7 +92,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
   const topics = (DB.DOC_FOLDERS as string[])
     .filter((f) => f && f !== 'Tất cả')
     .slice(0, 5)
-    .map((label) => ({ label, to: 's-docs' as const }));
+    .map((label) => ({ label, href: ROUTES.library }));
 
   const items = (NAV_BY_ROLE.user[0] && NAV_BY_ROLE.user[0].items) || [];
   const activeKey = resolvePath(pathname).navKey;
@@ -103,9 +109,10 @@ export function PublicChrome({ children }: { children: ReactNode }) {
       <Link
         key={it.key}
         href={routeToHref(it.key)}
+        style={{ color: on ? p.accent : p.sub, background: on ? p.accentSoft : undefined }}
         className={`lms-btn flex cursor-pointer items-center gap-2 rounded-[9px] border-0 no-underline px-3.5 font-sans text-sm ${
           block ? 'h-11 w-full justify-start' : 'h-9 justify-center'
-        } ${on ? 'bg-lms-accent-soft font-semibold text-lms-accent' : 'bg-transparent font-medium text-lms-sub'}`}
+        } ${on ? 'font-semibold' : 'font-medium'}`}
       >
         {block && <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} />}
         {it.label}
@@ -117,12 +124,10 @@ export function PublicChrome({ children }: { children: ReactNode }) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-lms-bg font-sans text-lms-ink">
       <header className="z-30 shrink-0 border-b border-lms-line-soft bg-(--lms-surface-glass) backdrop-blur-md backdrop-saturate-[1.4]">
         <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
-          <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline">
-            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">
-              V
-            </div>
-            <div>
-              <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">Vườn Văn</div>
+          <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline" aria-label={brand.name}>
+            <BrandLogo className="h-[38px]! w-[38px]!" />
+            <div className="lms-hide-sm">
+              <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">{brand.name}</div>
               <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
             </div>
           </Link>
@@ -130,8 +135,8 @@ export function PublicChrome({ children }: { children: ReactNode }) {
             {items.map((it) => navLink(it, false))}
           </nav>
           <div className="flex-1" />
-          <IconBtn name="search" p={p} onClick={() => push(ROUTES.library)} title="Tìm kiếm" />
-          <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Sáng/tối" />
+          <IconBtn name="search" p={p} variant="filled" onClick={() => push(ROUTES.library)} title="Tìm kiếm" />
+          <IconBtn name={dark ? 'sun' : 'moon'} p={p} variant="filled" onClick={() => setDark(!dark)} title="Sáng/tối" />
           {auth && auth.loggedIn ? (
             <Popover
               trigger="click"
@@ -175,7 +180,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
               <button
                 title={auth.name}
                 aria-label="Tài khoản"
-                className="lms-btn lms-hide-sm flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
+                className="lms-btn lms-row lms-hide-sm flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-lms-accent-soft font-lms-heading text-xs font-bold text-lms-accent">
                   {auth.initials}
@@ -196,14 +201,14 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           {auth?.isStaff && (
             <button
               onClick={() => push(ROUTES.dashboard)}
-              className="lms-btn lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface text-lms-sub"
+              className="lms-btn lms-row lms-hide-sm inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink text-lms-sub"
               title="Khu vực quản trị"
             >
               <Icon name="settings" size={16} stroke={p.sub} />
             </button>
           )}
           <button
-            className="lms-hamburger lms-btn hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface"
+            className="lms-hamburger lms-btn lms-row hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border-0 bg-lms-sink"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Menu"
           >
@@ -243,7 +248,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
       </header>
       <div className="lms-scroll flex flex-1 flex-col overflow-y-auto" ref={mainRef}>
         <main className="flex-1">{children}</main>
-        <PublicFooter p={p} push={push} topics={topics} />
+        <PublicFooter p={p} topics={topics} />
       </div>
     </div>
   );

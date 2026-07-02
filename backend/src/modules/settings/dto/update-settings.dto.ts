@@ -113,6 +113,44 @@ export class SeoSettingsDto {
   ogImage?: string;
 }
 
+export class PageContentDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  content?: string;
+}
+
+export class PagesSettingsDto {
+  @ApiPropertyOptional({ type: PageContentDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PageContentDto)
+  about?: PageContentDto;
+
+  @ApiPropertyOptional({ type: PageContentDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PageContentDto)
+  guide?: PageContentDto;
+
+  @ApiPropertyOptional({ type: PageContentDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PageContentDto)
+  contact?: PageContentDto;
+
+  @ApiPropertyOptional({ type: PageContentDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PageContentDto)
+  terms?: PageContentDto;
+}
+
 export class AcademicSettingsDto {
   @ApiPropertyOptional({ type: Number })
   @IsOptional()
@@ -263,6 +301,12 @@ export class UpdateSettingsDto {
   @ValidateNested()
   @Type(() => SeoSettingsDto)
   seo?: SeoSettingsDto;
+
+  @ApiPropertyOptional({ type: PagesSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PagesSettingsDto)
+  pages?: PagesSettingsDto;
 
   @ApiPropertyOptional({ type: AcademicSettingsDto })
   @IsOptional()

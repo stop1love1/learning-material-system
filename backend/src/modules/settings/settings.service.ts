@@ -15,6 +15,7 @@ const SETTING_GROUPS = [
   'misc',
   'homepage',
   'seo',
+  'pages',
   'academic',
   'security',
   'notifications',

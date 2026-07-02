@@ -22,4 +22,19 @@ export class ListFilesDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   grade?: string;
+
+  @ApiPropertyOptional({ type: String, description: 'pdf|doc|image|video|audio|slide|link|other' })
+  @IsOptional()
+  @IsString()
+  fileType?: string;
+
+  @ApiPropertyOptional({ type: String, description: 'date|views|downloads|name' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ type: String, enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsString()
+  order?: string;
 }

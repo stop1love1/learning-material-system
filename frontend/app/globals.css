@@ -79,9 +79,9 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
   box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 14px rgba(0,0,0,.04); }
 .lms-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.07), 0 12px 32px rgba(0,0,0,.08); transform: translateY(-1px); }
 .lms-row { transition: background-color .15s; }
-.lms-row:hover { background: rgba(0,0,0,.025); }
-.lms-nav-item { transition: color .15s; }
-.lms-nav-item:hover { background: rgba(0,0,0,.035); }
+.lms-row:hover { background: var(--lms-accent-soft); }
+.lms-nav-item { transition: color .15s, background-color .15s; }
+.lms-nav-item:hover { background: var(--lms-accent-soft); }
 .lms-link { transition: color .15s, gap .15s; }
 .lms-link:hover { gap: 9px; }
 .lms-btn { transition: filter .15s, box-shadow .15s, opacity .15s; }

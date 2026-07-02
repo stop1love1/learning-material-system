@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Empty } from 'antd';
 import { Icon, Tag, Pill, Avatar, Btn, Field, Select, Progress, Ring, Spark, EmptyState } from '@/app/components/ui';
 import { DB, LMS, useLMS } from '@/app/store/store';
@@ -17,6 +18,7 @@ import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapExercise } from '@/app/lib/sync/load-exercises';
 import { mapFile } from '@/app/lib/sync/load-library';
 import { EX_TYPE_OPTS, EX_STATUS_OPTS } from '@/app/screens/assign';
+import { ROUTES } from '@/app/configs/routes.config';
 
 function taskTone(p, s) { return { todo: p.accent, done: p.info, graded: p.ok }[s] || p.sub; }
 function taskLabel(s) { return { todo: 'Cần làm', done: 'Đã nộp', graded: 'Đã chấm' }[s] || s; }
@@ -32,7 +34,7 @@ function parseTaskTab(raw: string | null): TaskTab {
 function HomeSection({
   title,
   linkLabel,
-  onLink,
+  linkHref,
   empty,
   emptyDescription,
   contentClassName,
@@ -40,7 +42,7 @@ function HomeSection({
 }: {
   title: string;
   linkLabel: string;
-  onLink: () => void;
+  linkHref: string;
   empty: boolean;
   emptyDescription: string;
   contentClassName?: string;
@@ -50,7 +52,7 @@ function HomeSection({
     <>
       <div className="reveal mb-4 flex items-baseline justify-between">
         <h2 className="m-0 font-lms-heading text-2xl font-extrabold tracking-[-0.6px] text-lms-ink">{title}</h2>
-        <span onClick={onLink} className="cursor-pointer text-[13px] font-semibold text-lms-accent">{linkLabel}</span>
+        <Link href={linkHref} className="text-[13px] font-semibold text-lms-accent no-underline">{linkLabel}</Link>
       </div>
       {empty ? (
         <div className={`reveal ${contentClassName || 'mb-10'}`}>
@@ -65,14 +67,9 @@ function HomeSection({
   );
 }
 
-export function UserHome({ p, t, setRoute, go }) {
+export function UserHome({ p, t }) {
   useLMS();
-  const router = useRouter();
   const [heroQ, setHeroQ] = React.useState('');
-  const submitHeroSearch = () => {
-    const query = heroQ.trim();
-    router.push(query ? `/kho-hoc-lieu?q=${encodeURIComponent(query)}` : '/kho-hoc-lieu');
-  };
   const [hp, setHp] = React.useState<any>(null);
   React.useEffect(() => { settingsApi.get().then((s) => setHp(s?.homepage)).catch(() => {}); }, []);
   const featured = DB.DOCS.slice(0, 6);
@@ -96,9 +93,9 @@ export function UserHome({ p, t, setRoute, go }) {
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
             {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
-          <form onSubmit={(e) => { e.preventDefault(); submitHeroSearch(); }} className="flex max-w-[540px] flex-wrap gap-2.5">
-            <Field p={p} icon="search" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
-            <Btn p={p} size="lg" icon="arrowRight" onClick={submitHeroSearch} className="rounded-xl!">{hp?.ctaLabel || 'Khám phá'}</Btn>
+          <form action={ROUTES.library} method="get" className="flex max-w-[540px] flex-wrap gap-2.5">
+            <Field p={p} icon="search" name="q" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
+            <Btn p={p} type="submit" size="lg" icon="arrowRight" className="rounded-xl!">{hp?.ctaLabel || 'Khám phá'}</Btn>
           </form>
         </div>
         <div className="col-4 reveal bento-tile hovlift flex cursor-default flex-col gap-3.5 border border-lms-line bg-lms-surface p-6 text-lms-ink">
@@ -129,9 +126,9 @@ export function UserHome({ p, t, setRoute, go }) {
       </div>
       <div className="bento mb-10">
         {heroDoc && (
-        <div
-          className="col-5 reveal bento-tile hovlift flex cursor-pointer flex-col overflow-hidden border border-lms-line bg-lms-surface"
-          onClick={() => go('s-doc', { doc: heroDoc.id })}
+        <Link
+          href={ROUTES.libraryItem(heroDoc.id)}
+          className="col-5 reveal bento-tile hovlift flex cursor-pointer flex-col overflow-hidden border border-lms-line bg-lms-surface no-underline"
         >
           <div className="flex h-[120px] items-end bg-(image:--lms-feature-gradient) p-4">
             <Tag p={p} color="#fff" soft={false} className="border border-white/50 text-white">HỌC LIỆU NỔI BẬT</Tag>
@@ -140,13 +137,13 @@ export function UserHome({ p, t, setRoute, go }) {
             <div className="line-clamp-2 font-lms-heading text-lg font-bold wrap-break-word leading-snug text-lms-ink">{heroDoc.name}</div>
             <div className="mt-2 truncate text-[12.5px] text-lms-faint">{heroDoc.folder} · {heroDoc.size}</div>
           </div>
-        </div>
+        </Link>
         )}
 
         {exercise && (
-        <div
-          className="col-4 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-(image:--lms-card-gradient) p-6"
-          onClick={() => go('s-task', { task: exercise.id })}
+        <Link
+          href={ROUTES.practiceItem(exercise.id)}
+          className="col-4 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-(image:--lms-card-gradient) p-6 no-underline"
         >
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-lms-line bg-lms-surface">
             <Icon name="assign" size={21} stroke={p.accent} />
@@ -154,20 +151,24 @@ export function UserHome({ p, t, setRoute, go }) {
           <div className="mb-1.5 text-xs font-bold tracking-[0.3px] text-lms-accent">LUYỆN TẬP</div>
           <div className="font-lms-heading text-[19px] font-bold leading-snug text-lms-ink">{exercise.title}</div>
           <div className="mt-2 text-[12.5px] text-lms-sub">{exercise.type} · {exercise.questions} câu{exercise.learners ? ' · ' + exercise.learners + ' người làm' : ''}</div>
-          <div className="mt-auto pt-4"><Btn p={p} variant="soft" size="sm" iconRight="arrowRight">Làm thử ngay</Btn></div>
-        </div>
+          <div className="mt-auto pt-4">
+            <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent">
+              Làm thử ngay <Icon name="arrowRight" size={15} stroke={p.accent} sw={1.9} />
+            </span>
+          </div>
+        </Link>
         )}
 
         {lead && (
-        <div
-          className="col-3 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-lms-surface p-[22px]"
-          onClick={() => go('article', { article: lead.id })}
+        <Link
+          href={ROUTES.blogPost(lead.id)}
+          className="col-3 reveal bento-tile hovlift flex cursor-pointer flex-col border border-lms-line bg-lms-surface p-[22px] no-underline"
         >
           <div className="mb-2.5 text-xs font-bold tracking-[0.3px] text-lms-accent">BÀI VIẾT MỚI</div>
           <div className="font-lms-heading text-[17px] font-bold leading-snug text-lms-ink">{lead.title}</div>
           <p className="mt-2.5 mb-0 text-[12.5px] leading-snug text-lms-sub">{lead.excerpt}</p>
           <div className="mt-auto pt-3.5 text-xs text-lms-faint">{lead.read} đọc →</div>
-        </div>
+        </Link>
         )}
 
         {!heroDoc && !exercise && !lead && (
@@ -180,20 +181,24 @@ export function UserHome({ p, t, setRoute, go }) {
       <HomeSection
         title="Khám phá theo chủ đề"
         linkLabel="Tất cả →"
-        onLink={() => setRoute('s-docs')}
+        linkHref={ROUTES.library}
         empty={cats.length === 0}
         emptyDescription="Chưa có chủ đề"
         contentClassName="mb-10"
       >
         <div className="reveal mb-10 grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
           {cats.map((c, i) => (
-            <div key={c} onClick={() => setRoute('s-docs')} className="bento-tile hovlift cursor-pointer border border-lms-line bg-lms-surface p-[18px]">
+            <Link
+              key={c}
+              href={`${ROUTES.library}?folder=${encodeURIComponent(c)}`}
+              className="bento-tile hovlift block cursor-pointer border border-lms-line bg-lms-surface p-[18px] no-underline"
+            >
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[11px] bg-lms-accent-soft">
                 <Icon name={catIcons[i % catIcons.length]} size={19} stroke={p.accent} />
               </div>
               <div className="text-sm font-semibold text-lms-ink">{c}</div>
               <div className="mt-[3px] text-[11.5px] text-lms-faint">{DB.DOCS.filter((d) => d.folder === c).length} học liệu</div>
-            </div>
+            </Link>
           ))}
         </div>
       </HomeSection>
@@ -201,7 +206,7 @@ export function UserHome({ p, t, setRoute, go }) {
       <HomeSection
         title="Học liệu nổi bật"
         linkLabel="Xem thêm →"
-        onLink={() => setRoute('s-docs')}
+        linkHref={ROUTES.library}
         empty={featured.length === 0}
         emptyDescription="Chưa có học liệu"
         contentClassName="mb-11"
@@ -210,7 +215,7 @@ export function UserHome({ p, t, setRoute, go }) {
           {featured.map((d) => {
             const m = DOC_TYPE_META[d.type];
             return (
-              <div key={d.id} onClick={() => go('s-doc', { doc: d.id })} className="bento-tile hovlift cursor-pointer overflow-hidden border border-lms-line bg-lms-surface">
+              <Link key={d.id} href={ROUTES.libraryItem(d.id)} className="bento-tile hovlift block cursor-pointer overflow-hidden border border-lms-line bg-lms-surface no-underline">
                 <div className="relative flex h-[92px] items-center justify-center bg-lms-accent-soft">
                   <Icon name={m.icon} size={28} stroke={p.accent} sw={1.4} />
                   <span className="absolute top-2.5 left-2.5"><Tag p={p} color={p.accent}>{m.label}</Tag></span>
@@ -219,7 +224,7 @@ export function UserHome({ p, t, setRoute, go }) {
                   <div className="min-h-9 text-[13.5px] font-semibold leading-snug text-lms-ink">{d.name}</div>
                   <div className="mt-2.5 font-mono text-[11px] text-lms-faint">{d.folder} · {d.size}</div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -228,19 +233,19 @@ export function UserHome({ p, t, setRoute, go }) {
       <HomeSection
         title="Bài viết mới nhất"
         linkLabel="Tất cả bài viết →"
-        onLink={() => setRoute('blog')}
+        linkHref={ROUTES.blog}
         empty={latestArticles.length === 0}
         emptyDescription="Chưa có bài viết"
         contentClassName="pb-2"
       >
         <div className="reveal grid gap-4 pb-2 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
           {latestArticles.map((a) => (
-            <div key={a.id} onClick={() => go('article', { article: a.id })} className="bento-tile hovlift cursor-pointer border border-lms-line bg-lms-surface p-5">
+            <Link key={a.id} href={ROUTES.blogPost(a.id)} className="bento-tile hovlift block cursor-pointer border border-lms-line bg-lms-surface p-5 no-underline">
               <span className="mb-2.5 inline-block rounded-md bg-lms-accent-soft px-[9px] py-[3px] text-[11px] font-bold text-lms-accent">{a.cat}</span>
               <h3 className="m-0 font-lms-heading text-[17px] font-bold leading-snug text-lms-ink">{a.title}</h3>
               <p className="my-2 text-[13px] leading-snug text-lms-sub">{a.excerpt}</p>
               <div className="text-[11.5px] text-lms-faint">{a.author} · {a.read} đọc</div>
-            </div>
+            </Link>
           ))}
         </div>
       </HomeSection>
@@ -334,26 +339,50 @@ export function SOverview({ p, t, setRoute, go }) {
   );
 }
 
-function STaskRow({ task, p, go }) {
+function STaskRow({ task, p }) {
   const tone = taskTone(p, task.status);
-  return (
-    <div className={`lms-card flex items-center gap-4 rounded-xl border border-lms-line bg-lms-surface px-5 py-4 ${task.status === 'todo' ? 'cursor-pointer' : 'cursor-default'}`}
-      onClick={() => task.status === 'todo' && go('s-task', { task: task.id })}>
+  const body = (
+    <>
       <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${taskIconBg(task.status)}`}>
         <Icon name={task.status === 'graded' ? 'checkCircle' : 'assign'} size={20} stroke={tone} /></div>
       <div className="min-w-0 flex-1">
-        <div className="text-[14.5px] font-semibold text-lms-ink">{task.title}</div>
-        <div className="mt-1 text-xs text-lms-sub">{[task.subject, task.type, task.due && `hạn ${task.due}`].filter(Boolean).join(' · ')}</div>
+        <div className="line-clamp-1 text-[14.5px] font-semibold text-lms-ink">{task.title}</div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-lms-sub">
+          {task.subject && <span className="rounded-md bg-lms-accent-soft px-2 py-[2px] font-semibold text-lms-accent">{task.subject}</span>}
+          {task.type && <span>{task.type}</span>}
+          <span className="inline-flex items-center gap-1"><Icon name="users" size={13} stroke={p.faint} /> {task.learners ?? 0} người đã làm</span>
+          <span className="inline-flex items-center gap-1"><Icon name="assign" size={13} stroke={p.faint} /> {task.questions ?? 0} câu</span>
+          <span className="inline-flex items-center gap-1"><Icon name="star" size={13} stroke={p.faint} /> {task.points} điểm</span>
+          {task.due && <span className="inline-flex items-center gap-1"><Icon name="calendar" size={13} stroke={p.faint} /> hạn {task.due}</span>}
+        </div>
       </div>
       {task.score != null
         ? <div className="text-center"><div className="font-lms-heading text-[22px] font-semibold text-lms-ok">{task.score}</div><div className="text-[10px] text-lms-faint">/{task.points}</div></div>
         : <Tag p={p} color={tone}>{task.dueIn}</Tag>}
-      {task.status === 'todo' ? <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go('s-task', { task: task.id })}>Làm bài</Btn> : <Tag p={p} color={taskTone(p, task.status)}>{taskLabel(task.status)}</Tag>}
+      {task.status === 'todo' ? (
+        <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent">
+          Làm bài <Icon name="arrowRight" size={15} stroke={p.accent} sw={1.9} />
+        </span>
+      ) : (
+        <Tag p={p} color={taskTone(p, task.status)}>{taskLabel(task.status)}</Tag>
+      )}
+    </>
+  );
+  if (task.status === 'todo') {
+    return (
+      <Link href={ROUTES.practiceItem(task.id)} className="lms-card flex items-center gap-4 rounded-xl border border-lms-line bg-lms-surface px-5 py-4 no-underline">
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <div className="lms-card flex cursor-default items-center gap-4 rounded-xl border border-lms-line bg-lms-surface px-5 py-4">
+      {body}
     </div>
   );
 }
 
-export function STasks({ p, t, go }) {
+export function STasks({ p, t }) {
   useLMS();
   const exFolders = (DB as any).EX_FOLDERS || [];
   const folderOpts = exFolders.map((f: any) => ({ value: String(f.id), label: f.name }));
@@ -388,7 +417,7 @@ export function STasks({ p, t, go }) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {list.map((task) => <STaskRow key={task.id} task={task} p={p} go={go} />)}
+          {list.map((task) => <STaskRow key={task.id} task={task} p={p} />)}
         </div>
       )}
       <Pagination current={paged.current} pages={paged.pages} total={paged.total} pageSize={paged.pageSize} onChange={paged.setPage} p={p} />
@@ -454,7 +483,7 @@ function buildSubmitAnswer(q: any, raw: any): any {
   return out;
 }
 
-export function STask({ p, t, ctx, setRoute, auth }) {
+export function STask({ p, t, ctx, auth }) {
   const task = DB.STUDENT_TASKS.find((x) => x.id === ctx.task) || DB.STUDENT_TASKS[0];
   const [liveQs, setLiveQs] = React.useState(null);
   const [exType, setExType] = React.useState(null);
@@ -522,7 +551,9 @@ export function STask({ p, t, ctx, setRoute, auth }) {
         <p className="m-0 max-w-[420px] text-[14.5px] leading-relaxed text-lms-sub">Cần đăng nhập để làm bài tập.</p>
         <div className="flex gap-2.5">
           <Btn p={p} icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
-          <Btn p={p} variant="ghost" onClick={() => setRoute('s-tasks')}>Quay lại</Btn>
+          <Link href={ROUTES.practice} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
+            Quay lại
+          </Link>
         </div>
       </div>
     );
@@ -607,7 +638,9 @@ export function STask({ p, t, ctx, setRoute, auth }) {
           </div>
         </div>
         <div className="flex gap-2.5">
-          <Btn p={p} size="lg" icon="arrowLeft" onClick={() => setRoute('s-tasks')}>Về danh sách bài</Btn>
+          <Link href={ROUTES.practice} className="lms-btn inline-flex h-[46px] items-center gap-2 rounded-[11px] bg-lms-accent px-[18px] text-[13.5px] font-semibold text-white no-underline shadow-[0_2px_0_var(--lms-glow)]">
+            <Icon name="arrowLeft" size={16} stroke="#fff" sw={1.9} /> Về danh sách bài
+          </Link>
         </div>
       </div>
     );
@@ -627,7 +660,9 @@ export function STask({ p, t, ctx, setRoute, auth }) {
         </div>
         <h2 className="m-0 font-lms-heading text-2xl font-extrabold text-lms-ink">Bài tập chưa có câu hỏi</h2>
         <p className="my-2.5 mb-[22px] max-w-[400px] text-sm leading-relaxed text-lms-sub">Bài này hiện chưa có câu hỏi nào để làm. Hãy quay lại sau nhé.</p>
-        <Btn p={p} icon="arrowLeft" onClick={() => setRoute('s-tasks')}>Về danh sách bài</Btn>
+        <Link href={ROUTES.practice} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent px-[18px] text-[13.5px] font-semibold text-white no-underline shadow-[0_2px_0_var(--lms-glow)]">
+          <Icon name="arrowLeft" size={16} stroke="#fff" sw={1.9} /> Về danh sách bài
+        </Link>
       </div>
     );
   }
@@ -635,9 +670,9 @@ export function STask({ p, t, ctx, setRoute, auth }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-4 border-b border-lms-line px-[30px] py-4">
-        <div onClick={() => setRoute('s-tasks')} className="lms-link inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
+        <Link href={ROUTES.practice} className="lms-link inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
           <Icon name="x" size={16} stroke={p.sub} /> Thoát
-        </div>
+        </Link>
         <div className="h-[26px] w-px bg-lms-line" />
         <div className="flex-1">
           <div className="text-[15px] font-semibold text-lms-ink">{task.title}</div>
@@ -725,11 +760,33 @@ export function STask({ p, t, ctx, setRoute, auth }) {
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
-export function SDocs({ p, t, go }) {
+const DOC_FORMAT_OPTS = [
+  { value: '', label: 'Tất cả định dạng' },
+  { value: 'pdf', label: 'PDF' },
+  { value: 'image', label: 'Ảnh' },
+  { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'slide', label: 'Slide' },
+  { value: 'doc', label: 'Tài liệu (Word/Docs)' },
+  { value: 'link', label: 'Liên kết' },
+];
+const DOC_SORT_OPTS = [
+  { value: 'date:desc', label: 'Mới nhất' },
+  { value: 'date:asc', label: 'Cũ nhất' },
+  { value: 'views:desc', label: 'Xem nhiều nhất' },
+  { value: 'downloads:desc', label: 'Tải nhiều nhất' },
+  { value: 'name:asc', label: 'Tên A → Z' },
+  { value: 'name:desc', label: 'Tên Z → A' },
+];
+
+export function SDocs({ p, t }) {
   useLMS();
+  const searchParams = useSearchParams();
   const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
   const { records: list, loading, error } = paged;
   const [folderName, setFolderName] = React.useState('Tất cả');
+  const [fileType, setFileType] = React.useState('');
+  const [sortKey, setSortKey] = React.useState('date:desc');
 
   const pickFolder = React.useCallback((f: string) => {
     setFolderName(f);
@@ -737,6 +794,26 @@ export function SDocs({ p, t, go }) {
     const id = f === 'Tất cả' ? '' : (tree.find((x: any) => x.name === f)?.id || '');
     paged.setFilter('folderId', id);
   }, [paged]);
+
+  // Deep-link from the home "Khám phá theo chủ đề" cards (?folder=<tên>): select that
+  // folder once its tree/list has loaded. Runs once.
+  const folderParam = searchParams?.get('folder') || '';
+  const folderApplied = React.useRef(false);
+  React.useEffect(() => {
+    if (!folderParam || folderApplied.current) return;
+    if ((DB.DOC_FOLDERS || []).includes(folderParam)) {
+      pickFolder(folderParam);
+      folderApplied.current = true;
+    }
+  }, [folderParam, list.length, pickFolder]);
+
+  const changeFileType = (v: string) => { setFileType(v); paged.setFilter('fileType', v); };
+  const changeSort = (v: string) => {
+    setSortKey(v);
+    const [by, order] = v.split(':');
+    paged.setFilter('sortBy', by === 'date' ? '' : by); // date desc = default, no param
+    paged.setFilter('order', order);
+  };
 
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
@@ -751,11 +828,17 @@ export function SDocs({ p, t, go }) {
           <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm theo tên tài liệu, chủ đề…" className="h-[46px]" />
         </div>
       </div>
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         {DB.DOC_FOLDERS.map((f) => {
           const n = f === 'Tất cả' ? DB.DOCS.length : DB.DOCS.filter((d) => d.folder === f).length;
           return <Pill key={f} p={p} active={f === folderName} onClick={() => pickFolder(f)}>{f} · {n}</Pill>;
         })}
+      </div>
+      <div className="mb-5 flex flex-nowrap items-center gap-2.5">
+        <div className="w-[210px] shrink-0"><Select p={p} value={fileType} onChange={changeFileType} options={DOC_FORMAT_OPTS} /></div>
+        <div className="flex-1" />
+        <span className="shrink-0 font-mono text-[11.5px] text-lms-faint">Sắp xếp</span>
+        <div className="w-[190px] shrink-0"><Select p={p} value={sortKey} onChange={changeSort} options={DOC_SORT_OPTS} /></div>
       </div>
 
       {loading ? (
@@ -772,7 +855,7 @@ export function SDocs({ p, t, go }) {
           {list.map((d) => {
             const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
             return (
-              <div key={d.id} onClick={() => go('s-doc', { doc: d.id })} className="bento-tile hovlift cursor-pointer overflow-hidden border border-lms-line bg-lms-surface">
+              <Link key={d.id} href={ROUTES.libraryItem(d.id)} className="bento-tile hovlift block cursor-pointer overflow-hidden border border-lms-line bg-lms-surface no-underline">
                 <div className="relative flex h-24 items-center justify-center overflow-hidden bg-lms-accent-soft">
                   <Icon name={m.icon} size={30} stroke={p.accent} sw={1.4} />
                   {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />}
@@ -784,10 +867,12 @@ export function SDocs({ p, t, go }) {
                   {d.desc && <div className="mt-1.5 line-clamp-2 text-[11.5px] wrap-break-word leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 110)}</div>}
                   <div className="mt-3 flex items-center justify-between">
                     <span className="font-mono text-[11px] text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</span>
-                    <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go && go('s-doc', { doc: d.id })}>Đọc</Btn>
+                    <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent">
+                      Đọc <Icon name="arrowRight" size={15} stroke={p.accent} sw={1.9} />
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -839,16 +924,30 @@ function MediaBlock({ d, p, m }) {
     </div>
   );
 }
-export function SDocReader({ p, t, ctx, setRoute, go }) {
+export function SDocReader({ p, t, ctx }) {
   const d = DB.DOCS.find((x) => x.id === ctx.doc) || DB.DOCS[0];
-  if (!d) return <EmptyState p={p} icon="book" label="Không có tài liệu" sub="Chưa có nội dung." action={<Btn p={p} variant="soft" size="sm" icon="arrowLeft" onClick={() => setRoute('s-docs')} className="mt-1">Về kho tài liệu</Btn>} />;
+  if (!d) {
+    return (
+      <EmptyState
+        p={p}
+        icon="book"
+        label="Không có tài liệu"
+        sub="Chưa có nội dung."
+        action={
+          <Link href={ROUTES.library} className="mt-1 inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent no-underline">
+            <Icon name="arrowLeft" size={15} stroke={p.accent} sw={1.9} /> Về kho tài liệu
+          </Link>
+        }
+      />
+    );
+  }
   const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
   const related = DB.DOCS.filter((x) => x.folder === d.folder && x.id !== d.id).slice(0, 4);
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
-      <div onClick={() => setRoute('s-docs')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
+      <Link href={ROUTES.library} className="lms-link mb-4 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Kho tài liệu
-      </div>
+      </Link>
       <div className="mb-[22px] flex flex-wrap items-start gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft">
           <Icon name={m.icon} size={26} stroke={p.accent} /></div>
@@ -885,8 +984,12 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
           ? <div className="lms-rich text-[15.5px] leading-[1.9] text-lms-ink" dangerouslySetInnerHTML={{ __html: d.desc }} />
           : <p className="m-0 text-[15.5px] leading-[1.9] text-lms-sub">Tài liệu được chia sẻ từ kho học liệu. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
         <div className="mt-[18px] flex flex-wrap gap-2.5">
-          <Btn p={p} variant="soft" icon="assign" onClick={() => setRoute('s-tasks')}>Làm bài tập liên quan</Btn>
-          <Btn p={p} variant="ghost" icon="rubric" onClick={() => setRoute('s-selfcheck')}>Tự đánh giá</Btn>
+          <Link href={ROUTES.practice} className="inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
+            <Icon name="assign" size={16} stroke={p.accent} sw={1.9} /> Làm bài tập liên quan
+          </Link>
+          <Link href={ROUTES.selfCheck} className="inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
+            <Icon name="rubric" size={16} stroke={p.ink} sw={1.9} /> Tự đánh giá
+          </Link>
         </div>
       </div>
 
@@ -897,12 +1000,12 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
             {related.map((r) => {
               const rm = DOC_TYPE_META[r.type] || DOC_TYPE_META.doc;
               return (
-                <div key={r.id} onClick={() => go('s-doc', { doc: r.id })} className={`lms-card lms-row ${cardClass(20)} flex cursor-pointer items-center gap-3 p-3.5`}>
+                <Link key={r.id} href={ROUTES.libraryItem(r.id)} className={`lms-card lms-row ${cardClass(20)} flex items-center gap-3 p-3.5 no-underline`}>
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-lms-accent-soft">
                     <Icon name={rm.icon} size={18} stroke={p.accent} /></div>
                   <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold wrap-break-word leading-snug text-lms-ink">{r.name}</div>
                     <div className="mt-0.5 font-mono text-[10.5px] text-lms-faint">{rm.label}</div></div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -1217,7 +1320,7 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
         <EmptyState p={p} icon="assign" label="Chưa làm bài nào" sub="Hãy thử một bài luyện tập để theo dõi tiến bộ của bạn." />
       ) : (
         <div className="flex flex-col gap-3">
-          {tasks.map((task) => <STaskRow key={task.id} task={task} p={p} go={go} />)}
+          {tasks.map((task) => <STaskRow key={task.id} task={task} p={p} />)}
         </div>
       )}
     </div>

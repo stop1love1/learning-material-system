@@ -1,8 +1,20 @@
 'use client';
 import React from 'react';
-import { ConfigProvider, theme as antdTheme } from 'antd';
+import { App, ConfigProvider, theme as antdTheme } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
+import { setDialogApi } from '@/app/lib/ui/dialogs';
+
+// Publishes antd's context-aware message/modal/notification instances to the
+// imperative dialog helpers, so async handlers can open themed dialogs.
+function AntdApiBridge({ children }: { children: React.ReactNode }) {
+  const staticApi = App.useApp();
+  React.useEffect(() => {
+    setDialogApi(staticApi);
+    return () => setDialogApi(null);
+  }, [staticApi]);
+  return <>{children}</>;
+}
 
 /**
  * Maps LMS palette/dark mode into antd ConfigProvider tokens.
@@ -50,7 +62,12 @@ export function AntdThemeBridge({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      {children}
+      {/* Default wrapper (.ant-app) — required for antd cssVar; children use h-dvh so
+          the extra block div doesn't affect layout. It also hosts the message/modal
+          /notification holders consumed by AntdApiBridge. */}
+      <App className="contents">
+        <AntdApiBridge>{children}</AntdApiBridge>
+      </App>
     </ConfigProvider>
   );
 }

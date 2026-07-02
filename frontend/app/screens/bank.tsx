@@ -8,10 +8,12 @@ import { LMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { questionsApi, topicsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { promptDialog, confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { FolderTree, type TreeNode } from '@/app/components/FolderTree';
 import { Pagination } from '@/app/components/Pagination';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapQuestion } from '@/app/lib/sync/load-questions';
+import RichEditor from '@/app/components/RichEditor';
 
 // Map a /questions/:id detail payload → the shape QuestionView expects.
 function qDetailToView(type: string, d: any): { options: any[]; answer: any[]; pairs: any[] } {
@@ -181,8 +183,7 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 
   if (q.type === 'essay') {
     return mode === 'do' ? (
-      <textarea value={a.text || ''} onChange={(e) => onAnswer({ text: e.target.value })} placeholder="Viết câu trả lời của bạn…"
-        className="box-border min-h-40 w-full resize-y rounded-xl border border-lms-line bg-lms-surface p-3.5 font-sans text-sm leading-relaxed text-lms-ink outline-none" />
+      <div className="lms-answer-editor"><RichEditor value={a.text || ''} onChange={(v) => onAnswer({ text: v })} placeholder="Viết câu trả lời của bạn…" /></div>
     ) : (
       <div className="rounded-xl border border-dashed border-lms-line bg-lms-raise p-3.5 text-[13px] text-lms-sub italic">
         Câu tự luận — chấm bằng rubric hoặc cho điểm thủ công.
@@ -227,31 +228,32 @@ export function TBank({ p, t, setRoute, go }) {
   const pickTopic = (id: string | null) => { setSelTopic(id); paged.setFilter('topicId', id || ''); };
 
   const addRootTopic = async () => {
-    const title = (typeof window !== 'undefined' && window.prompt('Tên chủ đề mới:'))?.trim();
+    const title = (await promptDialog({ title: 'Chủ đề mới', label: 'Tên chủ đề', placeholder: 'vd: Luyện từ và câu — Lớp 4' }))?.trim();
     if (!title) return;
-    try { await topicsApi.create({ title, parentId: null }); await hydrateFor('bank'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được chủ đề.'); }
+    try { await topicsApi.create({ title, parentId: null }); await hydrateFor('bank'); toastSuccess('Đã tạo chủ đề.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được chủ đề.'); }
   };
   const addChildTopic = async (parentId: string) => {
-    const title = (typeof window !== 'undefined' && window.prompt('Tên chủ đề con:'))?.trim();
+    const title = (await promptDialog({ title: 'Chủ đề con', label: 'Tên chủ đề con' }))?.trim();
     if (!title) return;
-    try { await topicsApi.create({ title, parentId }); await hydrateFor('bank'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được chủ đề.'); }
+    try { await topicsApi.create({ title, parentId }); await hydrateFor('bank'); toastSuccess('Đã tạo chủ đề.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được chủ đề.'); }
   };
   const renameTopic = async (node: TreeNode) => {
-    const title = (typeof window !== 'undefined' && window.prompt('Đổi tên chủ đề:', node.name))?.trim();
+    const title = (await promptDialog({ title: 'Đổi tên chủ đề', label: 'Tên mới', defaultValue: node.name }))?.trim();
     if (!title || title === node.name) return;
-    try { await topicsApi.update(node.id, { title }); await hydrateFor('bank'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không đổi tên được.'); }
+    try { await topicsApi.update(node.id, { title }); await hydrateFor('bank'); toastSuccess('Đã đổi tên chủ đề.'); }
+    catch (e: any) { toastError(e?.message || 'Không đổi tên được.'); }
   };
   const deleteTopic = async (node: TreeNode) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Xoá chủ đề “${node.name}”?`)) return;
+    if (!(await confirmDialog({ title: `Xoá chủ đề “${node.name}”?`, okText: 'Xoá', danger: true }))) return;
     try {
       await topicsApi.remove(node.id);
       if (selTopic === node.id) setSelTopic(null);
       await hydrateFor('bank');
+      toastSuccess('Đã xoá chủ đề.');
     } catch (e: any) {
-      if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được chủ đề.');
+      toastError(e?.message || 'Không xoá được chủ đề.');
     }
   };
   const composeWithTopic = () => { pendingTopicId = selTopic; setRoute('bank-edit'); };

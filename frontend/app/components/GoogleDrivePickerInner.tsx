@@ -2,6 +2,7 @@
 import React from 'react';
 import useDrivePicker from 'react-google-drive-picker';
 import { Btn } from '@/app/components/ui';
+import { notifyError } from '@/app/lib/ui/dialogs';
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
@@ -36,7 +37,10 @@ export default function GoogleDrivePickerInner({
 
   const handleOpen = () => {
     if (!CLIENT_ID || !API_KEY) {
-      alert('Chưa cấu hình Google Drive Picker.\nHãy đặt NEXT_PUBLIC_GOOGLE_CLIENT_ID và NEXT_PUBLIC_GOOGLE_API_KEY trong frontend/.env.local rồi build lại.');
+      notifyError(
+        'Chưa cấu hình Google Drive Picker',
+        'Hãy đặt NEXT_PUBLIC_GOOGLE_CLIENT_ID và NEXT_PUBLIC_GOOGLE_API_KEY trong frontend/.env.local rồi build lại.',
+      );
       return;
     }
     openPicker({

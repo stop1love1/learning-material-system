@@ -1,61 +1,111 @@
 'use client';
 import React from 'react';
-import { Icon, Tag, Avatar, Btn, Progress, Ring, EmptyState } from '@/app/components/ui';
+import { Icon, Tag, Pill, Avatar, Btn, Progress, Ring, EmptyState } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
-import { LMS } from '@/app/store/store';
+import { LMS, useLMS } from '@/app/store/store';
 import { attemptsApi } from '@/app/lib/api';
 import { loadSubmissions, loadSubmissionDetail } from '@/app/lib/sync/load-submissions';
+import { confirmDialog, toastSuccess } from '@/app/lib/ui/dialogs';
 import { cardClass } from '@/app/helpers/shared';
 import { RubricMatrix } from '@/app/screens/resources';
 
 
 export function TGrade({ p, t, go }) {
-  const ungraded = (aid) => DB.SUBMISSIONS.filter((s) => s.assignmentId === aid && s.status !== 'graded').length;
+  useLMS();
+  const [tab, setTab] = React.useState<'pending' | 'graded'>('pending');
+  const subsOf = (aid) => DB.SUBMISSIONS.filter((s) => s.assignmentId === aid);
+  const ungraded = (aid) => subsOf(aid).filter((s) => s.status !== 'graded').length;
+  const gradedCount = (aid) => subsOf(aid).filter((s) => s.status === 'graded').length;
+
   const queue = DB.ASSIGNMENTS.filter((a) => ungraded(a.id) > 0);
-  const total = queue.reduce((s, a) => s + ungraded(a.id), 0);
-  if (queue.length === 0) {
-    return (
-      <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-        <div className={`${cardClass(20)} mt-10`}>
-          <EmptyState p={p} icon="checkCircle" label="Đã chấm xong tất cả bài nộp" sub="Khi học viên nộp bài mới, bài sẽ xuất hiện ở đây." />
-        </div>
-      </div>
-    );
-  }
+  const totalPending = queue.reduce((s, a) => s + ungraded(a.id), 0);
+  const gradedSubs = DB.SUBMISSIONS
+    .filter((s) => s.status === 'graded')
+    .map((s) => ({ ...s, assignment: DB.ASSIGNMENTS.find((a) => a.id === s.assignmentId) }));
+  const totalGraded = gradedSubs.length;
+
+  const Tabs = () => (
+    <div className="mb-5 flex gap-2">
+      <Pill p={p} active={tab === 'pending'} onClick={() => setTab('pending')}>Chờ chấm · {totalPending}</Pill>
+      <Pill p={p} active={tab === 'graded'} onClick={() => setTab('graded')}>Đã chấm · {totalGraded}</Pill>
+    </div>
+  );
+
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className={`${cardClass(24)} mb-[22px] flex items-center gap-5 border-lms-accent/30 bg-lms-accent-soft`}>
         <div className="flex h-14 w-14 items-center justify-center rounded-[15px] bg-lms-accent">
           <Icon name="grade" size={28} stroke="#fff" /></div>
         <div className="flex-1">
-          <h2 className="m-0 font-lms-heading text-[26px] font-semibold text-lms-ink">{total} bài đang chờ chấm</h2>
-          <div className="mt-1 text-[13.5px] text-lms-sub">Trải đều trên {queue.length} bài tập · ưu tiên các bài sắp đến hạn trả.</div>
+          <h2 className="m-0 font-lms-heading text-[26px] font-semibold text-lms-ink">
+            {totalPending > 0 ? `${totalPending} bài đang chờ chấm` : 'Đã chấm xong tất cả bài nộp'}
+          </h2>
+          <div className="mt-1 text-[13.5px] text-lms-sub">
+            {totalPending > 0
+              ? `Trải đều trên ${queue.length} bài tập · ${totalGraded} bài đã chấm.`
+              : `${totalGraded} bài đã chấm · khi có bài nộp mới, bài sẽ xuất hiện ở đây.`}
+          </div>
         </div>
-        <Btn p={p} variant="accent" icon="play" onClick={() => go('grade-one', { assignment: queue[0].id })}>Bắt đầu chấm</Btn>
+        {totalPending > 0 && (
+          <Btn p={p} variant="accent" icon="play" onClick={() => go('grade-one', { assignment: queue[0].id })}>Bắt đầu chấm</Btn>
+        )}
       </div>
-      <div className="flex flex-col gap-3">
-        {queue.map((a) => {
-          const left = ungraded(a.id);
-          return (
-            <div key={a.id} className={`lms-card ${cardClass(20)} p-[18px]! flex cursor-pointer items-center gap-4`} onClick={() => go('grade-one', { assignment: a.id })}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-lms-accent-soft">
-                <Icon name={a.rubric ? 'rubric' : 'grade'} size={20} stroke={p.accent} /></div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-[9px]">
-                  <span className="text-[14.5px] font-semibold text-lms-ink">{a.title}</span>
-                  {a.rubric && <Tag p={p} color={p.accent}>Rubric</Tag>}
+
+      <Tabs />
+
+      {tab === 'pending' ? (
+        queue.length === 0 ? (
+          <div className={cardClass(20)}>
+            <EmptyState p={p} icon="checkCircle" label="Không còn bài chờ chấm" sub="Chuyển sang tab “Đã chấm” để xem lại các bài đã chấm." />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {queue.map((a) => {
+              const left = ungraded(a.id);
+              return (
+                <div key={a.id} className={`lms-card ${cardClass(20)} p-[18px]! flex cursor-pointer items-center gap-4`} onClick={() => go('grade-one', { assignment: a.id })}>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-lms-accent-soft">
+                    <Icon name={a.rubric ? 'rubric' : 'grade'} size={20} stroke={p.accent} /></div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-[9px]">
+                      <span className="text-[14.5px] font-semibold text-lms-ink">{a.title}</span>
+                      {a.rubric && <Tag p={p} color={p.accent}>Rubric</Tag>}
+                    </div>
+                    <div className="mt-1 text-[12.5px] text-lms-sub">{a.type} · hạn {a.due} · đã chấm {gradedCount(a.id)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-lms-heading text-2xl font-semibold leading-none text-lms-accent">{left}</div>
+                    <div className="mt-[3px] font-mono text-[10.5px] text-lms-faint">chờ chấm</div>
+                  </div>
+                  <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go('grade-one', { assignment: a.id })}>Chấm</Btn>
                 </div>
-                <div className="mt-1 text-[12.5px] text-lms-sub">{a.type} · hạn {a.due}</div>
+              );
+            })}
+          </div>
+        )
+      ) : totalGraded === 0 ? (
+        <div className={cardClass(20)}>
+          <EmptyState p={p} icon="grade" label="Chưa có bài nào được chấm" sub="Sau khi bạn chấm, các bài đã chấm sẽ hiển thị ở đây để xem lại." />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {gradedSubs.map((s) => (
+            <div key={s.id} className={`lms-card ${cardClass(20)} p-[16px]! flex cursor-pointer items-center gap-4`} onClick={() => s.assignment && go('grade-one', { assignment: s.assignment.id })}>
+              <Avatar name={s.name} p={p} size={40} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-lms-ink">{s.name}</div>
+                <div className="mt-0.5 truncate text-[12px] text-lms-sub">{s.assignment?.title || 'Bài tập'} · {s.code}{s.at ? ` · ${s.at}` : ''}</div>
               </div>
+              <Tag p={p} color={p.ok}>Đã chấm</Tag>
               <div className="text-right">
-                <div className="font-lms-heading text-2xl font-semibold leading-none text-lms-accent">{left}</div>
-                <div className="mt-[3px] font-mono text-[10.5px] text-lms-faint">chờ chấm</div>
+                <div className="font-lms-heading text-xl font-semibold leading-none text-lms-ok">{s.score ?? '—'}</div>
+                <div className="mt-[3px] font-mono text-[10px] text-lms-faint">điểm</div>
               </div>
-              <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go('grade-one', { assignment: a.id })}>Chấm</Btn>
+              <Btn p={p} variant="ghost" size="sm" iconRight="arrowRight" onClick={() => s.assignment && go('grade-one', { assignment: s.assignment.id })}>Xem</Btn>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -231,9 +281,10 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
               <Tag p={p} color={p.sub}>BÀI LÀM</Tag>
               <span className="font-mono text-[11px] text-lms-faint">{sub.wordcount} chữ</span>
             </div>
-            <div className={`${cardClass(24)} p-[26px]! text-base leading-[1.9] tracking-[0.2px] text-lms-ink`}>
-              {sub.text}
-            </div>
+            {/* Essay answers are rich text (HTML from the editor); render safely. */}
+            {/[<][a-z]/i.test(sub.text || '')
+              ? <div className={`lms-rich ${cardClass(24)} p-[26px]! text-base leading-[1.9] tracking-[0.2px] text-lms-ink`} dangerouslySetInnerHTML={{ __html: sub.text }} />
+              : <div className={`${cardClass(24)} p-[26px]! text-base leading-[1.9] tracking-[0.2px] text-lms-ink whitespace-pre-wrap`}>{sub.text}</div>}
 
             <div className="mt-[22px] flex items-center justify-between gap-3">
               <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => reset((idx - 1 + subs.length) % subs.length)}>Bài trước</Btn>
@@ -301,12 +352,15 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
 
           <div className="mt-5 flex gap-2.5">
             <Btn p={p} variant="ghost" full icon={draftSaved ? 'check' : 'docs'} onClick={saveDraft}>{draftSaved ? 'Đã lưu nháp' : 'Lưu nháp'}</Btn>
-            <Btn p={p} variant="accent" full icon="check" onClick={() => {
+            <Btn p={p} variant="accent" full icon="check" onClick={async () => {
               const effective = score || rubricScore;
               if (effective == null || effective === '') {
-                if (typeof window !== 'undefined' && !window.confirm('Chưa nhập điểm — vẫn lưu với điểm 0?')) return;
+                if (!(await confirmDialog({ title: 'Chưa nhập điểm', content: 'Vẫn lưu bài này với điểm 0?', okText: 'Lưu điểm 0' }))) return;
               }
-              persistGrade(sub, effective || 0, fb); clearDraft(sub.id); reset((idx + 1) % subs.length);
+              await persistGrade(sub, effective || 0, fb);
+              clearDraft(sub.id);
+              toastSuccess('Đã lưu điểm.');
+              reset((idx + 1) % subs.length);
             }}>Lưu & bài tiếp</Btn>
           </div>
         </div>

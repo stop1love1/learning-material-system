@@ -8,6 +8,10 @@ export const ROUTES = {
   blog: '/bai-viet',
   blogPost: (id: string) => `/bai-viet/${id}`,
   myLibrary: '/cua-toi',
+  about: '/gioi-thieu',
+  guide: '/huong-dan',
+  contact: '/lien-he',
+  terms: '/dieu-khoan',
   dashboard: '/quan-tri',
   dashLibrary: '/quan-tri/kho-hoc-lieu',
   questionBank: '/quan-tri/ngan-hang-cau-hoi',
@@ -41,6 +45,10 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'blog': return ROUTES.blog;
     case 'article': return ROUTES.blogPost(id('article'));
     case 's-mine': return ROUTES.myLibrary;
+    case 'about': return ROUTES.about;
+    case 'guide': return ROUTES.guide;
+    case 'contact': return ROUTES.contact;
+    case 'terms': return ROUTES.terms;
     case 'a-overview': return ROUTES.dashboard;
     case 'docs': return ROUTES.dashLibrary;
     case 'bank': return ROUTES.questionBank;
@@ -92,5 +100,9 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (/^\/bai-viet\/[^/]+/.test(seg)) return r('article', 'blog');
   if (seg.startsWith('/bai-viet')) return r('blog', 'blog');
   if (seg.startsWith('/cua-toi')) return r('s-mine', 's-mine');
+  if (seg.startsWith('/gioi-thieu')) return r('page-about', '');
+  if (seg.startsWith('/huong-dan')) return r('page-guide', '');
+  if (seg.startsWith('/lien-he')) return r('page-contact', '');
+  if (seg.startsWith('/dieu-khoan')) return r('page-terms', '');
   return r('home', 'home');
 }

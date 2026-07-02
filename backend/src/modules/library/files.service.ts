@@ -32,6 +32,7 @@ export class FilesService {
       ...(dto.category ? { tags: dto.category } : {}),
       ...(dto.subject ? { subject: dto.subject } : {}),
       ...(dto.grade ? { grade: dto.grade } : {}),
+      ...(dto.fileType ? { fileType: dto.fileType } : {}),
     };
     const and: Record<string, any>[] = [this.visibilityFilter(viewer)];
     if (safeKeyword) {
@@ -40,15 +41,23 @@ export class FilesService {
       });
     }
     query.$and = and;
+    // Configurable sort (default: newest first). name → A-Z/Z-A via Vietnamese collation.
+    const SORT_FIELD: Record<string, string> = {
+      date: 'createdAt', views: 'viewCount', downloads: 'downloadCount', name: 'name',
+    };
+    const sortField = SORT_FIELD[dto.sortBy as string] || 'createdAt';
+    const sortDir: 1 | -1 = dto.order === 'asc' ? 1 : -1;
+    const listQuery = this.fileModel
+      .find(query)
+      .sort({ [sortField]: sortDir })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .populate({ path: 'userId', select: 'name avatar' })
+      .populate({ path: 'folderId', select: 'name' })
+      .lean();
+    if (sortField === 'name') listQuery.collation({ locale: 'vi', strength: 1 });
     const [rawRecords, total] = await Promise.all([
-      this.fileModel
-        .find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .populate({ path: 'userId', select: 'name avatar' })
-        .populate({ path: 'folderId', select: 'name' })
-        .lean(),
+      listQuery,
       this.fileModel.countDocuments(query),
     ]);
     const records = rawRecords.map((r: Record<string, any>) => ({

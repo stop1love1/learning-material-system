@@ -164,6 +164,7 @@ export function Btn({
   iconRight,
   onClick,
   size = 'md',
+  type = 'button',
   className,
   style,
   full,
@@ -175,6 +176,7 @@ export function Btn({
   iconRight?: string;
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit' | 'reset';
   className?: string;
   style?: CSSProperties;
   full?: boolean;
@@ -193,6 +195,7 @@ export function Btn({
               : p.sub;
   return (
     <button
+      type={type}
       onClick={onClick}
       className={`lms-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[11px] font-sans font-semibold transition-all duration-150 ${BTN_SIZE[size]} ${BTN_VARIANT[variant]} ${full ? 'w-full' : ''} ${className || ''}`}
       style={style}
@@ -204,6 +207,18 @@ export function Btn({
   );
 }
 
+type IconBtnVariant = 'outline' | 'filled';
+const ICON_BTN_VARIANT: Record<IconBtnVariant, { base: string; active: string }> = {
+  outline: {
+    base: 'border border-lms-line bg-lms-surface text-lms-sub',
+    active: 'border border-lms-accent bg-lms-accent-soft text-lms-accent',
+  },
+  filled: {
+    base: 'border-0 bg-lms-sink text-lms-sub',
+    active: 'border-0 bg-lms-accent-soft text-lms-accent',
+  },
+};
+
 export function IconBtn({
   name,
   p,
@@ -212,6 +227,7 @@ export function IconBtn({
   badge,
   size = 38,
   title,
+  variant = 'outline',
   className,
 }: {
   name: string;
@@ -221,14 +237,16 @@ export function IconBtn({
   badge?: number | null;
   size?: number;
   title?: string;
+  variant?: IconBtnVariant;
   className?: string;
 }) {
+  const v = ICON_BTN_VARIANT[variant];
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`lms-btn relative flex cursor-pointer items-center justify-center rounded-lg ${
-        active ? 'border border-lms-accent bg-lms-accent-soft text-lms-accent' : 'border border-lms-line bg-lms-surface text-lms-sub'
+      className={`lms-btn lms-row relative flex cursor-pointer items-center justify-center rounded-lg ${
+        active ? v.active : v.base
       } ${className || ''}`}
       style={{ width: size, height: size }}
     >
@@ -248,6 +266,7 @@ export function Field({
   onChange,
   placeholder,
   icon,
+  name,
   className,
   style,
   type = 'text',
@@ -258,6 +277,7 @@ export function Field({
   onChange?: (value: string) => void;
   placeholder?: string;
   icon?: string;
+  name?: string;
   className?: string;
   style?: CSSProperties;
   type?: string;
@@ -266,6 +286,7 @@ export function Field({
   const prefix = icon ? <Icon name={icon} size={16} stroke={p.faint} /> : undefined;
   const inputStyle: CSSProperties = mono ? { fontFamily: "var(--font-dmmono), monospace" } : {};
   const common = {
+    name,
     value: value ?? '',
     placeholder,
     prefix,

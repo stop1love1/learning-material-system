@@ -6,9 +6,12 @@ import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
+import { refreshOrgBrand } from '@/app/components/Brand';
+import { promptDialog, confirmDialog, toastSuccess, toastError, notifySuccess } from '@/app/lib/ui/dialogs';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { downloadCsv, downloadJson } from '@/app/helpers/export';
 import { FilterSelect } from '@/app/components/FilterSelect';
+import RichEditor from '@/app/components/RichEditor';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapUser } from '@/app/lib/sync/load-users';
 
@@ -152,9 +155,9 @@ export function AUsers({ p, t }) {
 
   const handleDelete = async (u) => {
     if (!u?.id) return;
-    if (typeof window !== 'undefined' && !window.confirm(`Xoá người dùng "${u.name}"?`)) return;
+    if (!(await confirmDialog({ title: `Xoá người dùng “${u.name}”?`, okText: 'Xoá', danger: true }))) return;
     setBusy(true);
-    try { await usersApi.remove(u.id); } catch {}
+    try { await usersApi.remove(u.id); toastSuccess('Đã xoá người dùng.'); } catch { toastError('Không xoá được người dùng.'); }
     setBusy(false);
     paged.reload();
     try { await hydrateFor('a-users'); } catch {}
@@ -172,9 +175,10 @@ export function AUsers({ p, t }) {
       }
       setModal(null);
       paged.reload();
+      toastSuccess('Đã lưu người dùng.');
       try { await hydrateFor('a-users'); } catch {}
     } catch (e) {
-      if (typeof window !== 'undefined') window.alert('Không thể lưu người dùng. Vui lòng kiểm tra dữ liệu hoặc quyền truy cập.');
+      toastError('Không thể lưu người dùng. Vui lòng kiểm tra dữ liệu hoặc quyền truy cập.');
     }
     setBusy(false);
   };
@@ -434,6 +438,9 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [homepage, setHomepage] = React.useState({ badge: '', heroTitle: '', heroSubtitle: '', ctaLabel: '' });
   const [seo, setSeo] = React.useState({ title: '', description: '', keywords: '', ogImage: '' });
   const [logoUrl, setLogoUrl] = React.useState('');
+  const emptyPage = { title: '', content: '' };
+  const [pages, setPages] = React.useState({ about: { ...emptyPage }, guide: { ...emptyPage }, contact: { ...emptyPage }, terms: { ...emptyPage } });
+  const [pageTab, setPageTab] = React.useState('about');
 
   const [academic, setAcademic] = React.useState({ scoreScale: 10, passThreshold: 5, rounding: 'half', allowResubmit: true, showScoreImmediately: true });
   const [security, setSecurity] = React.useState({ twoFactor: true, passwordRotationDays: 0, lockoutThreshold: 5, allowSelfRegister: true, ssoEnabled: true });
@@ -460,6 +467,10 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
         if (s.misc) setMisc({ allowGoogleLogin: s.misc.allowGoogleLogin !== false });
         if (s.homepage) setHomepage({ badge: s.homepage.badge ?? '', heroTitle: s.homepage.heroTitle ?? '', heroSubtitle: s.homepage.heroSubtitle ?? '', ctaLabel: s.homepage.ctaLabel ?? '' });
         if (s.seo) setSeo({ title: s.seo.title ?? '', description: s.seo.description ?? '', keywords: (s.seo.keywords ?? []).join(', '), ogImage: s.seo.ogImage ?? '' });
+        if (s.pages) {
+          const pick = (k) => ({ title: s.pages[k]?.title ?? '', content: s.pages[k]?.content ?? '' });
+          setPages({ about: pick('about'), guide: pick('guide'), contact: pick('contact'), terms: pick('terms') });
+        }
         if (s.academic) setAcademic((a) => ({ ...a, ...s.academic }));
         if (s.security) setSecurity((a) => ({ ...a, ...s.security }));
         if (s.notifications) setNotifications((a) => ({ ...a, ...s.notifications }));
@@ -474,10 +485,11 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     setSaving(true);
     try {
       await settingsApi.update(group);
+      if (group && group.org) refreshOrgBrand(); // logo/name changed → refresh chrome
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
     } catch {
-      if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
+      toastError('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
     }
     setSaving(false);
   }, []);
@@ -504,13 +516,18 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   );
 
   const changeLogo = async () => {
-    if (typeof window === 'undefined') return;
-    const url = window.prompt('Dán URL logo (https://...)', logoUrl || '');
-    if (url == null) return;
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) { window.alert('URL logo phải bắt đầu bằng http hoặc https.'); return; }
+    const trimmed = (await promptDialog({
+      title: 'Đổi logo',
+      label: 'Dán URL logo (https://...)',
+      defaultValue: logoUrl || '',
+      placeholder: 'https://…/logo.png',
+      okText: 'Lưu logo',
+      validate: (v) => (/^https?:\/\//i.test(v) ? null : 'URL logo phải bắt đầu bằng http hoặc https.'),
+    }))?.trim();
+    if (!trimmed) return;
     setLogoUrl(trimmed);
     await saveGroup({ org: { logoUrl: trimmed } });
+    toastSuccess('Đã cập nhật logo.');
   };
 
   const regenApiKey = async () => {
@@ -527,8 +544,9 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       const snap = await settingsApi.export();
       const day = String(snap?.exportedAt || '').slice(0, 10) || 'backup';
       downloadJson(`vuonvan-backup-${day}.json`, snap);
+      toastSuccess('Đã tạo tệp sao lưu.');
     } catch {
-      if (typeof window !== 'undefined') window.alert('Không thể sao lưu. Vui lòng kiểm tra quyền truy cập.');
+      toastError('Không thể sao lưu. Vui lòng kiểm tra quyền truy cập.');
     }
   };
 
@@ -540,17 +558,17 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     try {
       parsed = JSON.parse(await file.text());
     } catch {
-      if (typeof window !== 'undefined') window.alert('Tệp sao lưu không hợp lệ (không phải JSON).');
+      toastError('Tệp sao lưu không hợp lệ (không phải JSON).');
       return;
     }
-    if (typeof window !== 'undefined' && !window.confirm('Khôi phục sẽ ghi đè nội dung hiện tại. Tiếp tục?')) return;
+    if (!(await confirmDialog({ title: 'Khôi phục dữ liệu?', content: 'Khôi phục sẽ ghi đè nội dung hiện tại. Tiếp tục?', okText: 'Khôi phục', danger: true }))) return;
     setRestoring(true);
     try {
       const res = await settingsApi.import(parsed);
       const total = Object.values(res?.restored || {}).reduce((a, n) => a + (Number(n) || 0), 0);
-      if (typeof window !== 'undefined') window.alert(`Đã khôi phục ${total.toLocaleString('vi-VN')} bản ghi.`);
+      notifySuccess('Khôi phục thành công', `Đã khôi phục ${total.toLocaleString('vi-VN')} bản ghi.`);
     } catch {
-      if (typeof window !== 'undefined') window.alert('Không thể khôi phục. Vui lòng kiểm tra tệp và quyền truy cập.');
+      toastError('Không thể khôi phục. Vui lòng kiểm tra tệp và quyền truy cập.');
     }
     setRestoring(false);
   };
@@ -562,10 +580,11 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
         org: { name: org.name, domain: org.domain, timezone: optToTz(org.timezone) },
         misc: { allowGoogleLogin: misc.allowGoogleLogin },
       });
+      refreshOrgBrand(); // org name may have changed
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
     } catch {
-      if (typeof window !== 'undefined') window.alert('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
+      toastError('Không thể lưu cấu hình. Vui lòng kiểm tra quyền truy cập.');
     }
     setSaving(false);
   }, [org, misc]);
@@ -573,6 +592,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     { id: 'appearance', icon: 'image', label: 'Giao diện' },
     { id: 'org', icon: 'settings', label: 'Tổ chức' },
     { id: 'homepage', icon: 'home', label: 'Trang chủ' },
+    { id: 'pages', icon: 'docs', label: 'Trang nội dung' },
     { id: 'seo', icon: 'search', label: 'SEO' },
     { id: 'academic', icon: 'grade', label: 'Cấu hình đánh giá' },
     { id: 'security', icon: 'target', label: 'Bảo mật & đăng nhập' },
@@ -800,6 +820,24 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
               </div>
               <div className="max-w-[280px]"><label className={lblClass()}>NHÃN NÚT (CTA)</label><Field p={p} value={homepage.ctaLabel} onChange={(v) => setHomepage((o) => ({ ...o, ctaLabel: v }))} className="mt-2" /></div>
             </div>
+          </section>
+        )}
+
+        {sec === 'pages' && (
+          <section className={cardClass(24)}>
+            <H desc="Nội dung 4 trang tĩnh ở chân trang: Giới thiệu, Hướng dẫn sử dụng, Liên hệ, Điều khoản.">Trang nội dung</H>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {[{ id: 'about', label: 'Giới thiệu' }, { id: 'guide', label: 'Hướng dẫn sử dụng' }, { id: 'contact', label: 'Liên hệ' }, { id: 'terms', label: 'Điều khoản' }].map((pt) => (
+                <Pill key={pt.id} p={p} active={pageTab === pt.id} onClick={() => setPageTab(pt.id)}>{pt.label}</Pill>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4">
+              <div><label className={lblClass()}>TIÊU ĐỀ TRANG</label>
+                <Field p={p} value={pages[pageTab].title} onChange={(v) => setPages((o) => ({ ...o, [pageTab]: { ...o[pageTab], title: v } }))} className="mt-2" /></div>
+              <div><label className={lblClass()}>NỘI DUNG</label>
+                <div className="mt-2"><RichEditor value={pages[pageTab].content} onChange={(v) => setPages((o) => ({ ...o, [pageTab]: { ...o[pageTab], content: v } }))} placeholder="Soạn nội dung trang…" /></div></div>
+            </div>
+            <SaveRow onSave={() => saveGroup({ pages: { [pageTab]: pages[pageTab] } })} />
           </section>
         )}
 

@@ -14,7 +14,7 @@ import { loadNotifications } from './load-notifications';
 type Loader = () => Promise<void>;
 
 const BY_ROUTE: Record<string, Loader[]> = {
-  home: [loadLibrary, loadArticles],
+  home: [loadLibrary, loadArticles, loadExercises],
   's-docs': [loadLibrary],
   's-doc': [loadLibrary],
   's-mine': [loadLibrary],

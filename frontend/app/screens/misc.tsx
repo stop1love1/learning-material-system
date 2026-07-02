@@ -5,6 +5,7 @@ import { Icon, Avatar, Btn, Field } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { useLMS } from '@/app/store/store';
 import { authApi } from '@/app/lib/api';
+import { toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 
 export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
@@ -75,8 +76,9 @@ export function SettingsScreen({ p, t }: { p: Palette; t: Tweaks }) {
       const u = await authApi.updateMe({ name: form.name.trim(), email: form.email.trim() });
       setMe(u);
       setEditing(false);
+      toastSuccess('Đã lưu hồ sơ.');
     } catch {
-      if (typeof window !== 'undefined') window.alert('Không thể lưu hồ sơ. Email có thể đã được dùng.');
+      toastError('Không thể lưu hồ sơ. Email có thể đã được dùng.');
     }
     setSavingP(false);
   };

@@ -10,6 +10,7 @@ import { Pagination } from '@/app/components/Pagination';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapFile } from '@/app/lib/sync/load-library';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
+import { promptDialog, confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import RichEditor from '@/app/components/RichEditor';
 import GoogleDrivePicker from '@/app/components/GoogleDrivePicker';
 
@@ -82,32 +83,33 @@ export function TDocs({ p, t, auth }) {
   };
 
   const addRootFolder = async () => {
-    const name = (typeof window !== 'undefined' ? window.prompt('Tên thư mục mới') : '')?.trim();
+    const name = (await promptDialog({ title: 'Thư mục mới', label: 'Tên thư mục', placeholder: 'vd: Giáo án tuần 1' }))?.trim();
     if (!name) return;
-    try { await foldersApi.create({ name, parentId: null }); await hydrateFor('docs'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được thư mục.'); }
+    try { await foldersApi.create({ name, parentId: null }); await hydrateFor('docs'); toastSuccess('Đã tạo thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được thư mục.'); }
   };
   const addChildFolder = async (parentId: string) => {
-    const name = (typeof window !== 'undefined' ? window.prompt('Tên thư mục con') : '')?.trim();
+    const name = (await promptDialog({ title: 'Thư mục con', label: 'Tên thư mục con' }))?.trim();
     if (!name) return;
-    try { await foldersApi.create({ name, parentId }); await hydrateFor('docs'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không tạo được thư mục.'); }
+    try { await foldersApi.create({ name, parentId }); await hydrateFor('docs'); toastSuccess('Đã tạo thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không tạo được thư mục.'); }
   };
   const renameFolder = async (node: any) => {
-    const name = (typeof window !== 'undefined' ? window.prompt('Đổi tên thư mục', node.name) : '')?.trim();
+    const name = (await promptDialog({ title: 'Đổi tên thư mục', label: 'Tên mới', defaultValue: node.name }))?.trim();
     if (!name || name === node.name) return;
-    try { await foldersApi.update(node.id, { name }); await hydrateFor('docs'); }
-    catch (e: any) { if (typeof window !== 'undefined') window.alert(e?.message || 'Không đổi tên được thư mục.'); }
+    try { await foldersApi.update(node.id, { name }); await hydrateFor('docs'); toastSuccess('Đã đổi tên thư mục.'); }
+    catch (e: any) { toastError(e?.message || 'Không đổi tên được thư mục.'); }
   };
   const deleteFolder = async (node: any) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Xoá thư mục “${node.name}”?`)) return;
+    if (!(await confirmDialog({ title: `Xoá thư mục “${node.name}”?`, content: 'Thư mục và cách sắp xếp bên trong sẽ bị gỡ.', okText: 'Xoá', danger: true }))) return;
     try {
       await foldersApi.remove(node.id);
       if (selId === node.id) onSelectFolder(null);
       await hydrateFor('docs');
       paged.reload();
+      toastSuccess('Đã xoá thư mục.');
     } catch (e: any) {
-      if (typeof window !== 'undefined') window.alert(e?.message || 'Không xoá được thư mục.');
+      toastError(e?.message || 'Không xoá được thư mục.');
     }
   };
 
@@ -136,8 +138,8 @@ export function TDocs({ p, t, auth }) {
   const openDoc = (d: any) => { if (d.url) window.open(d.url, '_blank', 'noopener'); };
   const copyLink = (d: any) => { try { navigator.clipboard?.writeText(d.url || ''); } catch {} };
   const deleteDoc = async (d: any) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Xoá tài liệu “${d.name}”?`)) return;
-    try { await filesApi.remove(d.id); await hydrateFor('docs'); paged.reload(); }
+    if (!(await confirmDialog({ title: `Xoá tài liệu “${d.name}”?`, okText: 'Xoá', danger: true }))) return;
+    try { await filesApi.remove(d.id); await hydrateFor('docs'); paged.reload(); toastSuccess('Đã xoá tài liệu.'); }
     catch { DB.DOCS = DB.DOCS.filter((x) => x.id !== d.id); LMS && LMS.bump(); }
   };
   const DocMenu = ({ d, up }: { d: any; up?: boolean }) => (

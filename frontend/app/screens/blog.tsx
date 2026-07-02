@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Icon, Tag, Pill, Avatar, Btn, Field, Select, EmptyState } from '@/app/components/ui';
 import { hexA } from '@/app/theme/palette';
@@ -11,6 +12,7 @@ import RichEditor from '@/app/components/RichEditor';
 import { Pagination } from '@/app/components/Pagination';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapArticle } from '@/app/lib/sync/load-articles';
+import { ROUTES } from '@/app/configs/routes.config';
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -21,7 +23,7 @@ const BLOG_COVER = {
 };
 function coverHue(p, c) { return (BLOG_COVER[c] || BLOG_COVER.blue)[p.dark ? 'dark' : 'light']; }
 
-export function SBlog({ p, t, go }) {
+export function SBlog({ p, t }) {
   useLMS();
   const router = useRouter();
   const pathname = usePathname();
@@ -73,7 +75,7 @@ export function SBlog({ p, t, go }) {
       ) : (
       <>
       {lead && (
-        <div onClick={() => go('article', { article: lead.id })} className="reveal bento-tile hovlift mb-[22px] grid cursor-pointer grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface">
+        <Link href={ROUTES.blogPost(lead.id)} className="reveal bento-tile hovlift mb-[22px] grid grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface no-underline">
           <div className="flex min-h-[240px] items-end p-[22px]" style={{ background: `linear-gradient(135deg, ${coverHue(p, lead.cover)}, ${hexA(coverHue(p, lead.cover), 0.55)})` }}>
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-[11.5px] font-bold" style={{ color: coverHue(p, lead.cover) }}>{lead.cat}</span>
           </div>
@@ -87,12 +89,12 @@ export function SBlog({ p, t, go }) {
                 <div className="text-[11.5px] text-lms-faint">{lead.date} · {lead.read} đọc</div></div>
             </div>
           </div>
-        </div>
+        </Link>
       )}
 
       <div className="reveal grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px] pb-10">
         {rest.map((a) => (
-          <div key={a.id} onClick={() => go('article', { article: a.id })} className="bento-tile hovlift cursor-pointer overflow-hidden border border-lms-line bg-lms-surface">
+          <Link key={a.id} href={ROUTES.blogPost(a.id)} className="bento-tile hovlift overflow-hidden border border-lms-line bg-lms-surface no-underline">
             <div className="flex h-[132px] items-end p-3.5" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>
               <span className="rounded-md bg-white/90 px-[9px] py-[3px] text-[11px] font-bold" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
             </div>
@@ -103,7 +105,7 @@ export function SBlog({ p, t, go }) {
                 <Avatar name={a.author} p={p} size={26} /><span>{a.author}</span><span>·</span><span>{a.read}</span><span>·</span><span>👁 {a.views ?? 0}</span>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
       </>
@@ -113,16 +115,28 @@ export function SBlog({ p, t, go }) {
   );
 }
 
-export function SArticle({ p, t, ctx, setRoute, go }) {
+export function SArticle({ p, t, ctx }) {
   const a = DB.ARTICLES.find((x) => x.id === ctx.article) || DB.ARTICLES[0];
-  if (!a) return <EmptyState p={p} icon="docs" label="Không có bài viết" sub="Chưa có nội dung." action={<Btn p={p} variant="soft" size="sm" icon="arrowLeft" onClick={() => setRoute('blog')} className="mt-1">Về blog</Btn>} />;
+  if (!a) return (
+    <EmptyState
+      p={p}
+      icon="docs"
+      label="Không có bài viết"
+      sub="Chưa có nội dung."
+      action={(
+        <Link href={ROUTES.blog} className="lms-btn mt-1 inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent no-underline">
+          <Icon name="arrowLeft" size={15} stroke={p.accent} sw={1.9} /> Về blog
+        </Link>
+      )}
+    />
+  );
   const hue = coverHue(p, a.cover);
   const more = DB.ARTICLES.filter((x) => x.id !== a.id).slice(0, 3);
   return (
     <div className="lms-content-pad mx-auto max-w-[760px] px-[30px] pt-7 pb-2">
-      <div onClick={() => setRoute('blog')} className="lms-link mb-5 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
+      <Link href={ROUTES.blog} className="lms-link mb-5 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Blog
-      </div>
+      </Link>
       <span className="mb-3.5 inline-block rounded-md px-[11px] py-1 text-xs font-bold" style={{ background: hexA(hue, 0.12), color: hue }}>{a.cat}</span>
       <h1 className="m-0 font-lms-heading text-[34px] font-extrabold leading-[1.18] tracking-[-0.8px] text-lms-ink">{a.title}</h1>
       <div className="my-5 flex items-center gap-[11px]">
@@ -139,24 +153,28 @@ export function SArticle({ p, t, ctx, setRoute, go }) {
             ))}
           </div>}
       <div className="my-2 flex gap-2.5 border-y border-lms-line py-[22px]">
-        <Btn p={p} variant="soft" icon="book" onClick={() => setRoute('s-docs')}>Xem học liệu liên quan</Btn>
-        <Btn p={p} variant="ghost" icon="assign" onClick={() => setRoute('s-tasks')}>Luyện bài tập</Btn>
+        <Link href={ROUTES.library} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
+          <Icon name="book" size={16} stroke={p.accent} sw={1.9} /> Xem học liệu liên quan
+        </Link>
+        <Link href={ROUTES.practice} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
+          <Icon name="assign" size={16} stroke={p.sub} sw={1.9} /> Luyện bài tập
+        </Link>
       </div>
       <h3 className="mb-4 mt-0 font-lms-heading text-xl font-bold text-lms-ink">Bài viết khác</h3>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5 pb-10">
         {more.map((m) => (
-          <div key={m.id} onClick={() => go('article', { article: m.id })} className={`lms-card lms-row cursor-pointer ${cardClass(16)} p-3.5!`}>
+          <Link key={m.id} href={ROUTES.blogPost(m.id)} className={`lms-card lms-row ${cardClass(16)} p-3.5! no-underline`}>
             <span className="mb-2 inline-block rounded-[5px] px-2 py-0.5 text-[10.5px] font-bold" style={{ background: hexA(coverHue(p, m.cover), 0.12), color: coverHue(p, m.cover) }}>{m.cat}</span>
             <div className="text-sm font-semibold leading-snug text-lms-ink">{m.title}</div>
             <div className="mt-2 text-[11.5px] text-lms-faint">{m.read} đọc</div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
   );
 }
 
-export function ABlog({ p, t, setRoute, go }) {
+export function ABlog({ p, t, setRoute }) {
   const [mode, setMode] = React.useState('list');
   const [editId, setEditId] = React.useState(null);
   const [title, setTitle] = React.useState('');
@@ -242,7 +260,9 @@ export function ABlog({ p, t, setRoute, go }) {
               <div className="my-2 text-[11.5px] text-lms-faint">{a.author} · {a.date} · 👁 {a.views ?? 0}</div>
               <div className="flex gap-2">
                 <Btn p={p} variant="ghost" size="sm" icon="pen" onClick={() => openCompose(a)}>Sửa</Btn>
-                <Btn p={p} variant="ghost" size="sm" icon="eye" onClick={() => go && go('article', { article: a.id })}>Xem</Btn>
+                <Link href={ROUTES.blogPost(a.id)} className="lms-btn inline-flex h-[34px] items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-3 text-[12.5px] font-semibold text-lms-ink no-underline">
+                  <Icon name="eye" size={15} stroke={p.sub} sw={1.9} /> Xem
+                </Link>
                 <div className="flex-1" />
                 <Tag p={p} color={p.ok}>Đã đăng</Tag>
               </div>

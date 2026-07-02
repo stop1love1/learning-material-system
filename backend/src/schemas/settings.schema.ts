@@ -178,6 +178,54 @@ export class Settings {
   @ApiProperty({ type: Object })
   seo: { title: string; description: string; keywords: string[]; ogImage: string | null };
 
+  // Nội dung các trang tĩnh trong footer (admin soạn ở Cài đặt → Trang nội dung).
+  // Mỗi trang: { title, content(HTML) }.
+  @Prop({
+    type: {
+      about: {
+        title: { type: String, default: 'Giới thiệu' },
+        content: {
+          type: String,
+          default:
+            '<p><strong>Vườn Văn</strong> là kho học liệu mở, miễn phí cho môn Tiếng Việt tiểu học (lớp 4–5). Ở đây tập hợp phiếu học tập, đề bài, ngữ liệu đọc, sơ đồ tư duy và bảng tiêu chí đánh giá được biên soạn bám sát chương trình GDPT 2018 (bộ Kết nối tri thức với cuộc sống).</p><p>Mọi tài liệu đều có thể đọc, luyện tập và tải về mà không cần đăng nhập. Chúng tôi mong muốn học liệu tốt đến được với mọi học sinh, phụ huynh và thầy cô.</p>',
+        },
+      },
+      guide: {
+        title: { type: String, default: 'Hướng dẫn sử dụng' },
+        content: {
+          type: String,
+          default:
+            '<p>Bạn có thể bắt đầu từ bốn khu vực chính:</p><ul><li><strong>Kho tài liệu</strong> — tìm và đọc tài liệu theo thư mục hoặc từ khoá; bấm “Tải về” để lưu bản trên Google Drive.</li><li><strong>Luyện tập</strong> — làm các bài trắc nghiệm; câu khách quan được chấm ngay, câu viết đoạn do giáo viên chấm.</li><li><strong>Tự đánh giá</strong> — dùng bảng tiêu chí (rubric) để tự chấm bài viết của mình.</li><li><strong>Bài viết</strong> — đọc các bài chia sẻ về phương pháp học Tiếng Việt.</li></ul>',
+        },
+      },
+      contact: {
+        title: { type: String, default: 'Liên hệ' },
+        content: {
+          type: String,
+          default:
+            '<p>Nếu bạn cần hỗ trợ, góp ý hoặc muốn chia sẻ học liệu, hãy liên hệ với chúng tôi qua thông tin bên dưới (cập nhật trong phần Cài đặt của quản trị viên).</p><p>Rất mong nhận được ý kiến đóng góp để Vườn Văn ngày càng hữu ích.</p>',
+        },
+      },
+      terms: {
+        title: { type: String, default: 'Điều khoản' },
+        content: {
+          type: String,
+          default:
+            '<p>Học liệu trên Vườn Văn được chia sẻ miễn phí cho mục đích học tập. Bạn có thể sử dụng, in và tải về cho việc dạy và học cá nhân.</p><p>Vui lòng ghi nguồn khi sử dụng lại và không dùng cho mục đích thương mại nếu chưa được cho phép. Một số tài liệu được dẫn từ Google Drive; bản quyền thuộc về tác giả gốc.</p>',
+        },
+      },
+    },
+    default: {},
+    _id: false,
+  })
+  @ApiProperty({ type: Object })
+  pages: {
+    about: { title: string; content: string };
+    guide: { title: string; content: string };
+    contact: { title: string; content: string };
+    terms: { title: string; content: string };
+  };
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

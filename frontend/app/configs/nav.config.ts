@@ -17,7 +17,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
       { key: 'assignments', icon: 'assign', label: 'Bài tập' },
       { key: 'rubrics', icon: 'rubric', label: 'Rubrics' },
       { key: 'a-blog', icon: 'docs', label: 'Bài viết' },
-      { key: 'grade', icon: 'grade', label: 'Chấm bài', badge: 19 },
+      { key: 'grade', icon: 'grade', label: 'Chấm bài' },
     ] },
     { group: 'QUẢN LÝ', items: [
       { key: 'a-users', icon: 'users', label: 'Người dùng' },

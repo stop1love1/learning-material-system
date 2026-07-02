@@ -4,11 +4,14 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Icon, IconBtn, Btn } from '@/app/components/ui';
+import { BrandLogo, useOrgBrand } from '@/app/components/Brand';
 import { NAV_BY_ROLE, PAGE_TITLES, ROLE_META } from '@/app/configs/nav.config';
 import { ROUTES, routeToHref, resolvePath } from '@/app/configs/routes.config';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { notificationsApi } from '@/app/lib/api';
+import { DB, useLMS } from '@/app/store/store';
+import { loadStats } from '@/app/lib/sync/load-stats';
 
 function timeAgoVi(iso?: string): string {
   if (!iso) return '';
@@ -57,7 +60,7 @@ function NotifyBell({ p }: { p: any }) {
 
   return (
     <div className="relative">
-      <IconBtn name="notify" p={p} badge={unread > 0 ? unread : null} onClick={() => setOpen((o) => !o)} title="Thông báo" />
+      <IconBtn name="notify" p={p} variant="filled" badge={unread > 0 ? unread : null} onClick={() => setOpen((o) => !o)} title="Thông báo" />
       {open && (
         <>
           <div onClick={() => setOpen(false)} className="fixed inset-0 z-40" />
@@ -106,23 +109,27 @@ function NotifyBell({ p }: { p: any }) {
 function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: string; onNavigate: () => void }) {
   const nav = NAV_BY_ROLE.admin;
   const compact = t.density === 'compact';
+  const brand = useOrgBrand();
+  useLMS();
+  // Live "chờ chấm" count for the grade nav badge (real data, not a mock number).
+  React.useEffect(() => { loadStats(); }, []);
+  const ungraded = Number(DB.ADMIN_STATS?.ungraded) || 0;
+  const badgeFor = (key: string): number | null => (key === 'grade' && ungraded > 0 ? ungraded : null);
   return (
     <aside
       className="lms-rail relative z-2 flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg"
       style={{ width: t.railWide ? 268 : 244 }}
     >
-      <Link
-        href={ROUTES.home}
-        onClick={onNavigate}
-        className={`flex cursor-pointer items-center gap-[11px] no-underline ${compact ? 'px-5 pt-[18px] pb-3.5' : 'p-[22px_22px_18px]'}`}
-      >
-        <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-lms-accent font-lms-heading text-lg font-bold tracking-[-0.5px] text-white">V</div>
-        <div>
-          <div className="font-lms-heading text-lg font-semibold leading-none text-lms-ink">Vườn Văn</div>
-          <div className="mt-[3px] font-mono text-[9.5px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
-        </div>
-      </Link>
-      <nav className="lms-scroll flex-1 overflow-y-auto px-3.5 pt-1">
+      <div className={`flex shrink-0 items-center border-b border-lms-line-soft ${compact ? 'h-14 px-5' : 'h-16 px-[22px]'}`}>
+        <Link href={ROUTES.dashboard} onClick={onNavigate} className="flex min-w-0 cursor-pointer items-center gap-[11px] no-underline" aria-label="Khu vực quản trị">
+          <BrandLogo className="h-[36px]! w-[36px]!" />
+          <div className="min-w-0">
+            <div className="truncate font-lms-heading text-[16px] font-bold leading-none text-lms-ink">{brand.name}</div>
+            <div className="mt-[3px] font-mono text-[9.5px] tracking-wide text-lms-faint">KHU VỰC QUẢN TRỊ</div>
+          </div>
+        </Link>
+      </div>
+      <nav className="lms-scroll flex-1 overflow-y-auto px-3 py-3">
         {nav.map((g, gi) => (
           <div key={gi} className={compact ? 'mb-2.5' : 'mb-3.5'}>
             <div className="px-3 pb-[7px] font-mono text-[9.5px] tracking-[1.3px] text-lms-faint">{g.group}</div>
@@ -133,15 +140,19 @@ function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: stri
                   key={it.key}
                   href={routeToHref(it.key)}
                   onClick={onNavigate}
+                  style={{ color: on ? p.accent : p.sub }}
                   className={`lms-nav-item relative mb-[3px] flex cursor-pointer items-center gap-[11px] rounded-[10px] no-underline text-[13.5px] ${
                     compact ? 'px-3 py-2' : 'px-3 py-[9px]'
-                  } ${on ? 'bg-lms-active-bg font-semibold text-lms-accent' : 'bg-transparent font-[450] text-lms-sub'}`}
+                  } ${on ? 'bg-lms-active-bg font-semibold' : 'bg-transparent font-[450]'}`}
                 >
                   <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} sw={1.7} />
                   <span className="flex-1">{it.label}</span>
-                  {it.badge != null && (
-                    <span className={`rounded-[20px] px-[7px] py-px font-mono text-[10.5px] font-semibold ${on ? 'bg-lms-accent-soft text-lms-accent' : 'bg-lms-sink text-lms-faint'}`}>{it.badge}</span>
-                  )}
+                  {(() => {
+                    const badge = badgeFor(it.key) ?? it.badge ?? null;
+                    return badge != null ? (
+                      <span className={`rounded-[20px] px-[7px] py-px font-mono text-[10.5px] font-semibold ${on ? 'bg-lms-accent-soft text-lms-accent' : 'bg-lms-sink text-lms-faint'}`}>{badge}</span>
+                    ) : null;
+                  })()}
                 </Link>
               );
             })}
@@ -166,7 +177,7 @@ function RoleSwitcher({ p }: { p: any }) {
     <div className="relative">
       <div
         onClick={() => setOpen((o) => !o)}
-        className="lms-btn flex cursor-pointer items-center gap-[11px] rounded-lg border border-lms-line bg-lms-surface py-[5px] pr-2.5 pl-1.5"
+        className="lms-btn flex cursor-pointer items-center gap-[11px] rounded-lg border-0 bg-lms-sink py-[5px] pr-2.5 pl-1.5"
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-lms-accent-soft font-lms-heading text-[15px] font-semibold text-lms-accent">{initials}</div>
         <div className="lms-hide-xs min-w-0">
@@ -287,7 +298,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <main className="relative z-1 flex min-w-0 flex-1 flex-col">
         <header className="lms-header flex h-16 shrink-0 items-center gap-4 border-b border-lms-line-soft bg-lms-surface px-7">
           <button
-            className="lms-hamburger lms-btn hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-lg border border-lms-line bg-lms-surface"
+            className="lms-hamburger lms-btn lms-row hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-lms-sink"
             onClick={() => setNavOpen(true)}
             aria-label="Menu"
           >
@@ -298,13 +309,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             <div className="lms-hide-xs mt-px text-xs text-lms-faint">{sub}</div>
           </div>
           <div className="flex-1" />
-          <div className="lms-hide-sm flex h-8 w-60 items-center gap-[9px] rounded-lg border border-lms-line bg-lms-surface px-[11px] text-lms-faint">
+          <div className="lms-hide-sm flex h-8 w-60 items-center gap-[9px] rounded-lg border-0 bg-lms-sink px-[11px] text-lms-faint">
             <Icon name="search" size={15} stroke={p.faint} />
             <span className="text-[13px]">Tìm kiếm…</span>
             <span className="ml-auto rounded border border-lms-line px-[5px] font-mono text-[10.5px]">⌘K</span>
           </div>
           <div className="flex gap-2">
-            <IconBtn name={dark ? 'sun' : 'moon'} p={p} onClick={() => setDark(!dark)} title="Chế độ sáng/tối" />
+            <IconBtn name={dark ? 'sun' : 'moon'} p={p} variant="filled" onClick={() => setDark(!dark)} title="Chế độ sáng/tối" />
             <NotifyBell p={p} />
           </div>
           <div className="lms-hide-sm h-7 w-px bg-lms-line-soft" />

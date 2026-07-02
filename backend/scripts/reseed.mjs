@@ -138,8 +138,10 @@ async function main() {
       });
       const id = created._id || created.question?._id;
       nQ++;
+      // Attach EVERY question of a phiếu to its quiz (incl. essay/viết-đoạn) so the
+      // online quiz matches the worksheet image exactly. Order follows content.json.
       const tag = (q.tags || []).find((t) => /^Phiếu /.test(t));
-      if (id && tag && q.type !== 'essay') {
+      if (id && tag) {
         if (!byPhieu.has(tag)) byPhieu.set(tag, []);
         byPhieu.get(tag).push(id);
       }
@@ -154,21 +156,23 @@ async function main() {
     catch (e) { console.log('  exercise ERR', ex.title, e.message); }
   }
 
-  // One quiz per phiếu — title/passage/grade come from content.json `quizzes`
-  // (transcribed verbatim from the real worksheets).
+  // One quiz per phiếu — every phiếu that has questions becomes a quiz (incl. the
+  // all-essay "Bài văn miêu tả cây cối"). Metadata (title/passage/grade) from
+  // content.json `quizzes` when present, else derived from the tag.
+  const quizMeta = new Map((C.quizzes || []).map((qz) => [qz.tag, qz]));
   let nQuiz = 0;
-  for (const qz of (C.quizzes || [])) {
-    const ids = byPhieu.get(qz.tag) || [];
-    if (!ids.length) { console.log('  quiz SKIP (no questions):', qz.tag); continue; }
+  for (const [tag, ids] of byPhieu) {
+    if (!ids.length) continue;
+    const qz = quizMeta.get(tag) || { title: tag, subject: 'Tiếng Việt', grade: 'Lớp 4–5', description: null };
     try {
       const exq = await api('POST', '/exercises', {
-        title: qz.title, description: qz.description || null, type: 'quiz',
+        title: qz.title || tag, description: qz.description || null, type: 'quiz',
         subject: qz.subject || 'Tiếng Việt', grade: qz.grade || 'Lớp 4–5',
         points: ids.length * 2, status: 'open',
       });
       for (let j = 0; j < ids.length; j++) await api('POST', `/exercises/${exq._id}/questions`, { questionId: ids[j], grades: 2, order: j });
       nQuiz++;
-    } catch (e) { console.log('  quiz ERR', qz.tag, e.message); }
+    } catch (e) { console.log('  quiz ERR', tag, e.message); }
   }
   console.log(`Exercises: ${nEx} đề bài (essay) + ${nQuiz} quiz (phiếu)`);
   console.log('RESEED COMPLETE');
