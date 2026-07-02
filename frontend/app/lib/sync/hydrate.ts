@@ -39,10 +39,26 @@ const BY_ROUTE: Record<string, Loader[]> = {
   notify: [loadNotifications],
 };
 
+// First-load tracking: screens read DB synchronously, so on a fresh page load
+// they'd render empty until the loaders finish. ScreenHost uses this to show a
+// loading state for the FIRST hydration of each route (later visits show the
+// already-loaded data and refresh silently).
+const hydratedOnce = new Set<string>();
+
+/** True from the very first render until the route's loaders complete once. */
+export function isFirstHydrating(routeKey?: string): boolean {
+  if (!routeKey) return false;
+  return !!BY_ROUTE[routeKey]?.length && !hydratedOnce.has(routeKey);
+}
+
 /** Load live collections for `routeKey` into DB, then bump subscribers. */
 export async function hydrateFor(routeKey?: string): Promise<void> {
   const loaders = routeKey ? BY_ROUTE[routeKey] : undefined;
   if (!loaders?.length) return;
-  await Promise.allSettled(loaders.map((l) => l()));
-  LMS.bump();
+  try {
+    await Promise.allSettled(loaders.map((l) => l()));
+  } finally {
+    hydratedOnce.add(routeKey!);
+    LMS.bump();
+  }
 }

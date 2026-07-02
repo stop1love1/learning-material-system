@@ -228,8 +228,8 @@ export function TDocs({ p, t, auth }) {
                     <span className={`absolute top-2.5 left-2.5 z-2 rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-[0_1px_3px_rgba(0,0,0,.12)] backdrop-blur-sm' : 'bg-transparent'}`}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
                   </div>
                   <div className="p-3.5">
-                    <div className="min-h-[34px] text-[13px] font-semibold leading-snug text-lms-ink">{d.name}</div>
-                    {d.desc && <div className="mt-[5px] max-h-[31px] overflow-hidden text-[11px] leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 100)}</div>}
+                    <div className="line-clamp-2 min-h-[34px] text-[13px] font-semibold wrap-break-word leading-snug text-lms-ink">{d.name}</div>
+                    {d.desc && <div className="mt-[5px] line-clamp-2 text-[11px] wrap-break-word leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 100)}</div>}
                     <div className="mt-2.5 flex items-center gap-3 font-mono text-[11px] text-lms-faint">
                       <span>👁 {d.views ?? 0}</span><span>↓ {d.downloads}</span>
                     </div>
@@ -254,8 +254,8 @@ export function TDocs({ p, t, auth }) {
                   <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-lms-accent-soft">
                     <Icon name={m.icon} size={18} stroke={p.accent} /></div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13.5px] font-semibold text-lms-ink">{d.name}</div>
-                    <div className="mt-0.5 font-mono text-[11px] text-lms-faint">{m.label} · {d.folder}</div>
+                    <div className="truncate text-[13.5px] font-semibold text-lms-ink">{d.name}</div>
+                    <div className="mt-0.5 truncate font-mono text-[11px] text-lms-faint">{m.label} · {d.folder}</div>
                   </div>
                   <div className="w-[110px] text-xs text-lms-sub">{d.updated}</div>
                   <div className="w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>

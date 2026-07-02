@@ -137,8 +137,8 @@ export function UserHome({ p, t, setRoute, go }) {
             <Tag p={p} color="#fff" soft={false} className="border border-white/50 text-white">HỌC LIỆU NỔI BẬT</Tag>
           </div>
           <div className="p-5">
-            <div className="font-lms-heading text-lg font-bold leading-snug text-lms-ink">{heroDoc.name}</div>
-            <div className="mt-2 text-[12.5px] text-lms-faint">{heroDoc.folder} · {heroDoc.size}</div>
+            <div className="line-clamp-2 font-lms-heading text-lg font-bold wrap-break-word leading-snug text-lms-ink">{heroDoc.name}</div>
+            <div className="mt-2 truncate text-[12.5px] text-lms-faint">{heroDoc.folder} · {heroDoc.size}</div>
           </div>
         </div>
         )}
@@ -780,8 +780,8 @@ export function SDocs({ p, t, go }) {
                   <span className={`absolute top-2.5 right-2.5 z-2 rounded-[7px] ${d.thumb ? 'bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.sub}>{d.folder}</Tag></span>
                 </div>
                 <div className="p-3.5">
-                  <div className="min-h-9 text-[13.5px] font-semibold leading-snug text-lms-ink">{d.name}</div>
-                  {d.desc && <div className="mt-1.5 max-h-[34px] overflow-hidden text-[11.5px] leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 110)}</div>}
+                  <div className="line-clamp-2 min-h-9 text-[13.5px] font-semibold wrap-break-word leading-snug text-lms-ink">{d.name}</div>
+                  {d.desc && <div className="mt-1.5 line-clamp-2 text-[11.5px] wrap-break-word leading-snug text-lms-sub">{stripHtml(d.desc).slice(0, 110)}</div>}
                   <div className="mt-3 flex items-center justify-between">
                     <span className="font-mono text-[11px] text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</span>
                     <Btn p={p} variant="soft" size="sm" iconRight="arrowRight" onClick={() => go && go('s-doc', { doc: d.id })}>Đọc</Btn>
@@ -854,7 +854,7 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
           <Icon name={m.icon} size={26} stroke={p.accent} /></div>
         <div className="min-w-0 flex-1">
           <div className="mb-1.5 flex gap-2"><Tag p={p} color={p.accent}>{m.label}</Tag><Tag p={p} color={p.sub}>{d.folder}</Tag></div>
-          <h2 className="m-0 font-lms-heading text-2xl font-bold leading-tight tracking-[-0.3px] text-lms-ink">{d.name}</h2>
+          <h2 className="m-0 font-lms-heading text-2xl font-bold wrap-break-word leading-tight tracking-[-0.3px] text-lms-ink">{d.name}</h2>
           <div className="mt-1.5 text-[12.5px] text-lms-faint">{d.by} · cập nhật {d.updated} · {d.size} · ↓ {d.downloads} lượt tải</div>
         </div>
         {(DB.DOWNLOADS || []).includes(d.id)
@@ -900,7 +900,7 @@ export function SDocReader({ p, t, ctx, setRoute, go }) {
                 <div key={r.id} onClick={() => go('s-doc', { doc: r.id })} className={`lms-card lms-row ${cardClass(20)} flex cursor-pointer items-center gap-3 p-3.5`}>
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-lms-accent-soft">
                     <Icon name={rm.icon} size={18} stroke={p.accent} /></div>
-                  <div className="min-w-0"><div className="text-[13px] font-semibold leading-snug text-lms-ink">{r.name}</div>
+                  <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold wrap-break-word leading-snug text-lms-ink">{r.name}</div>
                     <div className="mt-0.5 font-mono text-[10.5px] text-lms-faint">{rm.label}</div></div>
                 </div>
               );
@@ -1200,8 +1200,8 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
                   <span className="absolute top-2.5 left-2.5"><Tag p={p} color={p.ok}>Đã tải ✓</Tag></span>
                 </div>
                 <div className="p-3.5">
-                  <div className="min-h-[34px] text-[13px] font-semibold leading-snug text-lms-ink">{d.name}</div>
-                  <div className="mt-2.5 font-mono text-[11px] text-lms-faint">{d.folder} · {d.size}</div>
+                  <div className="line-clamp-2 min-h-[34px] text-[13px] font-semibold wrap-break-word leading-snug text-lms-ink">{d.name}</div>
+                  <div className="mt-2.5 truncate font-mono text-[11px] text-lms-faint">{d.folder} · {d.size}</div>
                 </div>
               </div>
             );
