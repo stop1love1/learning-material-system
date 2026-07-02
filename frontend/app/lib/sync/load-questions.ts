@@ -37,9 +37,11 @@ export async function loadQuestions(): Promise<void> {
 
     const topicMap: Record<string, string> = {};
     try {
-      const topics = (await topicsApi.list()) as any[];
-      (topics ?? []).forEach((tp: Record<string, any>) => { topicMap[String(tp._id)] = tp.title; });
-      DB.TOPIC_TREE = (topics ?? []).map((tp: Record<string, any>) => ({        id: String(tp._id),
+      const tres: any = await topicsApi.list();
+      const topics: any[] = Array.isArray(tres) ? tres : (tres?.records ?? []);
+      topics.forEach((tp: Record<string, any>) => { topicMap[String(tp._id)] = tp.title; });
+      DB.TOPIC_TREE = topics.map((tp: Record<string, any>) => ({
+        id: String(tp._id),
         name: tp.title,
         parentId: tp.parentId ? String(tp.parentId) : null,
       }));

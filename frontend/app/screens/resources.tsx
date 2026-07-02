@@ -186,7 +186,7 @@ export function TDocs({ p, t, auth }) {
   );
 
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-[210px_1fr] gap-[26px] px-[30px] pt-6 pb-10">
+    <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-[26px] px-[30px] lms-content-pad pt-6 pb-10 min-[961px]:grid-cols-[210px_1fr]">
       <aside>
         <Btn p={p} icon="plus" full onClick={openCompose}>Thêm tài liệu</Btn>
         <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">THƯ MỤC</div>
@@ -207,7 +207,7 @@ export function TDocs({ p, t, auth }) {
       </aside>
 
       <div>
-        <div className="mb-[18px] flex items-center gap-2.5">
+        <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
           <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" className="w-[260px]" />
           <GoogleDrivePicker p={p} onPicked={importDriveDocs} label="Google Drive" />
           <div className="flex-1" />
@@ -259,8 +259,8 @@ export function TDocs({ p, t, auth }) {
                     <div className="truncate text-[13.5px] font-semibold text-lms-ink">{d.name}</div>
                     <div className="mt-0.5 truncate font-mono text-[11px] text-lms-faint">{m.label} · {d.folder}</div>
                   </div>
-                  <div className="w-[110px] text-xs text-lms-sub">{d.updated}</div>
-                  <div className="w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>
+                  <div className="lms-hide-xs w-[110px] text-xs text-lms-sub">{d.updated}</div>
+                  <div className="lms-hide-xs w-[110px] whitespace-nowrap font-mono text-xs text-lms-faint">👁 {d.views ?? 0} · ↓ {d.downloads}</div>
                   <Btn p={p} variant="soft" size="sm" icon="download" onClick={() => doDownload(d.id)}>Tải</Btn>
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <IconBtn name="more" p={p} size={34} onClick={() => setMenuFor(menuFor === d.id ? null : d.id)} />
@@ -323,13 +323,13 @@ export function TRubrics({ p, t, setRoute, go }) {
   const [kw, setKw] = React.useState('');
   const k = kw.trim().toLowerCase();
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="mb-[22px] flex items-center gap-2.5">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+      <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
         <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="w-[260px]" />
         <div className="flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('rubric-edit')}>Tạo rubric</Btn>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(380px,1fr))] gap-5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-5">
         {DB.RUBRICS.filter((r) => !k || (r.name || '').toLowerCase().includes(k)).map((r) => (
           <div key={r.id} onClick={() => go('rubric-edit', { rubric: r.id })} className={`lms-card ${cardClass(24)} cursor-pointer`}>
             <div className="mb-3.5 flex items-start justify-between">
@@ -373,7 +373,7 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
   const delLevel = (i) => setRubric((r) => ({ ...r, scale: (r.scale || []).filter((_, j) => j !== i) }));
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[22px] pb-10">
       <div onClick={() => setRoute('rubrics')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Rubrics
       </div>
@@ -400,7 +400,7 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
         }}>Lưu rubric</Btn>
       </div>
 
-      <div className="mb-[22px] flex gap-3">
+      <div className="mb-[22px] flex flex-wrap gap-3">
         <div className={`${cardClass(16)} flex flex-1 items-center gap-3`}>
           <Ring value={totalW} size={48} thickness={6} p={p} color={totalW === 100 ? p.ok : p.warn} />
           <div><div className="text-[13px] font-semibold text-lms-ink">Tổng trọng số {totalW}%</div>

@@ -17,7 +17,6 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
       { key: 'assignments', icon: 'assign', label: 'Bài tập' },
       { key: 'rubrics', icon: 'rubric', label: 'Rubrics' },
       { key: 'a-blog', icon: 'docs', label: 'Bài viết' },
-      { key: 'grade', icon: 'grade', label: 'Chấm bài' },
     ] },
     { group: 'QUẢN LÝ', items: [
       { key: 'a-users', icon: 'users', label: 'Người dùng' },
@@ -33,7 +32,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
 // detail routes → which nav item lights up
 export const ROUTE_PARENT: Record<string, string> = {
   'bank-edit': 'bank', 'rubric-edit': 'rubrics',
-  'assign-new': 'assignments', 'grade-one': 'grade',
+  'assign-new': 'assignments', 'grade-one': 'assignments', grade: 'assignments',
   's-task': 's-tasks', 's-doc': 's-docs', article: 'blog',
 };
 

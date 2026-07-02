@@ -21,8 +21,10 @@ export class RubricService {
   async listRubrics(userId: string, dto: { keyword?: string; page?: number; pageSize?: number; groupId?: string }) {
     const { keyword, page, pageSize } = getPagination(dto.keyword, dto.page, dto.pageSize);
     const safeKeyword = parseKeyword(keyword);
+    // Public endpoint: anonymous/students get all rubrics (shared grading criteria);
+    // an authenticated owner still sees their own set.
     const query: Record<string, any> = {
-      userId: convertStringToObjectId(userId),
+      ...(userId ? { userId: convertStringToObjectId(userId) } : {}),
       ...(safeKeyword ? { name: { $regex: safeKeyword, $options: 'i' } } : {}),
       ...(dto.groupId ? { groupId: convertStringToObjectId(dto.groupId) } : {}),
     };

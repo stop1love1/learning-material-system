@@ -106,7 +106,7 @@ function NotifyBell({ p }: { p: any }) {
   );
 }
 
-function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: string; onNavigate: () => void }) {
+function Rail({ p, t, activeKey, open, onNavigate }: { p: any; t: any; activeKey: string; open: boolean; onNavigate: () => void }) {
   const nav = NAV_BY_ROLE.admin;
   const compact = t.density === 'compact';
   const brand = useOrgBrand();
@@ -114,10 +114,10 @@ function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: stri
   // Live "chờ chấm" count for the grade nav badge (real data, not a mock number).
   React.useEffect(() => { loadStats(); }, []);
   const ungraded = Number(DB.ADMIN_STATS?.ungraded) || 0;
-  const badgeFor = (key: string): number | null => (key === 'grade' && ungraded > 0 ? ungraded : null);
+  const badgeFor = (key: string): number | null => (key === 'assignments' && ungraded > 0 ? ungraded : null);
   return (
     <aside
-      className="lms-rail relative z-2 flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg"
+      className={'lms-rail relative z-2 flex h-full shrink-0 flex-col border-r border-lms-line-soft bg-lms-rail-bg' + (open ? ' is-open' : '')}
       style={{ width: t.railWide ? 268 : 244 }}
     >
       <div className={`flex shrink-0 items-center border-b border-lms-line-soft ${compact ? 'h-14 px-5' : 'h-16 px-[22px]'}`}>
@@ -140,10 +140,10 @@ function Rail({ p, t, activeKey, onNavigate }: { p: any; t: any; activeKey: stri
                   key={it.key}
                   href={routeToHref(it.key)}
                   onClick={onNavigate}
-                  style={{ color: on ? p.accent : p.sub }}
+                  style={{ color: on ? p.accent : p.sub, background: on ? p.accentSoft : undefined }}
                   className={`lms-nav-item relative mb-[3px] flex cursor-pointer items-center gap-[11px] rounded-[10px] no-underline text-[13.5px] ${
                     compact ? 'px-3 py-2' : 'px-3 py-[9px]'
-                  } ${on ? 'bg-lms-active-bg font-semibold' : 'bg-transparent font-[450]'}`}
+                  } ${on ? 'font-semibold' : 'font-[450]'}`}
                 >
                   <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} sw={1.7} />
                   <span className="flex-1">{it.label}</span>
@@ -292,10 +292,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <div className="lms-shell relative flex h-dvh w-full overflow-hidden bg-lms-bg font-sans text-lms-ink">
       <div className={'lms-rail-backdrop' + (navOpen ? ' is-open' : '')} onClick={() => setNavOpen(false)} />
-      <div className={navOpen ? 'is-open-wrap fixed inset-0 z-70' : ''}>
-        <Rail p={p} t={t} activeKey={navKey} onNavigate={() => setNavOpen(false)} />
-      </div>
-      <main className="relative z-1 flex min-w-0 flex-1 flex-col">
+      <Rail p={p} t={t} activeKey={navKey} open={navOpen} onNavigate={() => setNavOpen(false)} />
+      <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="lms-header flex h-16 shrink-0 items-center gap-4 border-b border-lms-line-soft bg-lms-surface px-7">
           <button
             className="lms-hamburger lms-btn lms-row hidden h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-lms-sink"
@@ -321,7 +319,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="lms-hide-sm h-7 w-px bg-lms-line-soft" />
           <RoleSwitcher p={p} />
         </header>
-        <div className="lms-scroll flex-1 overflow-y-auto">{children}</div>
+        <div className="lms-scroll lms-page-scroll flex-1 overflow-y-auto">{children}</div>
       </main>
     </div>
   );

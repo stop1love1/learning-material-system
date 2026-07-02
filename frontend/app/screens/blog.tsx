@@ -13,6 +13,7 @@ import { Pagination } from '@/app/components/Pagination';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapArticle } from '@/app/lib/sync/load-articles';
 import { ROUTES } from '@/app/configs/routes.config';
+import { withKeyword } from '@/app/helpers/related-href';
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -56,7 +57,7 @@ export function SBlog({ p, t }) {
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-9 pb-2">
       <div className="reveal mb-2">
         <div className="mb-2 font-mono text-[11.5px] tracking-wide text-lms-accent">BLOG · CHIA SẺ HỌC THUẬT</div>
-        <h1 className="m-0 font-lms-heading text-[34px] font-extrabold tracking-[-0.8px] text-lms-ink">Bài viết & mẹo học tập</h1>
+        <h1 className="m-0 font-lms-heading text-[clamp(24px,6vw,34px)] font-extrabold tracking-[-0.8px] text-lms-ink">Bài viết & mẹo học tập</h1>
         <p className="mt-2.5 mb-0 w-full text-[15px] leading-relaxed text-lms-sub">
           Những bài viết về phương pháp học tập và kỹ năng học tốt các môn — do thầy cô biên soạn chia sẻ.
         </p>
@@ -75,7 +76,7 @@ export function SBlog({ p, t }) {
       ) : (
       <>
       {lead && (
-        <Link href={ROUTES.blogPost(lead.id)} className="reveal bento-tile hovlift mb-[22px] grid grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface no-underline">
+        <Link href={ROUTES.blogPost(lead.id)} className="reveal bento-tile hovlift mb-[22px] grid grid-cols-1 min-[720px]:grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface no-underline">
           <div className="flex min-h-[240px] items-end p-[22px]" style={{ background: `linear-gradient(135deg, ${coverHue(p, lead.cover)}, ${hexA(coverHue(p, lead.cover), 0.55)})` }}>
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-[11.5px] font-bold" style={{ color: coverHue(p, lead.cover) }}>{lead.cat}</span>
           </div>
@@ -92,7 +93,7 @@ export function SBlog({ p, t }) {
         </Link>
       )}
 
-      <div className="reveal grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px] pb-10">
+      <div className="lms-stagger reveal grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px] pb-10">
         {rest.map((a) => (
           <Link key={a.id} href={ROUTES.blogPost(a.id)} className="bento-tile hovlift overflow-hidden border border-lms-line bg-lms-surface no-underline">
             <div className="flex h-[132px] items-end p-3.5" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>
@@ -132,13 +133,16 @@ export function SArticle({ p, t, ctx }) {
   );
   const hue = coverHue(p, a.cover);
   const more = DB.ARTICLES.filter((x) => x.id !== a.id).slice(0, 3);
+  // "Liên quan" = lọc trang đích theo tag của bài viết (fallback: chuyên mục),
+  // qua ?q= mà usePagedResource tự đọc — thay vì mở full danh sách.
+  const relatedKw = (Array.isArray(a.tags) && a.tags[0]) || a.cat || '';
   return (
     <div className="lms-content-pad mx-auto max-w-[760px] px-[30px] pt-7 pb-2">
       <Link href={ROUTES.blog} className="lms-link mb-5 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Blog
       </Link>
       <span className="mb-3.5 inline-block rounded-md px-[11px] py-1 text-xs font-bold" style={{ background: hexA(hue, 0.12), color: hue }}>{a.cat}</span>
-      <h1 className="m-0 font-lms-heading text-[34px] font-extrabold leading-[1.18] tracking-[-0.8px] text-lms-ink">{a.title}</h1>
+      <h1 className="m-0 font-lms-heading text-[clamp(24px,6vw,34px)] font-extrabold leading-[1.18] tracking-[-0.8px] text-lms-ink">{a.title}</h1>
       <div className="my-5 flex items-center gap-[11px]">
         <Avatar name={a.author} p={p} size={42} accent />
         <div><div className="text-[13.5px] font-semibold text-lms-ink">{a.author}</div>
@@ -152,11 +156,11 @@ export function SArticle({ p, t, ctx }) {
               <p key={i} className="mb-5 mt-0 text-[16.5px] leading-[1.95] text-pretty text-lms-ink">{para}</p>
             ))}
           </div>}
-      <div className="my-2 flex gap-2.5 border-y border-lms-line py-[22px]">
-        <Link href={ROUTES.library} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
+      <div className="my-2 flex flex-wrap gap-2.5 border-y border-lms-line py-[22px]">
+        <Link href={withKeyword(ROUTES.library, relatedKw)} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
           <Icon name="book" size={16} stroke={p.accent} sw={1.9} /> Xem học liệu liên quan
         </Link>
-        <Link href={ROUTES.practice} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
+        <Link href={withKeyword(ROUTES.practice, relatedKw)} className="lms-btn inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
           <Icon name="assign" size={16} stroke={p.sub} sw={1.9} /> Luyện bài tập
         </Link>
       </div>
@@ -192,11 +196,11 @@ export function ABlog({ p, t, setRoute }) {
 
   if (mode === 'compose') {
     return (
-      <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+      <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
         <div onClick={() => setMode('list')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
           <Icon name="arrowLeft" size={16} stroke={p.sub} /> Quản lý bài viết
         </div>
-        <div className="grid grid-cols-[1.5fr_1fr] items-start gap-6">
+        <div className="grid grid-cols-1 items-start gap-6 min-[961px]:grid-cols-[1.5fr_1fr]">
           <section className={cardClass(24)}>
             <label className={lblClass()}>TIÊU ĐỀ</label>
             <Field p={p} value={title} onChange={setTitle} placeholder="vd: Cách giúp con viết mở bài tả con vật" className="mt-2 mb-[18px]" />
@@ -243,13 +247,12 @@ export function ABlog({ p, t, setRoute }) {
   }
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm bài viết…" className="w-[280px]" />
-        <div className="flex-1" />
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="mb-[22px] flex items-center gap-2.5">
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm bài viết…" className="min-w-0 flex-1" />
         <Btn p={p} icon="plus" onClick={() => openCompose(null)}>Viết bài mới</Btn>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+      <div className="lms-stagger grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {DB.ARTICLES.filter((a) => { const k = kw.trim().toLowerCase(); return !k || (a.title || '').toLowerCase().includes(k) || (a.cat || '').toLowerCase().includes(k); }).map((a) => (
           <div key={a.id} className={`lms-card overflow-hidden ${cardClass(16)} p-0!`}>
             <div className="flex h-[90px] items-end p-3" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>

@@ -7,6 +7,7 @@ import { DB } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
 import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
 import { refreshOrgBrand } from '@/app/components/Brand';
+import { refreshGoogleConfig } from '@/app/lib/google-config';
 import { promptDialog, confirmDialog, toastSuccess, toastError, notifySuccess } from '@/app/lib/ui/dialogs';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { downloadCsv, downloadJson } from '@/app/helpers/export';
@@ -65,7 +66,7 @@ export function AOverview({ p, t }) {
     ? [0, 0.25, 0.5, 0.75, 1].map((f) => fmtMd(dates[Math.round(f * (dates.length - 1))]))
     : ['01/06', '08/06', '15/06', '22/06', '30/06'];
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pb-10 pt-[30px]">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-[30px]">
       <h2 className="mb-1.5 mt-0 font-lms-heading text-[30px] font-medium tracking-tight text-lms-ink">
         Toàn cảnh <span className="text-lms-accent">hệ thống</span>
       </h2>
@@ -84,7 +85,7 @@ export function AOverview({ p, t }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-[1.6fr_1fr] items-start gap-[22px]">
+      <div className="grid grid-cols-1 items-start gap-[22px] min-[961px]:grid-cols-[1.6fr_1fr]">
         <section className={`${cardClass(20)} p-[22px]!`}>
           <div className="mb-[18px] flex items-start justify-between">
             <div>
@@ -184,7 +185,7 @@ export function AUsers({ p, t }) {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pb-10 pt-6">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-6">
       <div className="mb-5 grid grid-cols-2 gap-4">
         {counts.map(([r, ic, col, v]) => (
           <div key={r} className={`${cardClass(16)} p-[18px]! flex items-center gap-3.5`}>
@@ -378,7 +379,7 @@ export function AReports({ p, t }) {
   ).map((b) => ({ ...b, color: p.accent }));
   const maxBar = Math.max(10, ...bars.map((b) => b.value));
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pb-10 pt-6">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-6">
       <div className="grid grid-cols-2 gap-[22px]">
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Lượt làm bài theo ngày</h3>
@@ -445,7 +446,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [academic, setAcademic] = React.useState({ scoreScale: 10, passThreshold: 5, rounding: 'half', allowResubmit: true, showScoreImmediately: true });
   const [security, setSecurity] = React.useState({ twoFactor: true, passwordRotationDays: 0, lockoutThreshold: 5, allowSelfRegister: true, ssoEnabled: true });
   const [notifications, setNotifications] = React.useState({ emailOnSubmit: true, remindUngraded: true, weeklyDigest: false });
-  const [integration, setIntegration] = React.useState({ smtpHost: '', smtpPort: 587, smtpUser: '', smtpFrom: '', storageProvider: 's3', apiKey: '' });
+  const [integration, setIntegration] = React.useState({ smtpHost: '', smtpPort: 587, smtpUser: '', smtpFrom: '', storageProvider: 's3', apiKey: '', googleClientId: '', googleApiKey: '' });
   const [data, setData] = React.useState({ autoBackup: true, backupFrequency: 'daily', encryptBackups: true });
   const [restoring, setRestoring] = React.useState(false);
   const restoreInputRef = React.useRef(null);
@@ -486,6 +487,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     try {
       await settingsApi.update(group);
       if (group && group.org) refreshOrgBrand(); // logo/name changed → refresh chrome
+      if (group && group.integration) refreshGoogleConfig(); // Google keys changed → refresh picker
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -623,7 +625,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     </div>
   );
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-6 px-[30px] pb-10 pt-6">
+    <div className="mx-auto grid max-w-[1480px] grid-cols-1 items-start gap-6 px-[30px] lms-content-pad pb-10 pt-6 min-[961px]:grid-cols-[230px_1fr]">
       <aside className={`${cardClass(16)} p-2! sticky top-0`}>
         {SECTIONS.map((s) => {
           const on = sec === s.id;
@@ -763,7 +765,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
         {sec === 'academic' && (
           <section className={cardClass(24)}>
             <H desc="Quy định chấm điểm & đánh giá áp dụng toàn hệ thống.">Cấu hình đánh giá</H>
-            <div className="mb-[18px] grid grid-cols-3 gap-4">
+            <div className="mb-[18px] grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div><label className={lblClass()}>THANG ĐIỂM</label><Select p={p} value={String(academic.scoreScale)} onChange={(v) => setAcademic((o) => ({ ...o, scoreScale: parseInt(v, 10) || 10 }))} className="mt-2" options={[{ value: '10', label: 'Hệ 10' }, { value: '100', label: 'Hệ 100' }]} /></div>
               <div><label className={lblClass()}>ĐIỂM ĐẠT TỐI THIỂU</label><Field p={p} value={String(academic.passThreshold)} onChange={(v) => setAcademic((o) => ({ ...o, passThreshold: parseFloat(v.replace(',', '.')) || 0 }))} mono className="mt-2" /></div>
               <div><label className={lblClass()}>LÀM TRÒN</label><Select p={p} value={academic.rounding} onChange={(v) => setAcademic((o) => ({ ...o, rounding: v }))} className="mt-2" options={[{ value: 'none', label: 'Không' }, { value: 'half', label: 'Đến 0,5' }, { value: 'integer', label: 'Số nguyên' }]} /></div>
@@ -803,7 +805,15 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
               <Field p={p} value={integration.apiKey || ''} onChange={(v) => setIntegration((o) => ({ ...o, apiKey: v }))} placeholder="(chưa tạo)" mono className="flex-1" />
               <Btn p={p} variant="ghost" icon="copy" onClick={regenApiKey}>Tạo lại</Btn>
             </div>
-            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, apiKey: integration.apiKey } })} />
+            <div className="mt-6 border-t border-lms-line-soft pt-5">
+              <div className="mb-1 text-[13.5px] font-semibold text-lms-ink">Google (Đăng nhập &amp; Drive Picker)</div>
+              <p className="mb-3.5 mt-0 text-[12.5px] leading-relaxed text-lms-sub">Client ID + API Key dùng cho nút “Kéo từ Google Drive” và đăng nhập Google. Lưu ở đây thì không cần build lại; để trống sẽ dùng biến môi trường NEXT_PUBLIC_GOOGLE_*.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className={lblClass()}>GOOGLE CLIENT ID</label><Field p={p} value={integration.googleClientId || ''} onChange={(v) => setIntegration((o) => ({ ...o, googleClientId: v }))} placeholder="…apps.googleusercontent.com" mono className="mt-2" /></div>
+                <div><label className={lblClass()}>GOOGLE API KEY</label><Field p={p} value={integration.googleApiKey || ''} onChange={(v) => setIntegration((o) => ({ ...o, googleApiKey: v }))} placeholder="AIza…" mono className="mt-2" /></div>
+              </div>
+            </div>
+            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, apiKey: integration.apiKey, googleClientId: integration.googleClientId, googleApiKey: integration.googleApiKey } })} />
           </section>
         )}
 

@@ -12,7 +12,7 @@ export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
   useLMS();
   const items: any[] = DB.NOTICES || [];
   return (
-    <div className="mx-auto max-w-[760px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-[760px] px-[30px] pt-6 pb-10">
       <div className={`${cardClass(16)} p-2!`}>
         {items.length === 0 && (
           <div className="px-4 py-7 text-center text-[13.5px] text-lms-faint">Chưa có hoạt động nào.</div>
@@ -86,12 +86,12 @@ export function SettingsScreen({ p, t }: { p: Palette; t: Tweaks }) {
   const profEmail = me?.email || '—';
   const profRole = ROLE_VI[me?.role] || '';
   return (
-    <div className="mx-auto max-w-[760px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-[760px] px-[30px] pt-6 pb-10">
       <section className={`mb-5 ${cardClass(24)}`}>
         <h3 className="mb-[18px] mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Hồ sơ</h3>
         {editing ? (
           <div className="flex flex-col gap-3.5">
-            <div className="grid grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div><label className={lblClass()}>HỌ TÊN</label><Field p={p} value={form.name} onChange={(v) => setForm((o) => ({ ...o, name: v }))} className="mt-2" /></div>
               <div><label className={lblClass()}>EMAIL</label><Field p={p} value={form.email} onChange={(v) => setForm((o) => ({ ...o, email: v }))} mono className="mt-2" /></div>
             </div>

@@ -6,7 +6,7 @@ import mongoose, { HydratedDocument, Model, Types } from 'mongoose';
 export type ExerciseFolderDocument = HydratedDocument<ExerciseFolder>;
 
 /**
- * Thư mục cây cho "Bài tập" + "Kho đề thi" (cùng một cây). Phân cấp theo
+ * Thư mục cây cho "Bài tập" (kho bài tập). Phân cấp theo
  * materialized-path (ancestors + depth) — mô phỏng `library/folder.schema`.
  */
 @Schema({ collection: 'exercise_folders', timestamps: true, versionKey: false })

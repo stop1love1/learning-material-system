@@ -175,7 +175,127 @@ async function main() {
     } catch (e) { console.log('  quiz ERR', tag, e.message); }
   }
   console.log(`Exercises: ${nEx} đề bài (essay) + ${nQuiz} quiz (phiếu)`);
+
+  // ── 5. Gán rubric cho câu/bài tự luận theo nội dung (grading + tự đánh giá dùng đúng
+  //       rubric của bài viết). Dùng mongoose trực tiếp (API không có endpoint này). ──
+  await assignWritingRubrics();
+
   console.log('RESEED COMPLETE');
+}
+
+async function assignWritingRubrics() {
+  await mongoose.connect(MONGODB_URI);
+  const db = mongoose.connection.db;
+  const R = {};
+  for (const r of await db.collection('rubrics').find({}, { projection: { name: 1 } }).toArray()) {
+    const n = r.name.toLowerCase();
+    if (n.includes('tả cảnh')) R.taCanh = r._id;
+    else if (n.includes('nêu tình cảm')) R.neuTinhCam = r._id;
+    else if (n.includes('thuật lại')) R.thuatViec = r._id;
+    else if (n.includes('kể lại')) R.keChuyen = r._id;
+  }
+  const match = (t) => {
+    t = (t || '').toLowerCase();
+    if (/kể lại (một )?câu chuyện|tưởng tượng dựa vào|ý kiến.{0,20}câu chuyện|thích (một )?câu chuyện|đóng vai.{0,20}kể/.test(t)) return R.keChuyen;
+    if (/thuật lại (một )?sự việc|cảm xúc.{0,10}một sự việc|thuật lại (một )?hoạt động/.test(t)) return R.thuatViec;
+    if (/tình cảm, cảm xúc về nhân vật|nhân vật (văn học|trong)|giới thiệu nhân vật|tình cảm.{0,20}(nhân vật|bài thơ|người thân)|cảm xúc về.{0,20}(bài thơ|người thân|nhân vật)/.test(t)) return R.neuTinhCam;
+    if (/miêu tả cảnh|tả cảnh|bài văn miêu tả (cảnh|con vật|cây cối|người)|đoạn văn.{0,20}miêu tả|viết.{0,15}văn.{0,15}miêu tả/.test(t)) return R.taCanh;
+    return null;
+  };
+  const isFull = (t) => /viết (đoạn văn|bài văn|\d+\s*[-–]?\s*\d*\s*câu (miêu tả|kể|thuật|nêu))/.test((t || '').toLowerCase()) || /miêu tả .{0,30} bằng câu mở đoạn/.test((t || '').toLowerCase());
+  let nEq = 0, nEx = 0;
+  for (const eq of await db.collection('essay-questions').find({}).toArray()) {
+    const q = await db.collection('questions').findOne({ _id: eq.questionId }, { projection: { content: 1 } });
+    const rid = isFull(q?.content) ? match(q?.content) : null;
+    if (rid) { await db.collection('essay-questions').updateOne({ _id: eq._id }, { $set: { rubricId: rid, gradingType: 'rubric' } }); nEq++; }
+  }
+  for (const e of await db.collection('exercises').find({ type: 'essay' }).toArray()) {
+    const rid = match(e.title);
+    if (rid) { await db.collection('exercises').updateOne({ _id: e._id }, { $set: { rubricId: rid } }); nEx++; }
+  }
+  console.log(`Rubric gán: ${nEx} đề bài + ${nEq} câu tự luận`);
+
+  // Chủ đề: phân loại câu hỏi theo 4 dạng bài viết (không theo từng phiếu) — mỗi phiếu
+  // ánh xạ về một dạng văn để ngân hàng câu hỏi gọn và có ý nghĩa với giáo viên.
+  //   Phiếu 1-4 → thuật lại sự việc · 5-8 → kể lại câu chuyện
+  //   Phiếu 9-14 (+ tag "cây cối") → miêu tả cây cối · 15-18 → miêu tả con vật
+  const owner = (await db.collection('questions').findOne({}, { projection: { userId: 1 } }))?.userId;
+  if (owner) {
+    const now = new Date();
+    const CONTENT_TOPICS = [
+      'Văn thuật lại một sự việc',
+      'Văn kể lại một câu chuyện',
+      'Văn miêu tả cây cối',
+      'Văn miêu tả con vật',
+    ];
+    const topicFor = (tag) => {
+      if (!tag) return null;
+      if (/cây cối/i.test(tag)) return 'Văn miêu tả cây cối';
+      const n = parseInt((tag.match(/\d+/) || [0])[0]);
+      if (n >= 1 && n <= 4) return 'Văn thuật lại một sự việc';
+      if (n >= 5 && n <= 8) return 'Văn kể lại một câu chuyện';
+      if (n >= 9 && n <= 14) return 'Văn miêu tả cây cối';
+      if (n >= 15 && n <= 18) return 'Văn miêu tả con vật';
+      return null;
+    };
+    const topicId = {};
+    for (const title of CONTENT_TOPICS) {
+      let t = await db.collection('topics').findOne({ title, userId: owner });
+      if (!t) { const r = await db.collection('topics').insertOne({ userId: owner, title, description: null, parentId: null, ancestors: [], depth: 0, createdAt: now, updatedAt: now }); t = { _id: r.insertedId }; }
+      topicId[title] = t._id;
+    }
+    let nT = 0;
+    for (const q of await db.collection('questions').find({}, { projection: { tags: 1 } }).toArray()) {
+      const tag = (q.tags || []).find((x) => /^Phiếu/.test(x));
+      const title = topicFor(tag);
+      if (title && topicId[title]) { await db.collection('questions').updateOne({ _id: q._id }, { $set: { topicId: topicId[title] } }); nT++; }
+    }
+    console.log(`Chủ đề: ${CONTENT_TOPICS.length} chủ đề · gán ${nT} câu`);
+  }
+
+  // Chủ đề Bài tập: 6 thư mục theo kiểu bài viết, gán mỗi exercise vào đúng kiểu.
+  //   quiz (phiếu) theo số: 1-4 thuật lại · 5-8 kể chuyện · 9-18 (+ "cây cối") miêu tả
+  //   essay theo tiêu đề (thuật lại / kể chuyện / miêu tả / nêu ý kiến / cảm xúc / viết thư)
+  const exOwner = (await db.collection('exercises').findOne({}, { projection: { userId: 1 } }))?.userId;
+  if (exOwner) {
+    const now2 = new Date();
+    const EX_FOLDERS = [
+      'Văn kể chuyện', 'Văn miêu tả', 'Văn thuật lại sự việc',
+      'Đoạn văn nêu tình cảm, cảm xúc', 'Đoạn văn nêu ý kiến', 'Viết thư',
+    ];
+    const folderFor = (title, type) => {
+      const t = title || '';
+      if (type === 'quiz') {
+        if (/cây cối/i.test(t)) return 'Văn miêu tả';
+        const n = parseInt((t.match(/\d+/) || [0])[0]);
+        if (n >= 1 && n <= 4) return 'Văn thuật lại sự việc';
+        if (n >= 5 && n <= 8) return 'Văn kể chuyện';
+        if (n >= 9 && n <= 18) return 'Văn miêu tả';
+        return null;
+      }
+      if (/thuật lại/i.test(t)) return 'Văn thuật lại sự việc';
+      if (/kể lại .*câu chuyện|tưởng tượng|giới thiệu nhân vật/i.test(t)) return 'Văn kể chuyện';
+      if (/miêu tả|tả (cây|con vật|cảnh|người)/i.test(t)) return 'Văn miêu tả';
+      if (/nêu ý kiến/i.test(t)) return 'Đoạn văn nêu ý kiến';
+      if (/tình cảm|cảm xúc/i.test(t)) return 'Đoạn văn nêu tình cảm, cảm xúc';
+      if (/viết thư/i.test(t)) return 'Viết thư';
+      return null;
+    };
+    const exFolderId = {};
+    for (const name of EX_FOLDERS) {
+      let f = await db.collection('exercise_folders').findOne({ name, userId: exOwner });
+      if (!f) { const r = await db.collection('exercise_folders').insertOne({ name, parentId: null, ancestors: [], depth: 0, userId: exOwner, createdAt: now2, updatedAt: now2 }); f = { _id: r.insertedId }; }
+      exFolderId[name] = f._id;
+    }
+    let nExF = 0;
+    for (const e of await db.collection('exercises').find({}, { projection: { title: 1, type: 1 } }).toArray()) {
+      const name = folderFor(e.title, e.type);
+      if (name && exFolderId[name]) { await db.collection('exercises').updateOne({ _id: e._id }, { $set: { folderId: exFolderId[name] } }); nExF++; }
+    }
+    console.log(`Chủ đề bài tập: ${EX_FOLDERS.length} thư mục · gán ${nExF} bài`);
+  }
+
+  await mongoose.disconnect();
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error('FATAL', e); process.exit(1); });

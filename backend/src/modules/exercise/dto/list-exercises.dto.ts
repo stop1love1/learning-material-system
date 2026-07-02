@@ -28,4 +28,14 @@ export class ListExercisesDto extends PaginationQueryDto {
   @IsString()
   @ApiPropertyOptional({ type: String, description: 'Lọc theo thư mục (folderId). Bỏ trống = tất cả.' })
   folderId?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ type: String, description: 'date|points|name' })
+  sortBy?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ type: String, enum: ['asc', 'desc'] })
+  order?: string;
 }

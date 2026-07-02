@@ -10,6 +10,7 @@ export function mapArticle(a: Record<string, any>): Record<string, any> {
     title: a.title,
     excerpt: a.excerpt ?? '',
     cat: a.category ?? '',
+    tags: Array.isArray(a.tags) ? a.tags : [],
     author: a.userId?.name ?? '—',
     date: formatDateVi(a.createdAt),
     read: (a.readMinutes ?? 4) + ' phút',

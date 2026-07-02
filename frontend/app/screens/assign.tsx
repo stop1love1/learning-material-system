@@ -83,12 +83,13 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
           selectedId={selFolder}
           onSelect={onSelectFolder}
           p={p}
-          allLabel="Tất cả bài tập / đề thi"
+          allLabel="Tất cả bài tập"
           allCount={paged.total}
           onAddRoot={canManage ? onAddRoot : undefined}
           onAddChild={canManage ? onAddChild : undefined}
           onRename={canManage ? onRename : undefined}
           onDelete={canManage ? onDelete : undefined}
+          entityLabel="chủ đề"
         />
       </aside>
       <div className="min-w-0 flex-1">
@@ -97,6 +98,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
         <FilterSelect label="HÌNH THỨC" p={p} value={paged.filters.type} options={EX_TYPE_OPTS} onChange={(v) => paged.setFilter('type', v)} />
         <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={EX_STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
         <div className="flex-1" />
+        <Btn p={p} variant="ghost" icon="grade" onClick={() => setRoute('grade')}>Hàng chờ chấm</Btn>
         <Btn p={p} icon="plus" onClick={() => setRoute('assign-new')}>Giao bài tập</Btn>
       </div>
       {loading ? (
@@ -116,7 +118,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
                 <Icon name="assign" size={21} stroke={tone} /></div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[15px] font-semibold text-lms-ink">{a.title}</span>
+                  <span className="min-w-0 truncate text-[15px] font-semibold text-lms-ink">{a.title}</span>
                   {a.rubric && <Tag p={p} color={p.accent}>Rubric</Tag>}
                 </div>
                 <div className="mt-[5px] flex flex-wrap gap-3 text-[12.5px] text-lms-sub">
@@ -124,7 +126,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
                   <span className={`font-mono ${toneText}`}>· {a.dueIn}</span>
                 </div>
               </div>
-              <div className="w-[150px]">
+              <div className="lms-hide-xs w-[150px]">
                 <div className="mb-[5px] flex justify-between text-[11px] text-lms-faint">
                   <span>Đã chấm {a.graded}/{a.submitted}</span><span className="font-mono">{pct}%</span>
                 </div>
@@ -224,7 +226,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
       <label className={lblClass()}>TIÊU ĐỀ</label>
       <Field p={p} value={title} onChange={setTitle} placeholder="vd: Trắc nghiệm đọc hiểu — Dế Mèn bênh vực kẻ yếu" className="mt-2 mb-[18px]" />
       <div className="mb-[18px]">
-        <label className={lblClass()}>THƯ MỤC (Kho đề thi)</label>
+        <label className={lblClass()}>CHỦ ĐỀ</label>
         <Select p={p} value={folder} onChange={setFolder} className="mt-2"
           options={[{ value: '', label: 'Không xếp vào thư mục' }, ...exFolders.map((f) => ({ value: f.id, label: f.name }))]} />
       </div>
@@ -289,12 +291,12 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const StepSettings = (
     <section className={`${cardClass(24)} mb-5`}>
       <h3 className="mb-[18px] m-0 font-lms-heading text-[19px] font-medium text-lms-ink">Cài đặt & giao bài</h3>
-      <div className="mb-[18px] grid grid-cols-2 gap-4">
+      <div className="mb-[18px] grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div><label className={lblClass()}>HẠN NỘP</label>
           <div className="mt-2 flex h-10 items-center gap-2.5 rounded-[10px] border border-lms-line bg-lms-surface px-[13px]">
             <Icon name="calendar" size={16} stroke={p.faint} />
             <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)}
-              className="flex-1 border-none bg-transparent text-sm text-lms-ink outline-none" />
+              className="min-w-0 flex-1 border-none bg-transparent text-sm text-lms-ink outline-none" />
           </div></div>
         <div><label className={lblClass()}>ĐIỂM TỐI ĐA</label>
           <div className="mt-2 flex h-10 items-center gap-2.5 rounded-[10px] border border-lms-line bg-lms-surface px-[13px]">

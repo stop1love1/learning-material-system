@@ -20,7 +20,7 @@ export class ExerciseFoldersController {
 
   @Get()
   @Public()
-  @ApiOperation({ summary: 'Danh sách thư mục bài tập/đề thi theo parentId (null = gốc)' })
+  @ApiOperation({ summary: 'Danh sách thư mục bài tập theo parentId (null = gốc)' })
   list(@Query() dto: ListExerciseFoldersDto) {
     return this.foldersService.list(dto);
   }

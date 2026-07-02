@@ -245,7 +245,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
         </div>
       </div>
 
-      <div className={`grid min-h-0 flex-1 ${t.railWide ? 'grid-cols-[240px_minmax(0,1fr)]' : 'grid-cols-[216px_minmax(0,1fr)]'}`}>
+      <div className={`grid grid-cols-1 min-h-0 flex-1 ${t.railWide ? 'min-[961px]:grid-cols-[240px_minmax(0,1fr)]' : 'min-[961px]:grid-cols-[216px_minmax(0,1fr)]'}`}>
         <div className="lms-scroll overflow-y-auto border-r border-lms-line p-3">
           <div className="px-2.5 pt-1.5 pb-2 font-mono text-[10px] tracking-[0.5px] text-lms-faint">BÀI NỘP · {subs.length}</div>
           {subs.map((s, i) => {

@@ -6,6 +6,7 @@ import { RubricGroupDto } from './dto/rubric-group.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../enums';
 
@@ -17,12 +18,14 @@ export class RubricController {
   constructor(private readonly rubricService: RubricService) {}
 
   @Get('rubrics')
-  @ApiOperation({ summary: 'Danh sách rubric của tôi (phân trang, lọc nhóm + tên)' })
+  @Public()
+  @ApiOperation({ summary: 'Danh sách rubric (public — dùng cho chấm bài & tự đánh giá)' })
   listRubrics(@CurrentUser('sub') userId: string, @Query() dto: ListRubricsDto) {
     return this.rubricService.listRubrics(userId, dto);
   }
 
   @Get('rubrics/:id')
+  @Public()
   @ApiOperation({ summary: 'Chi tiết rubric kèm mức điểm và tiêu chí' })
   getRubric(@Param('id') id: string) {
     return this.rubricService.getRubric(id);

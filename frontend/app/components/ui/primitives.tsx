@@ -464,7 +464,7 @@ export function Bars({
   const mx = max || Math.max(...data.map((d) => d.value)) || 1;
   const bw = (w - gap * (data.length - 1)) / data.length;
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxWidth: w }} className="block h-auto max-w-full">
       {data.map((d, i) => {
         const bh = (d.value / mx) * (h - 22);
         const x = i * (bw + gap);

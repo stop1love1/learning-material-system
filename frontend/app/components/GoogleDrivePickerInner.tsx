@@ -3,9 +3,8 @@ import React from 'react';
 import useDrivePicker from 'react-google-drive-picker';
 import { Btn } from '@/app/components/ui';
 import { notifyError } from '@/app/lib/ui/dialogs';
+import { useGoogleConfig } from '@/app/lib/google-config';
 
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
 const TOKEN_KEY = 'gdrive-token';
 
 export default function GoogleDrivePickerInner({
@@ -23,6 +22,7 @@ export default function GoogleDrivePickerInner({
   variant?: string;
   full?: boolean;
 }) {
+  const { clientId: CLIENT_ID, apiKey: API_KEY } = useGoogleConfig();
   const [openPicker, authResponse] = useDrivePicker();
   const [token, setToken] = React.useState<string>(() => {
     try { return typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) || '' : ''; } catch { return ''; }
@@ -39,7 +39,7 @@ export default function GoogleDrivePickerInner({
     if (!CLIENT_ID || !API_KEY) {
       notifyError(
         'Chưa cấu hình Google Drive Picker',
-        'Hãy đặt NEXT_PUBLIC_GOOGLE_CLIENT_ID và NEXT_PUBLIC_GOOGLE_API_KEY trong frontend/.env.local rồi build lại.',
+        'Vào Cài đặt → Tích hợp để nhập Google Client ID và API Key (hoặc đặt biến môi trường NEXT_PUBLIC_GOOGLE_* rồi build lại).',
       );
       return;
     }

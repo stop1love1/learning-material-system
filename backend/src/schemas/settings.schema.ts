@@ -118,6 +118,11 @@ export class Settings {
       smtpFrom: { type: String, default: null },
       storageProvider: { type: String, default: 'external' },
       apiKey: { type: String, default: null },
+      // Google OAuth Client ID + Drive/Picker API Key. Đây là giá trị CÔNG KHAI phía
+      // client (Google Picker/Sign-In chạy trên trình duyệt) nên KHÔNG bị redact ở GET
+      // /settings — cho phép cấu hình runtime, đổi khoá không cần build lại.
+      googleClientId: { type: String, default: null },
+      googleApiKey: { type: String, default: null },
     },
     default: {},
     _id: false,
@@ -130,6 +135,8 @@ export class Settings {
     smtpFrom: string | null;
     storageProvider: string;
     apiKey: string | null;
+    googleClientId: string | null;
+    googleApiKey: string | null;
   };
 
   @Prop({
@@ -151,7 +158,7 @@ export class Settings {
       heroSubtitle: {
         type: String,
         default:
-          'Mình chia sẻ miễn phí kho tài liệu, đề thi và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.',
+          'Mình chia sẻ miễn phí kho tài liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.',
       },
       ctaLabel: { type: String, default: 'Khám phá' },
     },
@@ -167,9 +174,9 @@ export class Settings {
       description: {
         type: String,
         default:
-          'Hệ thống LMS — học liệu, đề thi và bài tập cho mọi môn học.',
+          'Hệ thống LMS — học liệu và bài tập môn Tiếng Việt Tiểu học.',
       },
-      keywords: { type: [String], default: ['học liệu', 'tiểu học', 'tiếng việt', 'đề thi', 'lms'] },
+      keywords: { type: [String], default: ['học liệu', 'tiểu học', 'tiếng việt', 'bài tập', 'lms'] },
       ogImage: { type: String, default: null },
     },
     default: {},

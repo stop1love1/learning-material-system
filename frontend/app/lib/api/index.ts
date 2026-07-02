@@ -57,7 +57,7 @@ export const exerciseFoldersApi = {
 };
 
 export const topicsApi = {
-  list: (parentId?: string) => api.get<any[]>(`/topics${qs({ parentId })}`),
+  list: (parentId?: string, pageSize = 200) => api.get<any[]>(`/topics${qs({ parentId, pageSize })}`),
   create: (body: any) => api.post('/topics', body),
   update: (id: string, body: any) => api.patch(`/topics/${id}`, body),
   remove: (id: string) => api.del(`/topics/${id}`),

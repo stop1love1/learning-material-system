@@ -63,6 +63,7 @@ export function mapExercise(e: Record<string, any>): Record<string, any> {
     questions: e.questionCount ?? 0,
     attempts: e.attemptCount ?? 0,
     learners: e.learnerCount ?? 0,
+    rubric: e.rubricId ? String(e.rubricId?._id ?? e.rubricId) : null,
   };
 }
 

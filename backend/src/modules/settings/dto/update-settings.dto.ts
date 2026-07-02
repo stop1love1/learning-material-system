@@ -252,6 +252,16 @@ export class IntegrationSettingsDto {
   @IsOptional()
   @IsString()
   apiKey?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  googleClientId?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  googleApiKey?: string;
 }
 
 export class DataSettingsDto {

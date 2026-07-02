@@ -24,6 +24,7 @@ export function FolderTree({
   p,
   allLabel = 'Tất cả',
   allCount,
+  entityLabel = 'thư mục',
   onAddRoot,
   onAddChild,
   onRename,
@@ -35,6 +36,7 @@ export function FolderTree({
   p: any;
   allLabel?: string;
   allCount?: number;
+  entityLabel?: string;
   onAddRoot?: () => void;
   onAddChild?: (parentId: string) => void;
   onRename?: (node: TreeNode) => void;
@@ -49,6 +51,27 @@ export function FolderTree({
     for (const k of Object.keys(map)) map[k].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     return map;
   }, [nodes]);
+
+  // Số hiển thị cạnh mỗi chủ đề = số của chính nó + tổng của mọi chủ đề con (đệ quy).
+  // `null` khi không node nào có `count` (các cây không truyền số thì không hiện gì).
+  const subtreeCount = React.useMemo(() => {
+    let anyCount = false;
+    const own: Record<string, number> = {};
+    for (const n of nodes) { if (n.count != null) anyCount = true; own[String(n.id)] = n.count || 0; }
+    if (!anyCount) return null;
+    const memo: Record<string, number> = {};
+    const calc = (id: string, seen: Set<string>): number => {
+      if (memo[id] != null) return memo[id];
+      if (seen.has(id)) return own[id] || 0; // chống chu trình dữ liệu xấu
+      seen.add(id);
+      let sum = own[id] || 0;
+      for (const c of childrenOf[id] || []) sum += calc(String(c.id), seen);
+      memo[id] = sum;
+      return sum;
+    };
+    for (const n of nodes) calc(String(n.id), new Set());
+    return memo;
+  }, [nodes, childrenOf]);
 
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
   const toggle = (id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] }));
@@ -80,14 +103,14 @@ export function FolderTree({
           <div onClick={() => onSelect(node.id)} className="flex min-w-0 flex-1 items-center gap-[7px]">
             <Icon name="folder" size={15} stroke={on ? p.accent : p.faint} />
             <span className="truncate">{node.name}</span>
-            {node.count != null && (
-              <span className="ml-auto font-mono text-[10.5px] text-lms-faint">{node.count}</span>
+            {subtreeCount && (
+              <span className="ml-auto font-mono text-[10.5px] text-lms-faint">{subtreeCount[String(node.id)] ?? 0}</span>
             )}
           </div>
           {hasActions && (
             <div className="hidden shrink-0 items-center gap-0.5 group-hover/treenode:flex">
               {onAddChild && (
-                <button type="button" title="Thêm thư mục con" onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }} className="flex h-5 w-5 items-center justify-center rounded hover:bg-lms-sink">
+                <button type="button" title={`Thêm ${entityLabel} con`} onClick={(e) => { e.stopPropagation(); onAddChild(node.id); }} className="flex h-5 w-5 items-center justify-center rounded hover:bg-lms-sink">
                   <Icon name="plus" size={13} stroke={p.faint} />
                 </button>
               )}
@@ -130,7 +153,7 @@ export function FolderTree({
           className="mt-1 flex items-center gap-1.5 rounded-[9px] px-2 py-2 text-[12.5px] font-medium text-lms-sub hover:bg-lms-sink"
         >
           <Icon name="plus" size={14} stroke={p.faint} />
-          <span>Thêm thư mục</span>
+          <span>Thêm {entityLabel}</span>
         </button>
       )}
     </div>

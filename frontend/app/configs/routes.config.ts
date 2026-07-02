@@ -84,8 +84,8 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (seg.startsWith('/quan-tri/rubrics')) return r('rubrics', 'rubrics');
   if (seg.startsWith('/quan-tri/kho-hoc-lieu')) return r('docs', 'docs');
   if (seg.startsWith('/quan-tri/bai-viet')) return r('a-blog', 'a-blog');
-  if (/^\/quan-tri\/cham-bai\/[^/]+/.test(seg)) return r('grade-one', 'grade');
-  if (seg.startsWith('/quan-tri/cham-bai')) return r('grade', 'grade');
+  if (/^\/quan-tri\/cham-bai\/[^/]+/.test(seg)) return r('grade-one', 'assignments');
+  if (seg.startsWith('/quan-tri/cham-bai')) return r('grade', 'assignments');
   if (seg.startsWith('/quan-tri/nguoi-dung')) return r('a-users', 'a-users');
   if (seg.startsWith('/quan-tri/bao-cao')) return r('a-reports', 'a-reports');
   if (seg.startsWith('/quan-tri/cai-dat')) return r('a-settings', 'a-settings');

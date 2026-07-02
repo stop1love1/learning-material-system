@@ -26,6 +26,7 @@ export function mapFile(f: Record<string, any>): Record<string, any> {
       (Array.isArray(f.tags) ? f.tags[0] : undefined) ??
       f.subject ??
       'Tư liệu',
+    tags: Array.isArray(f.tags) ? f.tags : [],
     updated: formatRelativeVi(f.updatedAt),
     by: (f.userId && typeof f.userId === 'object' ? f.userId.name : undefined) ?? '—',
     downloads: f.downloadCount ?? 0,

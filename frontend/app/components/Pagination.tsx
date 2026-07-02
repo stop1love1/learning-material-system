@@ -27,7 +27,7 @@ export function Pagination({
   if (!total) return null;
 
   return (
-    <div className="mt-6 flex justify-end">
+    <div className="mt-6 flex justify-end overflow-x-auto pb-1 max-sm:justify-start">
       <AntPagination
         current={current}
         pageSize={pageSize || 12}
@@ -35,6 +35,8 @@ export function Pagination({
         onChange={(page) => onChange(page)}
         showSizeChanger={false}
         showQuickJumper
+        responsive
+        size="small"
         showTotal={(t) => `tổng ${t.toLocaleString('vi-VN')} kết quả`}
       />
     </div>

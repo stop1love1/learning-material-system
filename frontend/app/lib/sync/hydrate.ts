@@ -20,7 +20,7 @@ const BY_ROUTE: Record<string, Loader[]> = {
   's-mine': [loadLibrary],
   's-tasks': [loadExercises],
   's-task': [loadExercises],
-  's-selfcheck': [loadRubrics],
+  's-selfcheck': [loadRubrics, loadExercises],
   blog: [loadArticles],
   article: [loadArticles],
   docs: [loadLibrary],

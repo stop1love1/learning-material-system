@@ -6,7 +6,7 @@ import { hexA } from '@/app/theme/palette';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
-import { questionsApi, topicsApi } from '@/app/lib/api';
+import { questionsApi, topicsApi, rubricsApi } from '@/app/lib/api';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { promptDialog, confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { FolderTree, type TreeNode } from '@/app/components/FolderTree';
@@ -113,6 +113,15 @@ export function MatchBoard({ p, q, answer, onAnswer }) {
       </div>
     </div>
   );
+}
+
+// Render question content that may be rich HTML (from the editor) or legacy plain
+// text with \n line breaks — pick the safe renderer for each.
+export function RichText({ html, className = '' }: { html?: string; className?: string }) {
+  const s = html || '';
+  return /<[a-z][\s\S]*>/i.test(s)
+    ? <div className={`lms-rich ${className}`} dangerouslySetInnerHTML={{ __html: s }} />
+    : <div className={`whitespace-pre-wrap ${className}`}>{s}</div>;
 }
 
 export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) {
@@ -293,17 +302,43 @@ export function TBank({ p, t, setRoute, go }) {
         options: src.options, answer: src.answer, pairs: src.pairs, topic: src.topic });
     }
   };
+  const bankToolbar = (
+    <div className="mb-[18px] flex items-center gap-2.5">
+      <Btn p={p} icon="plus" onClick={composeWithTopic}>Soạn câu hỏi</Btn>
+      <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm câu hỏi, chủ đề…" className="min-w-0 flex-1" />
+      <Btn p={p} variant={showFilter || level !== 'all' ? 'soft' : 'ghost'} icon="filter" onClick={() => setShowFilter((s) => !s)}>Bộ lọc</Btn>
+    </div>
+  );
+  const filterPanel = showFilter ? (
+    <div className="mb-[18px] flex flex-wrap items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise px-4 py-3">
+      <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">ĐỘ KHÓ</span>
+      <Pill p={p} active={level === 'all'} onClick={() => pickLevel('all')}>Tất cả</Pill>
+      {DB.LEVELS.map((l) => (
+        <Pill key={l.id} p={p} active={level === l.id} onClick={() => pickLevel(l.id)}>{l.label}</Pill>
+      ))}
+      {level !== 'all' && (
+        <button onClick={() => pickLevel('all')} className="ml-auto cursor-pointer border-0 bg-transparent font-mono text-[11px] text-lms-accent">Xoá lọc</button>
+      )}
+    </div>
+  ) : null;
+  // Số câu hỏi trực tiếp của mỗi chủ đề (FolderTree tự cộng dồn cả chủ đề con).
+  const topicCounts: Record<string, number> = {};
+  for (const qq of DB.QUESTIONS || []) {
+    const tid = qq.topicId ? String(qq.topicId) : '';
+    if (tid) topicCounts[tid] = (topicCounts[tid] || 0) + 1;
+  }
+  const topicNodes: TreeNode[] = (DB.TOPIC_TREE || []).map((n: any) => ({ ...n, count: topicCounts[String(n.id)] || 0 }));
   const treeSidebar = (
     <aside>
-      <Btn p={p} icon="plus" full onClick={composeWithTopic}>Soạn câu hỏi</Btn>
-      <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ</div>
+      <div className="px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ</div>
       <FolderTree
-        nodes={(DB.TOPIC_TREE || []) as TreeNode[]}
+        nodes={topicNodes}
         selectedId={selTopic}
         onSelect={pickTopic}
         p={p}
         allLabel="Tất cả chủ đề"
         allCount={DB.QUESTIONS.length}
+        entityLabel="chủ đề"
         onAddRoot={addRootTopic}
         onAddChild={addChildTopic}
         onRename={renameTopic}
@@ -314,41 +349,28 @@ export function TBank({ p, t, setRoute, go }) {
 
   if (!q) {
     return (
-      <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-[26px] px-[30px] pt-6 pb-10">
-        {treeSidebar}
-        <div className="px-5 py-[60px] text-center text-lms-ink/60">
-          {selTopic === null
-            ? 'Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.'
-            : 'Chủ đề này chưa có câu hỏi nào.'}
+      <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+        {bankToolbar}
+        {filterPanel}
+        <div className="grid grid-cols-1 items-start gap-[26px] min-[961px]:grid-cols-[230px_1fr]">
+          {treeSidebar}
+          <div className="px-5 py-[60px] text-center text-lms-ink/60">
+            {selTopic === null
+              ? 'Chưa có câu hỏi nào. Bấm “Soạn câu hỏi” để thêm câu hỏi đầu tiên.'
+              : 'Chủ đề này chưa có câu hỏi nào.'}
+          </div>
         </div>
       </div>
     );
   }
   const tm = typeMeta(q.type), lm = levelMeta(q.level);
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-[230px_1fr] items-start gap-[26px] px-[30px] pt-6 pb-10">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+      {bankToolbar}
+      {filterPanel}
+      <div className="grid grid-cols-1 items-start gap-[26px] min-[961px]:grid-cols-[230px_1fr]">
       {treeSidebar}
       <div>
-      <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
-        <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm câu hỏi, chủ đề…" className="w-[280px]" />
-        <div className="flex-1" />
-        <Btn p={p} variant={showFilter || level !== 'all' ? 'soft' : 'ghost'} size="md" icon="filter" onClick={() => setShowFilter((s) => !s)}>Bộ lọc</Btn>
-        <Btn p={p} icon="plus" onClick={composeWithTopic}>Soạn câu hỏi</Btn>
-      </div>
-
-      {showFilter && (
-        <div className="mb-[18px] flex flex-wrap items-center gap-2.5 rounded-xl border border-lms-line bg-lms-raise px-4 py-3">
-          <span className="font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">ĐỘ KHÓ</span>
-          <Pill p={p} active={level === 'all'} onClick={() => pickLevel('all')}>Tất cả</Pill>
-          {DB.LEVELS.map((l) => (
-            <Pill key={l.id} p={p} active={level === l.id} onClick={() => pickLevel(l.id)}>{l.label}</Pill>
-          ))}
-          {level !== 'all' && (
-            <button onClick={() => pickLevel('all')} className="ml-auto cursor-pointer border-0 bg-transparent font-mono text-[11px] text-lms-accent">Xoá lọc</button>
-          )}
-        </div>
-      )}
-
       <div className="mb-[18px] flex flex-wrap gap-2">
         <Pill p={p} active={type === 'all'} onClick={() => pickType('all')}>Tất cả · {DB.QUESTIONS.length}</Pill>
         {DB.QTYPES.map((qt) => {
@@ -357,7 +379,7 @@ export function TBank({ p, t, setRoute, go }) {
         })}
       </div>
 
-      <div className="grid grid-cols-[1.25fr_1fr] items-start gap-[22px]">
+      <div className="grid grid-cols-1 items-start gap-[22px] min-[961px]:grid-cols-[1.25fr_1fr]">
         <div>
         <div className="flex flex-col gap-3">
           {list.map((item) => {
@@ -395,13 +417,14 @@ export function TBank({ p, t, setRoute, go }) {
               </div>
             </div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ · {q.topic.toUpperCase()}</div>
-            <div className="mb-5 text-[17px] font-medium leading-normal text-lms-ink">{q.stem}</div>
+            <RichText html={q.stem} className="mb-5 text-[17px] font-medium leading-normal text-lms-ink" />
             <QuestionView q={qFull} p={p} mode="preview" />
             <div className="mt-[22px] flex gap-4 border-t border-lms-line pt-4 text-xs text-lms-faint">
               <span>Đã dùng {q.uses} lần</span><span>· Cập nhật {q.updated}</span>
             </div>
           </div>
         </div>
+      </div>
       </div>
       </div>
     </div>
@@ -419,9 +442,23 @@ export function TBankEdit({ p, t, setRoute }) {
     const t0 = pendingTopicId; pendingTopicId = null; return t0;
   });
   const [fillAns, setFillAns] = React.useState('');
-  const [essayGrading, setEssayGrading] = React.useState('rubric');
+  const [essayGrading, setEssayGrading] = React.useState('manual');
+  const [essayRubricId, setEssayRubricId] = React.useState('');
+  const [rubricOpts, setRubricOpts] = React.useState<{ value: string; label: string }[]>([]);
+  const [topicOpts, setTopicOpts] = React.useState<{ value: string; label: string }[]>([]);
   const [pairs, setPairs] = React.useState([['', ''], ['', '']]);
   const editId = useSearchParams().get('id');
+  React.useEffect(() => {
+    rubricsApi.list({ pageSize: 100 })
+      .then((res: any) => setRubricOpts((res?.records ?? []).map((r: any) => ({ value: String(r._id), label: r.name }))))
+      .catch(() => {});
+    topicsApi.list()
+      .then((res: any) => {
+        const arr = Array.isArray(res) ? res : (res?.records ?? []);
+        setTopicOpts(arr.map((tp: any) => ({ value: String(tp._id), label: tp.title })));
+      })
+      .catch(() => {});
+  }, []);
   React.useEffect(() => {
     if (!editId) return;
     let alive = true;
@@ -437,7 +474,7 @@ export function TBankEdit({ p, t, setRoute }) {
         else if (q.type === 'multi') { setOptions(d.options?.length ? d.options : ['', '', '', '']); setCorrect(d.correctOptionIndices?.length ? d.correctOptionIndices : [0]); }
         else if (q.type === 'truefalse') { setCorrect([d.isCorrect ? 0 : 1]); }
         else if (q.type === 'fill') { setFillAns((d.answers || []).join(' / ')); }
-        else if (q.type === 'essay') { setEssayGrading(d.gradingType === 'manual' ? 'manual' : 'rubric'); }
+        else if (q.type === 'essay') { setEssayGrading(d.gradingType === 'rubric' ? 'rubric' : 'manual'); setEssayRubricId(d.rubricId ? String(d.rubricId?._id ?? d.rubricId) : ''); }
         else if (q.type === 'match') { setPairs((d.pairs || []).map((pp: any) => [pp.left || '', pp.right || ''])); }
       } catch { /* không nạp được → giữ form trống */ }
     })();
@@ -452,16 +489,16 @@ export function TBankEdit({ p, t, setRoute }) {
   const showOptions = type === 'single' || type === 'multi';
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[22px] pb-10">
       <div onClick={() => setRoute('bank')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Ngân hàng câu hỏi
       </div>
 
-      <div className="grid grid-cols-[1.4fr_1fr] items-start gap-6">
+      <div className="grid grid-cols-1 items-start gap-6 min-[961px]:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-5">
           <section className={cardClass(24)}>
             <label className={lblClass()}>LOẠI CÂU HỎI</label>
-            <div className="mt-2.5 grid grid-cols-3 gap-2">
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {DB.QTYPES.map((qt) => {
                 const on = type === qt.id;
                 return (
@@ -476,8 +513,7 @@ export function TBankEdit({ p, t, setRoute }) {
 
           <section className={cardClass(24)}>
             <label className={lblClass()}>NỘI DUNG CÂU HỎI</label>
-            <textarea value={stem} onChange={(e) => setStem(e.target.value)} placeholder="Nhập đề bài. Có thể chèn trích dẫn thơ, đoạn văn…"
-              className="mt-2.5 box-border min-h-[90px] w-full resize-y rounded-xl border border-lms-line bg-lms-surface p-[13px] font-sans text-sm leading-relaxed text-lms-ink outline-none" />
+            <div className="mt-2.5"><RichEditor value={stem} onChange={setStem} placeholder="Nhập đề bài — in đậm, xuống dòng, chèn danh sách, trích dẫn thơ/đoạn văn…" /></div>
 
             {showOptions && (
               <div className="mt-[18px]">
@@ -521,10 +557,20 @@ export function TBankEdit({ p, t, setRoute }) {
             )}
 
             {type === 'essay' && (
-              <div className="mt-[18px]">
-                <label className={lblClass()}>CHẤM BẰNG</label>
-                <Select p={p} value={essayGrading} onChange={setEssayGrading} className="mt-2.5 max-w-[360px]"
-                  options={[{ value: 'rubric', label: 'Rubric Hoạt động Viết (tả – kể)' }, { value: 'manual', label: 'Cho điểm thủ công' }]} />
+              <div className="mt-[18px] flex flex-wrap gap-4">
+                <div>
+                  <label className={lblClass()}>CHẤM BẰNG</label>
+                  <Select p={p} value={essayGrading} onChange={setEssayGrading} className="mt-2.5 w-[220px]"
+                    options={[{ value: 'rubric', label: 'Theo rubric (bộ tiêu chí)' }, { value: 'manual', label: 'Chấm tay (điểm số)' }]} />
+                </div>
+                {essayGrading === 'rubric' && (
+                  <div className="min-w-[280px] flex-1">
+                    <label className={lblClass()}>CHỌN RUBRIC</label>
+                    <Select p={p} value={essayRubricId} onChange={setEssayRubricId} className="mt-2.5 w-full max-w-[460px]"
+                      options={rubricOpts} />
+                    {!essayRubricId && <div className="mt-1.5 text-[11.5px] text-lms-danger">Hãy chọn một rubric, hoặc chuyển sang “Chấm tay”.</div>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -558,12 +604,10 @@ export function TBankEdit({ p, t, setRoute }) {
               </div>
               <div>
                 <label className={lblClass()}>CHỦ ĐỀ</label>
-                {(DB.TOPIC_TREE && DB.TOPIC_TREE.length) ? (
-                  <Select p={p} value={topicId ?? ''} onChange={(v) => setTopicId(v || null)} className="mt-2.5"
-                    options={[{ value: '', label: '— Không gán chủ đề —' },
-                      ...DB.TOPIC_TREE.map((tp: TreeNode) => ({ value: tp.id, label: tp.name }))]} />
-                ) : (
-                  <Field p={p} value={topic} onChange={setTopic} placeholder="vd: Luyện từ và câu — Lớp 4" className="mt-2.5" />
+                <Select p={p} value={topicId ?? ''} onChange={(v) => setTopicId(v || null)} className="mt-2.5"
+                  options={[{ value: '', label: '— Không gán chủ đề —' }, ...topicOpts]} />
+                {topicOpts.length === 0 && (
+                  <div className="mt-1.5 text-[11.5px] text-lms-faint">Chưa có chủ đề nào — tạo chủ đề ở trang Ngân hàng câu hỏi.</div>
                 )}
               </div>
             </div>
@@ -579,9 +623,9 @@ export function TBankEdit({ p, t, setRoute }) {
               <Tag p={p} color={p.accent}>{tm.label}</Tag>
               <Tag p={p} color={levelMeta(level).color}>{levelMeta(level).label}</Tag>
             </div>
-            <div className={`mb-[18px] text-base font-medium leading-normal ${stem ? 'text-lms-ink not-italic' : 'text-lms-faint italic'}`}>
-              {stem || 'Nội dung câu hỏi sẽ hiển thị ở đây…'}
-            </div>
+            {stem
+              ? <RichText html={stem} className="mb-[18px] text-base font-medium leading-normal text-lms-ink" />
+              : <div className="mb-[18px] text-base font-medium italic leading-normal text-lms-faint">Nội dung câu hỏi sẽ hiển thị ở đây…</div>}
             <QuestionView q={{ type, options, answer: correct, pairs: [['Tre Việt Nam', 'Nguyễn Duy'], ['Truyện cổ nước mình', 'Lâm Thị Mỹ Dạ']], topic: '' }} p={p} mode="preview" />
           </div>
           <div className="mt-4 flex gap-2.5">
@@ -602,7 +646,11 @@ export function TBankEdit({ p, t, setRoute }) {
                 const answers = fillAns.split('/').map((x) => x.trim()).filter(Boolean);
                 detail = { answers: answers.length ? answers : ['—'] };
               } else if (type === 'essay') {
-                detail = { gradingType: essayGrading === 'manual' ? 'manual' : 'rubric' };
+                // Only use rubric grading when a rubric is actually chosen (schema requires
+                // rubricId when gradingType='rubric'); otherwise fall back to manual.
+                detail = essayGrading === 'rubric' && essayRubricId
+                  ? { gradingType: 'rubric', rubricId: essayRubricId }
+                  : { gradingType: 'manual' };
               } else if (type === 'match') {
                 const ps = pairs.filter(([l, r]) => l.trim() && r.trim()).map(([left, right]) => ({ left: left.trim(), right: right.trim() }));
                 detail = { pairs: ps.length ? ps : [{ left: 'Vế trái 1', right: 'Vế phải 1' }, { left: 'Vế trái 2', right: 'Vế phải 2' }] };

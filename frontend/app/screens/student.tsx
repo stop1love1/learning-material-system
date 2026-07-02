@@ -11,7 +11,7 @@ import { cardClass, lblClass } from '@/app/helpers/shared';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { DOC_TYPE_META, RubricMatrix } from '@/app/screens/resources';
 import { DocCardMini } from '@/app/screens/teacher';
-import { levelMeta, QuestionView } from '@/app/screens/bank';
+import { levelMeta, QuestionView, RichText } from '@/app/screens/bank';
 import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
@@ -19,6 +19,7 @@ import { mapExercise } from '@/app/lib/sync/load-exercises';
 import { mapFile } from '@/app/lib/sync/load-library';
 import { EX_TYPE_OPTS, EX_STATUS_OPTS } from '@/app/screens/assign';
 import { ROUTES } from '@/app/configs/routes.config';
+import { withKeyword } from '@/app/helpers/related-href';
 
 function taskTone(p, s) { return { todo: p.accent, done: p.info, graded: p.ok }[s] || p.sub; }
 function taskLabel(s) { return { todo: 'Cần làm', done: 'Đã nộp', graded: 'Đã chấm' }[s] || s; }
@@ -82,8 +83,8 @@ export function UserHome({ p, t }) {
 
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-7 pb-2 max-sm:px-4">
-      <div className="bento mb-4">
-        <div className="col-8 row-2 reveal bento-tile relative flex min-h-[320px] flex-col justify-center overflow-hidden border border-lms-line bg-(image:--lms-hero-gradient) p-[38px]">
+      <div className="lms-stagger bento mb-4">
+        <div className="col-8 row-2 reveal bento-tile relative flex min-h-[320px] flex-col justify-center overflow-hidden border border-lms-line bg-(image:--lms-hero-gradient) p-[38px] max-sm:p-5">
           <span className="mb-[18px] inline-flex items-center gap-[7px] self-start rounded-[20px] border border-lms-line bg-lms-surface px-3 py-[5px] text-[11.5px] font-bold text-lms-accent">
             <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ'}
           </span>
@@ -91,7 +92,7 @@ export function UserHome({ p, t }) {
             {hp?.heroTitle || 'Học Tiếng Việt nhẹ nhàng, kho tài liệu mở cho tất cả.'}
           </h1>
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
-            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu, đề thi và bài tập cho mọi môn học — ai cũng có thể đọc, luyện tập và tải về.'}
+            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
           <form action={ROUTES.library} method="get" className="flex max-w-[540px] flex-wrap gap-2.5">
             <Field p={p} icon="search" name="q" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />
@@ -270,7 +271,7 @@ export function SOverview({ p, t, setRoute, go }) {
   const dueToday = todo.filter((x) => x.dueIn === 'Hôm nay').length;
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-[30px] pb-10">
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[30px] pb-10">
       <div className="mb-[26px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-2.5 font-mono text-[11.5px] tracking-[1px] text-lms-faint">KHÔNG GIAN HỌC TẬP</div>
@@ -318,7 +319,7 @@ export function SOverview({ p, t, setRoute, go }) {
           <section className="rounded-xl border border-lms-line bg-(image:--lms-card-gradient) p-[22px]">
             <Icon name="book" size={22} stroke={p.accent} />
             <h3 className="my-3 mb-1.5 font-lms-heading text-[19px] font-semibold text-lms-ink">Kho tài liệu</h3>
-            <p className="mb-4 mt-0 text-[13px] leading-normal text-lms-sub">Tìm tài liệu, đề thi, sơ đồ tư duy để đọc và ôn tập.</p>
+            <p className="mb-4 mt-0 text-[13px] leading-normal text-lms-sub">Tìm tài liệu, sơ đồ tư duy để đọc và ôn tập.</p>
             <Btn p={p} icon="search" full onClick={() => setRoute('s-docs')}>Khám phá học liệu</Btn>
           </section>
           <section className={cardClass(20)}>
@@ -370,7 +371,7 @@ function STaskRow({ task, p }) {
   );
   if (task.status === 'todo') {
     return (
-      <Link href={ROUTES.practiceItem(task.id)} className="lms-card flex items-center gap-4 rounded-xl border border-lms-line bg-lms-surface px-5 py-4 no-underline">
+      <Link href={ROUTES.practiceItem(task.id)} style={{ background: p.surface }} className="lms-card flex items-center gap-4 rounded-xl border border-lms-line px-5 py-4 no-underline">
         {body}
       </Link>
     );
@@ -382,6 +383,25 @@ function STaskRow({ task, p }) {
   );
 }
 
+const EX_GRADE_OPTS = [
+  { value: 'Lớp 4', label: 'Lớp 4' },
+  { value: 'Lớp 5', label: 'Lớp 5' },
+  { value: 'Lớp 4–5', label: 'Lớp 4–5' },
+];
+const EX_SUBJECT_OPTS = [
+  { value: 'Tiếng Việt', label: 'Tiếng Việt' },
+  { value: 'Hoạt động Viết', label: 'Hoạt động Viết' },
+  { value: 'Đọc hiểu', label: 'Đọc hiểu' },
+  { value: 'Luyện từ và câu', label: 'Luyện từ và câu' },
+];
+const EX_SORT_OPTS = [
+  { value: 'date:desc', label: 'Mới nhất' },
+  { value: 'date:asc', label: 'Cũ nhất' },
+  { value: 'points:desc', label: 'Điểm cao nhất' },
+  { value: 'name:asc', label: 'Tên A → Z' },
+  { value: 'name:desc', label: 'Tên Z → A' },
+];
+
 export function STasks({ p, t }) {
   useLMS();
   const exFolders = (DB as any).EX_FOLDERS || [];
@@ -389,6 +409,13 @@ export function STasks({ p, t }) {
 
   const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
   const { records, loading, error } = paged;
+  const [sortKey, setSortKey] = React.useState('date:desc');
+  const changeSort = (v: string) => {
+    setSortKey(v);
+    const [by, order] = v.split(':');
+    paged.setFilter('sortBy', by === 'date' ? '' : by); // date desc = default, no param
+    paged.setFilter('order', order);
+  };
 
   const myStatusOf = (id: string) => {
     const s = (DB.STUDENT_TASKS || []).find((x: any) => x.id === id);
@@ -397,14 +424,19 @@ export function STasks({ p, t }) {
   const list = records.map((e) => ({ ...e, status: myStatusOf(e.id), score: undefined }));
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
         <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm bài tập…" className="w-[240px]" />
         <FilterSelect label="HÌNH THỨC" p={p} value={paged.filters.type} options={EX_TYPE_OPTS} onChange={(v) => paged.setFilter('type', v)} />
         <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={EX_STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
+        <FilterSelect label="LỚP" p={p} value={paged.filters.grade} options={EX_GRADE_OPTS} onChange={(v) => paged.setFilter('grade', v)} />
+        <FilterSelect label="MÔN" p={p} value={paged.filters.subject} options={EX_SUBJECT_OPTS} onChange={(v) => paged.setFilter('subject', v)} />
         {folderOpts.length > 0 && (
           <FilterSelect label="THƯ MỤC" p={p} value={paged.filters.folderId} options={folderOpts} onChange={(v) => paged.setFilter('folderId', v)} />
         )}
+        <div className="flex-1" />
+        <span className="shrink-0 font-mono text-[11.5px] text-lms-faint">Sắp xếp</span>
+        <div className="w-[180px] shrink-0"><Select p={p} value={sortKey} onChange={changeSort} options={EX_SORT_OPTS} /></div>
       </div>
       {loading ? (
         <div className="py-16 text-center text-[13px] text-lms-faint">Đang tải…</div>
@@ -416,7 +448,7 @@ export function STasks({ p, t }) {
           />
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="lms-stagger flex flex-col gap-3">
           {list.map((task) => <STaskRow key={task.id} task={task} p={p} />)}
         </div>
       )}
@@ -688,7 +720,7 @@ export function STask({ p, t, ctx, auth }) {
         )}
       </div>
 
-      <div className="lms-scroll flex-1 overflow-y-auto p-[30px]">
+      <div className="lms-scroll flex-1 overflow-y-auto p-[30px] max-sm:p-4">
         <div className="mx-auto max-w-[680px]">
           {worksheets.length > 0 && (
           <div className={`${cardClass(16)} mb-5`}>
@@ -733,7 +765,7 @@ export function STask({ p, t, ctx, auth }) {
               <Tag p={p} color={p.accent}>{essay ? 'Tự luận' : `Câu ${cur2 + 1}/${qs.length}`}</Tag>
               <Tag p={p} color={levelMeta(q.level).color}>{levelMeta(q.level).label}</Tag>
             </div>
-            <div className="mb-[22px] text-lg font-medium leading-normal text-lms-ink">{q.stem}</div>
+            <RichText html={q.stem} className="mb-[22px] text-lg font-medium leading-normal text-lms-ink" />
             <QuestionView q={q} p={p} mode="do" answer={answers[q.id]} onAnswer={(v) => setAnswers({ ...answers, [q.id]: v })} />
           </div>
 
@@ -817,12 +849,12 @@ export function SDocs({ p, t }) {
 
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px]">
+      <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px] max-sm:px-4 max-sm:py-6">
         <h2 className="m-0 font-lms-heading text-[26px] font-bold tracking-[-0.4px] text-lms-ink">
           Kho tài liệu <span className="text-lms-accent">học tập</span>
         </h2>
         <p className="mt-2 mb-[18px] max-w-[520px] text-sm leading-normal text-lms-sub">
-          Tìm tài liệu, đề thi và sơ đồ tư duy để đọc, ôn tập và làm bài.
+          Tìm tài liệu và sơ đồ tư duy để đọc, ôn tập và làm bài.
         </p>
         <div className="max-w-[560px]">
           <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm theo tên tài liệu, chủ đề…" className="h-[46px]" />
@@ -834,11 +866,11 @@ export function SDocs({ p, t }) {
           return <Pill key={f} p={p} active={f === folderName} onClick={() => pickFolder(f)}>{f} · {n}</Pill>;
         })}
       </div>
-      <div className="mb-5 flex flex-nowrap items-center gap-2.5">
-        <div className="w-[210px] shrink-0"><Select p={p} value={fileType} onChange={changeFileType} options={DOC_FORMAT_OPTS} /></div>
+      <div className="mb-5 flex flex-wrap items-center gap-2.5">
+        <div className="flex-1 min-w-[150px]"><Select p={p} value={fileType} onChange={changeFileType} options={DOC_FORMAT_OPTS} /></div>
         <div className="flex-1" />
         <span className="shrink-0 font-mono text-[11.5px] text-lms-faint">Sắp xếp</span>
-        <div className="w-[190px] shrink-0"><Select p={p} value={sortKey} onChange={changeSort} options={DOC_SORT_OPTS} /></div>
+        <div className="flex-1 min-w-[150px]"><Select p={p} value={sortKey} onChange={changeSort} options={DOC_SORT_OPTS} /></div>
       </div>
 
       {loading ? (
@@ -851,7 +883,7 @@ export function SDocs({ p, t }) {
           />
         </div>
       ) : (
-        <div className="reveal grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="lms-stagger reveal grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
           {list.map((d) => {
             const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
             return (
@@ -943,6 +975,9 @@ export function SDocReader({ p, t, ctx }) {
   }
   const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
   const related = DB.DOCS.filter((x) => x.folder === d.folder && x.id !== d.id).slice(0, 4);
+  // "Bài tập liên quan" = lọc trang luyện tập theo tag của tài liệu (fallback:
+  // tên chủ đề/thư mục), qua ?q= mà usePagedResource tự đọc.
+  const relatedKw = (Array.isArray(d.tags) && d.tags[0]) || d.folder || '';
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
       <Link href={ROUTES.library} className="lms-link mb-4 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
@@ -984,7 +1019,7 @@ export function SDocReader({ p, t, ctx }) {
           ? <div className="lms-rich text-[15.5px] leading-[1.9] text-lms-ink" dangerouslySetInnerHTML={{ __html: d.desc }} />
           : <p className="m-0 text-[15.5px] leading-[1.9] text-lms-sub">Tài liệu được chia sẻ từ kho học liệu. Bấm “Mở trên Google Drive” để xem bản đầy đủ.</p>}
         <div className="mt-[18px] flex flex-wrap gap-2.5">
-          <Link href={ROUTES.practice} className="inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
+          <Link href={withKeyword(ROUTES.practice, relatedKw)} className="inline-flex h-10 items-center gap-2 rounded-[11px] bg-lms-accent-soft px-[18px] text-[13.5px] font-semibold text-lms-accent no-underline">
             <Icon name="assign" size={16} stroke={p.accent} sw={1.9} /> Làm bài tập liên quan
           </Link>
           <Link href={ROUTES.selfCheck} className="inline-flex h-10 items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-[18px] text-[13.5px] font-semibold text-lms-ink no-underline">
@@ -996,7 +1031,7 @@ export function SDocReader({ p, t, ctx }) {
       {related.length > 0 && (
         <div>
           <h3 className="mb-3.5 mt-0 font-lms-heading text-lg font-semibold text-lms-ink">Học liệu liên quan</h3>
-          <div className="grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
+          <div className="lms-stagger grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
             {related.map((r) => {
               const rm = DOC_TYPE_META[r.type] || DOC_TYPE_META.doc;
               return (
@@ -1017,14 +1052,20 @@ export function SDocReader({ p, t, ctx }) {
 
 export function SSelfCheck({ p, t }) {
   useLMS();
+  // Each writing task carries its own rubric (essay exercise → rubricId). Selecting a
+  // task shows THAT task's criteria table. Fall back to picking a rubric directly if
+  // no rubric-linked writing tasks are loaded.
+  const rubrics = DB.RUBRICS || [];
   const works = React.useMemo(() => {
-    const tasks = (DB.STUDENT_TASKS || []).map((x: any) => ({ id: x.id, title: x.title }));
+    const tasks = (DB.ASSIGNMENTS || [])
+      .filter((e: any) => e.rubric && rubrics.some((r: any) => r.id === e.rubric))
+      .map((e: any) => ({ id: e.id, title: e.title, rubricId: e.rubric }));
     if (tasks.length) return tasks;
-    return (DB.RUBRICS || []).map((r: any) => ({ id: r.id, title: r.name }));
-  }, [DB.STUDENT_TASKS, DB.RUBRICS]);
+    return rubrics.map((r: any) => ({ id: r.id, title: r.name, rubricId: r.id }));
+  }, [DB.ASSIGNMENTS, rubrics]);
   const [workId, setWorkId] = React.useState<string>('');
-  const work = works.find((w) => w.id === workId) || works[0];
-  const rubric = DB.RUBRICS[0];
+  const work = works.find((w: any) => w.id === workId) || works[0];
+  const rubric = (work && rubrics.find((r: any) => r.id === work.rubricId)) || rubrics[0];
   const [sel, setSel] = React.useState({});
   const [note, setNote] = React.useState('');
   const [savingSelf, setSavingSelf] = React.useState(false);
@@ -1089,9 +1130,10 @@ export function SSelfCheck({ p, t }) {
       </div>
 
       <div className="mb-[18px]">
-        <label className={lblClass()}>CHỌN BÀI ĐỂ TỰ ĐÁNH GIÁ</label>
+        <label className={lblClass()}>CHỌN BÀI VIẾT ĐỂ TỰ ĐÁNH GIÁ</label>
         <Select p={p} value={work?.id ?? ''} onChange={setWorkId} className="mt-2 max-w-[460px]"
-          options={works.map((w) => ({ value: w.id, label: w.title }))} />
+          options={works.map((w: any) => ({ value: w.id, label: w.title }))} />
+        {work && <div className="mt-2 text-[12.5px] text-lms-sub">Bộ tiêu chí: <span className="font-semibold text-lms-accent">{rubric?.name}</span></div>}
       </div>
 
       <div className="grid grid-cols-1 items-start gap-5 min-[961px]:grid-cols-[1.5fr_1fr]">
@@ -1186,14 +1228,14 @@ export function SResults({ p, t }) {
 
   if (graded.length === 0) {
     return (
-      <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
         <EmptyState p={p} icon="award" label="Chưa có kết quả đã chấm" sub="Khi bài của bạn được chấm, điểm và nhận xét sẽ hiện ở đây." />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className="mb-6 flex flex-wrap gap-4">
         {avgScore != null && (
           <div className={`${cardClass(20)} flex flex-1 items-center gap-4 p-[22px]`}>
@@ -1293,7 +1335,7 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
       {downloaded.length === 0 ? (
         <EmptyState p={p} icon="download" label="Chưa có tài liệu nào" sub="Tải tài liệu từ kho học liệu để lưu lại ở đây." action={<Btn p={p} variant="soft" size="sm" icon="search" onClick={() => setRoute('s-docs')} className="mt-1">Khám phá học liệu</Btn>} />
       ) : (
-        <div className="mb-[34px] grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
+        <div className="lms-stagger mb-[34px] grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
           {downloaded.map((d) => {
             const m = DOC_TYPE_META[d.type];
             return (

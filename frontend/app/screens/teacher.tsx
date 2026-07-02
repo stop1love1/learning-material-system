@@ -16,11 +16,11 @@ export function TOverview({ p, t, setRoute, go }) {
     { icon: 'assign', label: 'Giao bài tập', sub: 'Phát cho lớp', route: 'assign-new' },
   ];
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] pt-[30px] pb-10">
+    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[30px] pb-10">
       <div className="mb-[26px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-2.5 font-mono text-[11.5px] tracking-wide text-lms-faint">THỨ HAI · 22 THÁNG 6, 2026</div>
-          <h2 className="m-0 font-lms-heading text-[38px] font-medium leading-[1.05] tracking-[-0.6px] text-lms-ink">
+          <h2 className="m-0 font-lms-heading text-[clamp(26px,7vw,38px)] font-medium leading-[1.05] tracking-[-0.6px] text-lms-ink">
             Chào buổi sáng, <span className="text-lms-accent">{auth.name || 'bạn'}.</span>
           </h2>
           <p className="mt-3 mb-0 max-w-[520px] text-[14.5px] leading-normal text-lms-sub">
@@ -46,7 +46,7 @@ export function TOverview({ p, t, setRoute, go }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-[1.5fr_1fr] items-start gap-[22px]">
+      <div className="grid grid-cols-1 items-start gap-[22px] min-[961px]:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-[22px]">
           <section className={cardClass(20)}>
             <div className="mb-4 flex items-center justify-between">
@@ -118,17 +118,17 @@ export function AssignmentRow({ a, p, go }) {
       <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${toneBg}`}>
         <Icon name="assign" size={20} stroke={tone} /></div>
       <div className="min-w-0 flex-1">
-        <div className="text-[14.5px] font-semibold text-lms-ink">{a.title}</div>
+        <div className="truncate text-[14.5px] font-semibold text-lms-ink">{a.title}</div>
         <div className="mt-1 flex flex-wrap gap-3 text-xs text-lms-sub">
           <span>{a.type}</span><span>· {a.questions} câu</span><span>· {a.points} điểm</span>
           <span className={`font-mono ${toneText}`}>· {a.dueIn}</span>
         </div>
       </div>
-      <div className="min-w-[90px] text-center">
+      <div className="lms-hide-xs min-w-[90px] text-center">
         <div className="font-mono text-[13px] text-lms-ink">{a.submitted}/{a.total}</div>
         <div className="text-[10.5px] text-lms-faint">đã nộp</div>
       </div>
-      <div className="min-w-[90px] text-center">
+      <div className="lms-hide-xs min-w-[90px] text-center">
         {a.submitted > a.graded ? <Tag p={p} color={p.accent}>{a.submitted - a.graded} chờ chấm</Tag> : <Tag p={p} color={p.ok}>Đã chấm</Tag>}
       </div>
       <Icon name="chevronRight" size={18} stroke={p.faint} />

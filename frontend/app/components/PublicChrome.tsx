@@ -43,7 +43,7 @@ function PublicFooter({ p, topics }: { p: any; topics: Array<{ label: string; hr
             <div className="font-lms-heading text-lg font-bold text-lms-ink">{brand.name}</div>
           </Link>
           <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
-            Kho học liệu mở miễn phí — tài liệu, đề thi và bài tập cho học sinh, phụ huynh và thầy cô.
+            Kho học liệu mở miễn phí — tài liệu và bài tập cho học sinh, phụ huynh và thầy cô.
           </p>
           <div className="mt-4 flex gap-[9px]">
             {['globe', 'message', 'send'].map((ic) => (
@@ -126,18 +126,20 @@ export function PublicChrome({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-[18px] px-6">
           <Link href={ROUTES.home} className="flex shrink-0 cursor-pointer items-center gap-[11px] no-underline" aria-label={brand.name}>
             <BrandLogo className="h-[38px]! w-[38px]!" />
-            <div className="lms-hide-sm">
-              <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">{brand.name}</div>
-              <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
-            </div>
+            {/* Home page hero already carries the branding — show the name only on other pages. */}
+            {activeKey !== 'home' && (
+              <div className="lms-hide-sm">
+                <div className="font-lms-heading text-[17px] font-bold leading-none text-lms-ink">{brand.name}</div>
+                <div className="mt-0.5 font-mono text-[9px] tracking-wide text-lms-faint">NỀN TẢNG HỌC LIỆU</div>
+              </div>
+            )}
           </Link>
           <nav className="lms-hide-sm ml-3.5 flex items-center gap-1">
             {items.map((it) => navLink(it, false))}
           </nav>
           <div className="flex-1" />
-          <IconBtn name="search" p={p} variant="filled" onClick={() => push(ROUTES.library)} title="Tìm kiếm" />
           <IconBtn name={dark ? 'sun' : 'moon'} p={p} variant="filled" onClick={() => setDark(!dark)} title="Sáng/tối" />
-          {auth && auth.loggedIn ? (
+          {auth?.ready && (auth.loggedIn ? (
             <Popover
               trigger="click"
               placement="bottomRight"
@@ -197,7 +199,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
             >
               <Icon name="logout" size={15} stroke="#fff" /> Đăng nhập
             </button>
-          )}
+          ))}
           {auth?.isStaff && (
             <button
               onClick={() => push(ROUTES.dashboard)}
@@ -246,7 +248,7 @@ export function PublicChrome({ children }: { children: ReactNode }) {
           </div>
         )}
       </header>
-      <div className="lms-scroll flex flex-1 flex-col overflow-y-auto" ref={mainRef}>
+      <div className="lms-scroll lms-page-scroll flex flex-1 flex-col overflow-y-auto" ref={mainRef}>
         <main className="flex-1">{children}</main>
         <PublicFooter p={p} topics={topics} />
       </div>

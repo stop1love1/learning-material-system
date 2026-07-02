@@ -1,8 +1,10 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import type { Auth, Role } from '@/app/types';
 import { LoginModal } from '@/app/components/LoginModal';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
+import { ROUTES } from '@/app/configs/routes.config';
 import { authApi, setToken, clearToken, getToken } from '@/app/lib/api';
 
 const AuthContext = React.createContext<Auth | null>(null);
@@ -27,9 +29,14 @@ type SessionUser = { name: string; role: Role | ''; email: string };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { p, t } = useLmsTheme();
+  const router = useRouter();
   const [user, setUser] = React.useState<SessionUser | null>(null);
   const [open, setOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
+  // After an explicit login (not session-restore), staff go straight to the admin area.
+  const redirectByRole = React.useCallback((role?: Role | '') => {
+    if (role === 'admin' || role === 'teacher') router.push(ROUTES.dashboard);
+  }, [router]);
 
   React.useEffect(() => {
     if (!getToken()) { setReady(true); return; }
@@ -66,15 +73,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(res.accessToken!);
     setUser({ name: res.user?.name ?? email, role: res.user?.role ?? '', email: res.user?.email ?? email });
     setOpen(false);
+    redirectByRole(res.user?.role ?? '');
     return {};
-  }, []);
+  }, [redirectByRole]);
 
   const verify2fa = React.useCallback(async (email: string, code: string) => {
     const res = await authApi.verify2fa(email, code);
     setToken(res.accessToken);
     setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '', email: res.user?.email ?? email });
     setOpen(false);
-  }, []);
+    redirectByRole(res.user?.role ?? '');
+  }, [redirectByRole]);
 
   const register = React.useCallback(async (name: string, email: string, password: string) => {
     const res = await authApi.register(name, email, password);
@@ -86,7 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(res.accessToken);
     setUser({ name: res.user?.name ?? '', role: res.user?.role ?? '', email: res.user?.email ?? '' });
     setOpen(false);
-  }, []);
+    redirectByRole(res.user?.role ?? '');
+  }, [redirectByRole]);
 
   const logout = React.useCallback(() => {
     authApi.logout().catch(() => {});

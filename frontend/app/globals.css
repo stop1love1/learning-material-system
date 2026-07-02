@@ -97,10 +97,40 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 .bento .col-12 { grid-column: span 12; } .bento .row-2 { grid-row: span 2; }
 .bento-tile { border-radius: 18px; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s; }
 .bento-tile.hovlift:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,.10); }
+/* Tailwind v4 `bg-lms-surface` utility loses to the utilities layer on <a> elements,
+   so card links render transparent (blend into the page). Force the white surface
+   background on card links. !important is needed to beat the utilities layer. */
+a.bento-tile, a.lms-card { background-color: var(--lms-surface) !important; }
 @media (max-width: 920px) { .bento > * { grid-column: span 12 !important; grid-row: auto !important; } }
 
 .reveal { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1 !important; transform: none !important; } }
+
+/* --- Mobile safety net --- Nothing should ever be wider than its column. Media
+   elements shrink to fit; the public scroll area clips stray horizontal overflow
+   on small screens (wide tables keep their own .lms-scrollx scroller). */
+img, svg, video, canvas { max-width: 100%; }
+@media (max-width: 960px) { .lms-page-scroll { overflow-x: clip; } }
+
+/* --- Motion --- Page-enter + staggered content reveal for the public pages.
+   Templates remount per navigation, so .lms-page replays on every route change.
+   .lms-stagger cascades a grid/list of cards in on load. Reduced-motion opts out. */
+@keyframes lms-fade-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes lms-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.lms-page { animation: lms-fade-rise .5s cubic-bezier(.22,.61,.36,1) both; }
+.lms-stagger > * { animation: lms-fade-rise .52s cubic-bezier(.22,.61,.36,1) both; }
+.lms-stagger > *:nth-child(1) { animation-delay: .02s; }
+.lms-stagger > *:nth-child(2) { animation-delay: .06s; }
+.lms-stagger > *:nth-child(3) { animation-delay: .10s; }
+.lms-stagger > *:nth-child(4) { animation-delay: .14s; }
+.lms-stagger > *:nth-child(5) { animation-delay: .18s; }
+.lms-stagger > *:nth-child(6) { animation-delay: .22s; }
+.lms-stagger > *:nth-child(7) { animation-delay: .26s; }
+.lms-stagger > *:nth-child(8) { animation-delay: .30s; }
+.lms-stagger > *:nth-child(n+9) { animation-delay: .34s; }
+@media (prefers-reduced-motion: reduce) {
+  .lms-page, .lms-stagger > * { animation: none !important; }
+}
 
 .lms-rail-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.42); z-index: 55; opacity: 0; transition: opacity .25s; }
 @media (max-width: 960px) {
@@ -133,6 +163,15 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 @media (max-width: 1080px) { .lms-hide-sm { display: none !important; } }
 @media (max-width: 920px) { .lms-foot-grid { grid-template-columns: 1fr 1fr !important; } }
 @media (max-width: 560px) { .lms-foot-grid { grid-template-columns: 1fr !important; } }
+
+/* antd's global reset (genLinkStyle, colorLink = accent) colours every bare `a`,
+   which outranks the Tailwind text-lms-sub utility on footer links and tints them
+   green. Re-assert the muted colour on the dedicated footer class so the links match
+   the footer description; keep the accent hover from the design. !important mirrors the
+   other antd/Tailwind overrides in this file and guarantees the win regardless of how
+   antd's cssinjs selector is scoped. */
+.lms-foot-link { color: var(--lms-sub) !important; }
+.lms-foot-link:hover { color: var(--lms-accent) !important; }
 
 .lms-rich > *:first-child { margin-top: 0; }
 .lms-rich p { margin: 0 0 1em; }

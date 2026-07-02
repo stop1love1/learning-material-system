@@ -39,13 +39,18 @@ export class ExercisesService {
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
 
+    const SORT_FIELD: Record<string, string> = { date: 'createdAt', points: 'points', name: 'title' };
+    const sortField = SORT_FIELD[dto.sortBy as string] || 'createdAt';
+    const sortDir: 1 | -1 = dto.order === 'asc' ? 1 : -1;
+    const listQuery = this.exerciseModel
+      .find(query)
+      .sort({ [sortField]: sortDir })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
+    if (sortField === 'title') listQuery.collation({ locale: 'vi', strength: 1 });
     const [records, total] = await Promise.all([
-      this.exerciseModel
-        .find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .lean(),
+      listQuery,
       this.exerciseModel.countDocuments(query),
     ]);
 

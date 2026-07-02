@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateExerciseFolderDto {
-  @ApiProperty({ example: 'Đề thi học kỳ' })
+  @ApiProperty({ example: 'Bài tập tuần 1' })
   @IsString()
   @MinLength(1)
   name: string;
