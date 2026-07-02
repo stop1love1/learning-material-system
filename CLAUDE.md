@@ -19,7 +19,9 @@ pnpm dev            # http://localhost:3000
 pnpm build          # next build (runs tsc; does NOT run eslint — see next.config.ts)
 pnpm lint           # eslint (separate; not part of build)
 
-# Backend (cd backend) — needs MongoDB on the URI in backend/.env (default mongodb://127.0.0.1:27017/lms)
+# Backend (cd backend) — needs MongoDB on the URI in backend/.env. CAUTION: .env may point
+# at MongoDB Atlas (mongodb+srv://…), NOT local 127.0.0.1 — any mongosh/script data work must
+# use the URI from backend/.env or it will silently hit the wrong database.
 pnpm start:dev      # watch mode, http://localhost:3001/api  ·  Swagger /api/docs
 pnpm build          # nest build
 pnpm seed           # ts-node src/seed.ts → creates default admin (ADMIN_EMAIL/ADMIN_PASSWORD,

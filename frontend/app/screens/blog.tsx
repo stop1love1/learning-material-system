@@ -163,7 +163,7 @@ export function ABlog({ p, t, setRoute, go }) {
   const [cat, setCat] = React.useState('Hoạt động Viết');
   const [body, setBody] = React.useState('');
   const [kw, setKw] = React.useState('');
-  const cats = ['Hoạt động Viết', 'Luyện từ & câu', 'Chính tả', 'Cùng con học', 'Tin tức'];
+  const cats = ['Giới thiệu học liệu', 'Hoạt động Viết', 'Luyện từ & câu', 'Cùng con học', 'Tin tức'];
   const openCompose = (a) => {
     setEditId(a ? a.id : null);
     setTitle(a ? a.title || '' : '');

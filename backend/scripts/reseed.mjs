@@ -10,7 +10,13 @@ import fs from 'fs';
 import path from 'path';
 import { pathToFileURL, fileURLToPath } from 'url';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/lms';
+// Read backend/.env so the direct-mongoose WIPE hits the SAME database the API
+// writes to (the .env may point at Atlas, not local).
+const ENV_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
+const envUri = fs.existsSync(ENV_PATH)
+  ? (fs.readFileSync(ENV_PATH, 'utf8').match(/^MONGODB_URI=(.+)$/m) || [])[1]
+  : undefined;
+const MONGODB_URI = process.env.MONGODB_URI || (envUri && envUri.trim()) || 'mongodb://127.0.0.1:27017/lms';
 const API = process.env.API || 'http://localhost:3001/api';
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), 'seed-data');
 const KEEP = new Set(['users', 'settings']);
@@ -31,7 +37,9 @@ const fileTypeOf = (n) => {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const cleanName = (name) =>
   name.replace(/\.[a-z0-9]+$/i, '')
-    .replace(/^(Đề bài:|Sơ đồ tư duy|Sơ đồ:|Thẻ:|Clip:|Tranh:|Trò chơi trên|Trò chơi:|Phiếu học tập:|Phiếu |\[Podcast tản văn\]\s*)/i, '')
+    .replace(/^\d+\.\s*/, '')
+    .replace(/^(Đề bài về|Đề bài:|Sơ đồ tư duy|Sơ đồ:|SĐTD|SDTD|Thẻ:|Clip:|Tranh:|Trò chơi trên|Trò chơi:|Phiếu học tập[:_]\s*|\[Podcast tản văn\]\s*)/i, '')
+    .replace(/^["“]\s*|\s*["”]$/g, '')
     .replace(/\s+/g, ' ').trim();
 const descHtml = (folder, name) => {
   const t = esc(cleanName(name));
@@ -118,8 +126,9 @@ async function main() {
   }
   console.log(`Rubrics: ${nRub}`);
 
-  // Questions — keep ids grouped by grade for building quizzes.
-  const byGrade = { 'Lớp 4': [], 'Lớp 5': [] };
+  // Questions — group created ids by their "Phiếu N" tag so each real worksheet
+  // can be rebuilt as one quiz (mirrors the teacher's actual phiếu học tập).
+  const byPhieu = new Map();
   let nQ = 0, qErr = 0;
   for (const q of (C.questions || [])) {
     try {
@@ -129,7 +138,11 @@ async function main() {
       });
       const id = created._id || created.question?._id;
       nQ++;
-      if (id && q.type !== 'essay' && byGrade[q.grade]) byGrade[q.grade].push(id);
+      const tag = (q.tags || []).find((t) => /^Phiếu /.test(t));
+      if (id && tag && q.type !== 'essay') {
+        if (!byPhieu.has(tag)) byPhieu.set(tag, []);
+        byPhieu.get(tag).push(id);
+      }
     } catch (e) { qErr++; if (qErr <= 8) console.log('  question ERR', q.type, e.message); }
   }
   console.log(`Questions: ${nQ} (${qErr} errors)`);
@@ -141,20 +154,23 @@ async function main() {
     catch (e) { console.log('  exercise ERR', ex.title, e.message); }
   }
 
-  // Build quiz exercises from seeded questions (5 per quiz, per grade).
+  // One quiz per phiếu — title/passage/grade come from content.json `quizzes`
+  // (transcribed verbatim from the real worksheets).
   let nQuiz = 0;
-  for (const grade of ['Lớp 4', 'Lớp 5']) {
-    const ids = byGrade[grade];
-    for (let i = 0; i + 3 < ids.length && nQuiz < 8; i += 5) {
-      const chunk = ids.slice(i, i + 5);
-      try {
-        const exq = await api('POST', '/exercises', { title: `Trắc nghiệm Tiếng Việt ${grade} — Đề ${Math.floor(i / 5) + 1}`, type: 'quiz', subject: 'Tiếng Việt', grade, points: chunk.length * 2, status: 'open' });
-        for (let j = 0; j < chunk.length; j++) await api('POST', `/exercises/${exq._id}/questions`, { questionId: chunk[j], grades: 2, order: j });
-        nQuiz++;
-      } catch (e) { console.log('  quiz ERR', e.message); }
-    }
+  for (const qz of (C.quizzes || [])) {
+    const ids = byPhieu.get(qz.tag) || [];
+    if (!ids.length) { console.log('  quiz SKIP (no questions):', qz.tag); continue; }
+    try {
+      const exq = await api('POST', '/exercises', {
+        title: qz.title, description: qz.description || null, type: 'quiz',
+        subject: qz.subject || 'Tiếng Việt', grade: qz.grade || 'Lớp 4–5',
+        points: ids.length * 2, status: 'open',
+      });
+      for (let j = 0; j < ids.length; j++) await api('POST', `/exercises/${exq._id}/questions`, { questionId: ids[j], grades: 2, order: j });
+      nQuiz++;
+    } catch (e) { console.log('  quiz ERR', qz.tag, e.message); }
   }
-  console.log(`Exercises: ${nEx} đề bài (essay) + ${nQuiz} quiz`);
+  console.log(`Exercises: ${nEx} đề bài (essay) + ${nQuiz} quiz (phiếu)`);
   console.log('RESEED COMPLETE');
 }
 
