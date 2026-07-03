@@ -29,7 +29,7 @@ export function TOverview({ p, t, setRoute, go }) {
         </div>
         <div className="flex gap-2.5">
           <Btn p={p} icon="plus" onClick={() => setRoute('assign-new')}>Giao bài tập</Btn>
-          <Btn p={p} variant="ghost" icon="book" onClick={() => setRoute('docs')}>Kho tài liệu</Btn>
+          <Btn p={p} variant="ghost" icon="book" onClick={() => setRoute('docs')}>Kho học liệu</Btn>
         </div>
       </div>
 

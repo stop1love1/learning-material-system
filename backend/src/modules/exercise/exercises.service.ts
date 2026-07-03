@@ -117,9 +117,13 @@ export class ExercisesService {
     return buildPagination(withCount, total, page, pageSize);
   }
 
-  async findOne(id: string, viewer?: { userId?: string; role?: UserRole }) {
+  async findOne(id: string, viewer?: { userId?: string; role?: UserRole }, countView = false) {
     const exerciseId = convertStringToObjectId(id);
-    const exercise = await this.exerciseModel.findById(exerciseId).lean();
+    // countView=true chỉ cho GET /:id công khai (xem bài) → $inc viewCount. Các lời gọi
+    // nội bộ (create trả về chi tiết) để mặc định false nên không thổi phồng lượt xem.
+    const exercise = countView
+      ? await this.exerciseModel.findByIdAndUpdate(exerciseId, { $inc: { viewCount: 1 } }, { returnDocument: 'after' }).lean()
+      : await this.exerciseModel.findById(exerciseId).lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
 
     // Chủ bài tập (hoặc Admin) được xem đáp án đúng để biên tập. Khách / học viên / chủ
@@ -196,7 +200,7 @@ export class ExercisesService {
     if (folderId !== undefined) patch.folderId = folderId ? convertStringToObjectId(folderId) : null;
     if (rubricId !== undefined) patch.rubricId = rubricId ? convertStringToObjectId(rubricId) : null;
     const exercise = await this.exerciseModel
-      .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
+      .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { returnDocument: 'after' })
       .lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
     return exercise;

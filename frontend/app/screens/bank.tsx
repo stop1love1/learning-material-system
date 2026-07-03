@@ -297,9 +297,8 @@ export function TBank({ p, t, setRoute, go }) {
     try {
       await questionsApi.create({ type: src.type, level: src.level, content: (src.stem || '') + ' (bản sao)', detail });
       await hydrateFor('bank');
-    } catch {
-      LMS && LMS.addQuestion({ type: src.type, level: src.level, stem: (src.stem || '') + ' (bản sao)',
-        options: src.options, answer: src.answer, pairs: src.pairs, topic: src.topic });
+    } catch (e: any) {
+      toastError(e?.message || 'Không sao chép được câu hỏi.');
     }
   };
   const bankToolbar = (
@@ -660,13 +659,9 @@ export function TBankEdit({ p, t, setRoute }) {
                 if (editId) await questionsApi.update(editId, { level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 else await questionsApi.create({ type, level, content: stem || 'Câu hỏi mới', detail, ...topicField });
                 await hydrateFor('bank');
-              } catch {
-                if (!editId) LMS && LMS.addQuestion({ type, level, stem: stem || 'Câu hỏi mới',
-                  options: (type === 'single' || type === 'multi') ? opts : undefined,
-                  answer: correct,
-                  pairs: type === 'match' ? [['Vế trái 1', 'Vế phải 1'], ['Vế trái 2', 'Vế phải 2']] : undefined });
-              } finally {
                 setRoute('bank');
+              } catch (e: any) {
+                toastError(e?.message || 'Không lưu được câu hỏi. Vui lòng thử lại.');
               }
             }}>{editId ? 'Cập nhật câu hỏi' : 'Lưu câu hỏi'}</Btn>
           </div>

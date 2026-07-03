@@ -291,7 +291,7 @@ describe('QuestionsService', () => {
       // SAME collection updated, NOT migrated
       const [updId, payload, opts] = detailModels[SingleChoiceQuestion.name].findByIdAndUpdate.mock.calls[0];
       expect(updId).toBe(base.questionDetail);
-      expect(opts).toEqual({ new: true, runValidators: true });
+      expect(opts).toEqual({ returnDocument: 'after', runValidators: true });
       // $set restricted to schema-own fields; arbitrary "junk" stripped
       expect(payload.$set).toHaveProperty('content', 'new');
       expect(payload.$set).toHaveProperty('options', ['a']);

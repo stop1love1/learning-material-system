@@ -218,7 +218,7 @@ export class QuestionsService {
         if (dto.detail) {
           const $set = this.pickDetailFields(detailModel, dto.detail);
           detail = await detailModel
-            .findByIdAndUpdate(base.questionDetail, { $set }, { new: true, runValidators: true })
+            .findByIdAndUpdate(base.questionDetail, { $set }, { returnDocument: 'after', runValidators: true })
             .lean();
         }
       }

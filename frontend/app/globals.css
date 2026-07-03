@@ -103,8 +103,12 @@ textarea::placeholder, input::placeholder { color: inherit; opacity: 0.5; }
 a.bento-tile, a.lms-card { background-color: var(--lms-surface) !important; }
 @media (max-width: 920px) { .bento > * { grid-column: span 12 !important; grid-row: auto !important; } }
 
-.reveal { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1 !important; transform: none !important; } }
+/* In-page section reveal: heroes, filter rows and grids marked .reveal fade+rise in
+   when the content mounts — including right after the first-load spinner swaps to real
+   content (which is what made the first paint feel abrupt). Public/focus screens only;
+   admin doesn't use .reveal. Reduced-motion opts out. */
+.reveal { animation: lms-fade-rise .55s cubic-bezier(.22,.61,.36,1) .05s both; }
+@media (prefers-reduced-motion: reduce) { .reveal { animation: none !important; opacity: 1 !important; transform: none !important; } }
 
 /* --- Mobile safety net --- Nothing should ever be wider than its column. Media
    elements shrink to fit; the public scroll area clips stray horizontal overflow

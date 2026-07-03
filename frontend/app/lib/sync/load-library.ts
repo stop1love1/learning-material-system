@@ -79,3 +79,26 @@ export async function loadLibrary(): Promise<void> {
     DB.DOWNLOADS = [];
   }
 }
+
+/**
+ * Fetch a single file by id (GET /files/:id — also $inc's viewCount) and upsert it
+ * into DB.DOCS by id. This is what makes the "lượt xem" counter go up when a document
+ * is opened, and guarantees the reader shows the exact requested file fresh from the
+ * API rather than a stale list snapshot. Best-effort: leaves DB untouched on error.
+ */
+export async function loadDoc(id: string): Promise<void> {
+  if (!id) return;
+  try {
+    const rec: any = await filesApi.get(id);
+    if (!rec?._id) return;
+    const doc = mapFile(rec);
+    const tree: any[] = (DB as any).DOC_FOLDER_TREE || [];
+    const resolved = doc.folderId ? tree.find((x: any) => String(x.id) === String(doc.folderId))?.name : undefined;
+    if (resolved) doc.folder = resolved;
+    const i = DB.DOCS.findIndex((x: any) => x.id === doc.id);
+    if (i >= 0) DB.DOCS[i] = doc;
+    else DB.DOCS = [...DB.DOCS, doc];
+  } catch {
+    /* best-effort */
+  }
+}

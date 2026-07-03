@@ -121,7 +121,7 @@ export class RubricService {
       }
     }
 
-    const rubric = await this.rubricModel.findOneAndUpdate({ _id: rubricId, userId: ownerId }, patch, { new: true });
+    const rubric = await this.rubricModel.findOneAndUpdate({ _id: rubricId, userId: ownerId }, patch, { returnDocument: 'after' });
     if (!rubric) throw new NotFoundException('Không tìm thấy rubric');
 
     const [existingLevels, existingCriterions] = await Promise.all([
@@ -211,7 +211,7 @@ export class RubricService {
       .findOneAndUpdate(
         { _id: convertStringToObjectId(groupId), userId: convertStringToObjectId(userId) },
         dto,
-        { new: true },
+        { returnDocument: 'after' },
       )
       .lean();
     if (!group) throw new NotFoundException('Không tìm thấy nhóm rubric');

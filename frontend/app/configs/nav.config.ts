@@ -2,7 +2,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
   user: [
     { group: 'KHÁM PHÁ', items: [
       { key: 'home', icon: 'overview', label: 'Trang chủ' },
-      { key: 's-docs', icon: 'book', label: 'Kho tài liệu' },
+      { key: 's-docs', icon: 'book', label: 'Kho học liệu' },
       { key: 's-tasks', icon: 'assign', label: 'Luyện tập' },
       { key: 's-selfcheck', icon: 'rubric', label: 'Tự đánh giá' },
       { key: 'blog', icon: 'docs', label: 'Bài viết' },
@@ -12,7 +12,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
   admin: [
     { group: 'TỔNG QUAN', items: [{ key: 'a-overview', icon: 'overview', label: 'Tổng quan' }] },
     { group: 'NỘI DUNG', items: [
-      { key: 'docs', icon: 'book', label: 'Kho tài liệu' },
+      { key: 'docs', icon: 'book', label: 'Kho học liệu' },
       { key: 'bank', icon: 'bank', label: 'Ngân hàng câu hỏi' },
       { key: 'assignments', icon: 'assign', label: 'Bài tập' },
       { key: 'rubrics', icon: 'rubric', label: 'Rubrics' },
@@ -49,14 +49,14 @@ export const PAGE_TITLES: Record<string, [string, string]> = {
   'grade-one': ['Chấm bài', 'Theo rubric & điểm số'],
   bank: ['Ngân hàng câu hỏi', 'Kho câu hỏi dùng lại cho mọi đề'],
   'bank-edit': ['Soạn câu hỏi', 'Thêm câu hỏi vào ngân hàng'],
-  docs: ['Kho tài liệu', 'Tài liệu giảng dạy & học liệu'],
+  docs: ['Kho học liệu', 'Tài liệu giảng dạy & học liệu'],
   rubrics: ['Rubrics', 'Bộ tiêu chí chấm điểm'],
   't-reports': ['Báo cáo & Thống kê', 'Hiệu quả giảng dạy & học tập'],
   'rubric-edit': ['Trình dựng Rubric', 'Tiêu chí & thang điểm'],
   notify: ['Thông báo', 'Hoạt động gần đây'],
   settings: ['Cài đặt', 'Tài khoản & hệ thống'],
   's-overview': ['Tổng quan', 'Chào mừng trở lại'],
-  's-docs': ['Kho tài liệu', 'Tìm và đọc tài liệu học tập'],
+  's-docs': ['Kho học liệu', 'Tìm và đọc tài liệu học tập'],
   's-selfcheck': ['Tự đánh giá', 'Dùng rubric tự chấm bài của bạn'],
   's-tasks': ['Luyện tập', 'Bài cần làm & đã nộp'],
   's-task': ['Làm bài', 'Hoàn thành và nộp bài'],

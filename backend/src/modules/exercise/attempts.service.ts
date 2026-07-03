@@ -407,7 +407,7 @@ export class AttemptsService {
           isCorrect,
           grades,
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       );
 
       if (isCorrect === true) correct += 1;
@@ -453,7 +453,7 @@ export class AttemptsService {
         $set: set,
         $inc: { submissionCount: 1 },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
 
     attempt.submittedAt = new Date();
@@ -662,7 +662,7 @@ export class AttemptsService {
     const submission = await this.submissionModel.findOneAndUpdate(
       { attemptId: id },
       { $set: set },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
 
     // Thông báo cho học viên rằng bài đã được chấm (best-effort).

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import ScreenHost from "@/app/components/ScreenHost";
 import { SDocs } from "@/app/screens/student";
 
-export const metadata: Metadata = { title: "Kho tài liệu" };
+export const metadata: Metadata = { title: "Kho học liệu" };
 
 export default function Page() {
   return (

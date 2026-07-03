@@ -37,7 +37,7 @@ export function Pagination({
         showQuickJumper
         responsive
         size="small"
-        showTotal={(t) => `tổng ${t.toLocaleString('vi-VN')} kết quả`}
+        showTotal={(t) => `Tổng ${t.toLocaleString('vi-VN')} kết quả`}
       />
     </div>
   );

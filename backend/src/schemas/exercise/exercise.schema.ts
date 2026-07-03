@@ -100,6 +100,11 @@ export class Exercise {
   @ApiProperty({ type: String, nullable: true })
   folderId: Types.ObjectId | null;
 
+  /** Số lượt mở xem bài tập (tăng mỗi lần GET /exercises/:id) — hiển thị như "lượt xem". */
+  @Prop({ type: Number, default: 0, min: 0 })
+  @ApiProperty({ type: Number })
+  viewCount: number;
+
   @ApiProperty({ type: Date })
   createdAt: Date;
 

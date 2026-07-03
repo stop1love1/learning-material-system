@@ -78,7 +78,7 @@ export class UsersService {
     if (dto.password !== undefined) patch.password = await this.bcrypt.hash(dto.password);
 
     const user = await this.userModel
-      .findByIdAndUpdate(convertStringToObjectId(id), patch, { new: true })
+      .findByIdAndUpdate(convertStringToObjectId(id), patch, { returnDocument: 'after' })
       .lean();
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     return user;

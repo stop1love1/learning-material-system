@@ -55,7 +55,7 @@ function PublicFooter({ p, topics }: { p: any; topics: Array<{ label: string; hr
         </div>
         {col('Khám phá', [
           { label: 'Trang chủ', href: ROUTES.home },
-          { label: 'Kho tài liệu', href: ROUTES.library },
+          { label: 'Kho học liệu', href: ROUTES.library },
           { label: 'Luyện tập', href: ROUTES.practice },
           { label: 'Tự đánh giá', href: ROUTES.selfCheck },
           { label: 'Bài viết', href: ROUTES.blog },

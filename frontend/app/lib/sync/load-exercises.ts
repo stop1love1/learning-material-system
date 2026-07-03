@@ -63,6 +63,7 @@ export function mapExercise(e: Record<string, any>): Record<string, any> {
     questions: e.questionCount ?? 0,
     attempts: e.attemptCount ?? 0,
     learners: e.learnerCount ?? 0,
+    views: e.viewCount ?? 0,
     rubric: e.rubricId ? String(e.rubricId?._id ?? e.rubricId) : null,
   };
 }
@@ -109,6 +110,7 @@ export async function loadExercises(): Promise<void> {
       questions: e.questionCount ?? 0,
       attempts: e.attemptCount ?? 0,
       learners: e.learnerCount ?? 0,
+      views: e.viewCount ?? 0,
     }));
   } catch {
     (DB as any).ASSIGNMENTS = [];

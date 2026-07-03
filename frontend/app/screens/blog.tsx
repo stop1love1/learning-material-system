@@ -14,6 +14,7 @@ import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapArticle, loadArticle } from '@/app/lib/sync/load-articles';
 import { ROUTES } from '@/app/configs/routes.config';
 import { withKeyword } from '@/app/helpers/related-href';
+import { toastError } from '@/app/lib/ui/dialogs';
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -23,6 +24,34 @@ const BLOG_COVER = {
   blue: { light: '#1677ff', dark: '#5b8ff0' },
 };
 function coverHue(p, c) { return (BLOG_COVER[c] || BLOG_COVER.blue)[p.dark ? 'dark' : 'light']; }
+/** Ảnh bìa dạng biểu tượng minh hoạ (nền trong suốt: .svg hoặc bộ emoji hoạt hình)
+ *  → canh giữa trên thẻ màu pastel; còn lại coi là ảnh chụp → phủ kín. */
+function isIconCover(url) {
+  return /\.svg(\?|$)/i.test(url) || /(fluentui-emoji|openmoji|twemoji)/i.test(url);
+}
+/** Nền của khối ảnh bìa: ảnh chụp phủ kín kèm lớp hue nhạt, biểu tượng canh giữa
+ *  trên thẻ màu, fallback về gradient theo hue khi bài viết chưa có ảnh. */
+function coverStyle(p, a) {
+  const hue = coverHue(p, a.cover);
+  const img = a && a.image;
+  if (img && isIconCover(img)) {
+    return {
+      backgroundColor: hexA(hue, 0.14),
+      backgroundImage: `url("${img}")`,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundSize: 'auto 72%',
+    };
+  }
+  if (img) {
+    return {
+      backgroundImage: `linear-gradient(135deg, ${hexA(hue, 0.28)}, ${hexA(hue, 0.12)}), url("${img}")`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  }
+  return { background: `linear-gradient(135deg, ${hue}, ${hexA(hue, 0.5)})` };
+}
 
 export function SBlog({ p, t }) {
   useLMS();
@@ -77,7 +106,7 @@ export function SBlog({ p, t }) {
       <>
       {lead && (
         <Link href={ROUTES.blogPost(lead.id)} className="reveal bento-tile hovlift mb-[22px] grid grid-cols-1 min-[720px]:grid-cols-[1.1fr_1fr] overflow-hidden border border-lms-line bg-lms-surface no-underline">
-          <div className="flex min-h-[240px] items-end p-[22px]" style={{ background: `linear-gradient(135deg, ${coverHue(p, lead.cover)}, ${hexA(coverHue(p, lead.cover), 0.55)})` }}>
+          <div className="flex min-h-[240px] items-end p-[22px]" style={coverStyle(p, lead)}>
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-[11.5px] font-bold" style={{ color: coverHue(p, lead.cover) }}>{lead.cat}</span>
           </div>
           <div className="flex flex-col justify-center p-7">
@@ -96,7 +125,7 @@ export function SBlog({ p, t }) {
       <div className="lms-stagger reveal grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px] pb-10">
         {rest.map((a) => (
           <Link key={a.id} href={ROUTES.blogPost(a.id)} className="bento-tile hovlift overflow-hidden border border-lms-line bg-lms-surface no-underline">
-            <div className="flex h-[132px] items-end p-3.5" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>
+            <div className="flex h-[132px] items-end p-3.5" style={coverStyle(p, a)}>
               <span className="rounded-md bg-white/90 px-[9px] py-[3px] text-[11px] font-bold" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
             </div>
             <div className="p-[18px]">
@@ -174,7 +203,7 @@ export function SArticle({ p, t, ctx }) {
         <div><div className="text-[13.5px] font-semibold text-lms-ink">{a.author}</div>
           <div className="text-xs text-lms-faint">{a.date} · {a.read} đọc</div></div>
       </div>
-      <div className="mb-7 h-[240px] rounded-[14px]" style={{ background: `linear-gradient(135deg, ${hue}, ${hexA(hue, 0.5)})` }} />
+      <div className="mb-7 h-[240px] rounded-[14px]" style={coverStyle(p, a)} />
       {a.html
         ? <div className="lms-rich text-[16.5px] leading-[1.95] text-lms-ink" dangerouslySetInnerHTML={{ __html: a.html }} />
         : <div>
@@ -210,6 +239,7 @@ export function ABlog({ p, t, setRoute }) {
   const [title, setTitle] = React.useState('');
   const [cat, setCat] = React.useState('Hoạt động Viết');
   const [body, setBody] = React.useState('');
+  const [image, setImage] = React.useState('');
   const [kw, setKw] = React.useState('');
   const cats = ['Giới thiệu học liệu', 'Hoạt động Viết', 'Luyện từ & câu', 'Cùng con học', 'Tin tức'];
   const openCompose = (a) => {
@@ -217,6 +247,7 @@ export function ABlog({ p, t, setRoute }) {
     setTitle(a ? a.title || '' : '');
     setCat(a ? a.cat || 'Hoạt động Viết' : 'Hoạt động Viết');
     setBody(a ? a.html || '' : '');
+    setImage(a ? a.image || '' : '');
     setMode('compose');
   };
 
@@ -232,6 +263,8 @@ export function ABlog({ p, t, setRoute }) {
             <Field p={p} value={title} onChange={setTitle} placeholder="vd: Cách giúp con viết mở bài tả con vật" className="mt-2 mb-[18px]" />
             <label className={lblClass()}>CHUYÊN MỤC</label>
             <Select p={p} value={cat} onChange={setCat} className="mt-2 mb-[18px] max-w-[280px]" options={cats} />
+            <label className={lblClass()}>ẢNH BÌA (URL)</label>
+            <Field p={p} icon="image" value={image} onChange={setImage} placeholder="https://… (dán link ảnh; để trống sẽ dùng nền mặc định)" className="mt-2 mb-[18px]" />
             <label className={lblClass()}>NỘI DUNG</label>
             <div className="mt-2">
               <RichEditor value={body} onChange={setBody} placeholder="Soạn nội dung bài viết…" />
@@ -241,17 +274,17 @@ export function ABlog({ p, t, setRoute }) {
               <Btn p={p} icon="send" onClick={async () => {
                 const safeTitle = title || 'Bài viết mới';
                 const plain = stripHtml(body);
+                const images = image.trim() ? [image.trim()] : [];
                 try {
                   if (editId) {
-                    await articlesApi.update(editId, { title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110) });
+                    await articlesApi.update(editId, { title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110), images });
                   } else {
-                    await articlesApi.create({ title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110), cover: 'blue' });
+                    await articlesApi.create({ title: safeTitle, category: cat, content: body, excerpt: plain.slice(0, 110), cover: 'blue', images });
                   }
                   await hydrateFor('a-blog');
-                } catch {
-                  if (!editId) LMS && LMS.addArticle({ title: safeTitle, cat, body: plain ? [plain] : ['(Chưa có nội dung)'], cover: 'blue' });
-                } finally {
-                  setMode('list'); setTitle(''); setBody(''); setEditId(null);
+                  setMode('list'); setTitle(''); setBody(''); setImage(''); setEditId(null);
+                } catch (e: any) {
+                  toastError(e?.message || 'Không đăng được bài viết. Vui lòng thử lại.');
                 }
               }}>{editId ? 'Lưu thay đổi' : 'Đăng bài'}</Btn>
             </div>
@@ -259,6 +292,7 @@ export function ABlog({ p, t, setRoute }) {
           <div className="sticky top-0">
             <div className={cardClass(20)}>
               <div className="mb-3.5 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">XEM TRƯỚC</div>
+              <div className="mb-3 h-[120px] overflow-hidden rounded-[10px]" style={coverStyle(p, { cover: 'blue', image: image.trim() })} />
               <span className="mb-2.5 inline-block rounded-md bg-lms-accent-soft px-[9px] py-[3px] text-[11px] font-bold text-lms-accent">{cat}</span>
               <h2 className={`m-0 font-lms-heading text-[21px] font-bold leading-snug ${title ? 'text-lms-ink' : 'text-lms-faint'}`}>{title || 'Tiêu đề bài viết…'}</h2>
               <div className="my-2.5 text-xs text-lms-faint">Quản trị · Hôm nay</div>
@@ -281,7 +315,7 @@ export function ABlog({ p, t, setRoute }) {
       <div className="lms-stagger grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {DB.ARTICLES.filter((a) => { const k = kw.trim().toLowerCase(); return !k || (a.title || '').toLowerCase().includes(k) || (a.cat || '').toLowerCase().includes(k); }).map((a) => (
           <div key={a.id} className={`lms-card overflow-hidden ${cardClass(16)} p-0!`}>
-            <div className="flex h-[90px] items-end p-3" style={{ background: `linear-gradient(135deg, ${coverHue(p, a.cover)}, ${hexA(coverHue(p, a.cover), 0.5)})` }}>
+            <div className="flex h-[90px] items-end p-3" style={coverStyle(p, a)}>
               <span className="rounded-[5px] bg-white/90 px-[9px] py-[3px] text-[10.5px] font-bold" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
             </div>
             <div className="p-4">

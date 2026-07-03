@@ -16,6 +16,7 @@ export function mapArticle(a: Record<string, any>): Record<string, any> {
     read: (a.readMinutes ?? 4) + ' phút',
     views: a.viewCount ?? 0,
     cover: a.cover ?? 'clay',
+    image: (Array.isArray(a.images) && a.images[0]) || '',
     body: a.content ? [a.content] : [],
     html: a.content ?? '',
   };

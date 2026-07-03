@@ -47,7 +47,7 @@ export class ExercisesController {
   @Public()
   @ApiOperation({ summary: 'Chi tiết bài tập kèm danh sách câu hỏi' })
   findOne(@Param('id') id: string, @Headers('authorization') authorization?: string) {
-    return this.exercisesService.findOne(id, this.resolveViewer(authorization));
+    return this.exercisesService.findOne(id, this.resolveViewer(authorization), true);
   }
 
   @Post()

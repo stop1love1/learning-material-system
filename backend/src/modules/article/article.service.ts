@@ -46,7 +46,7 @@ export class ArticleService {
       .findOneAndUpdate(
         { _id: convertStringToObjectId(id), isPublished: true },
         { $inc: { viewCount: 1 } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .populate({ path: 'userId', select: 'name avatar' })
       .lean();
@@ -92,7 +92,7 @@ export class ArticleService {
       if (dto[key] !== undefined) patch[key] = dto[key];
     }
     const article = await this.articleModel
-      .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { new: true })
+      .findOneAndUpdate(this.ownerFilter(id, userId, role), patch, { returnDocument: 'after' })
       .lean();
     if (!article) throw new NotFoundException('Không tìm thấy bài viết');
     return article;

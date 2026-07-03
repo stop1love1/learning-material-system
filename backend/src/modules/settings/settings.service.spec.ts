@@ -149,7 +149,7 @@ describe('SettingsService', () => {
 
       const [filter, update, opts] = settingsModel.findOneAndUpdate.mock.calls[0];
       expect(filter).toEqual({ key: 'system' });
-      expect(opts).toMatchObject({ upsert: true, new: true });
+      expect(opts).toMatchObject({ upsert: true, returnDocument: 'after' });
       expect(update.$set).toEqual({
         'org.name': 'Vườn Văn',
         'org.logo': 'x.png',

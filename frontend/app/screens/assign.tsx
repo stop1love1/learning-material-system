@@ -214,11 +214,9 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
         }
       }
       await hydrateFor('assignments');
-    } catch {
-      const typeLabel = kind === 'quiz' ? 'Trắc nghiệm' : kind === 'essay' ? 'Tự luận' : 'Nộp tệp';
-      LMS && LMS.addAssignment({ title: title || 'Bài luyện tập mới', type: typeLabel, due: 'Sắp tới', dueIn: status === 'draft' ? 'Bản nháp' : 'Mới đăng', points: Number(points) || 10, rubric: rubric !== 'none' ? rubric : undefined, questions: kind === 'quiz' ? picked.length : docs.length });
-    } finally {
       setRoute('assignments');
+    } catch (e: any) {
+      toastError(e?.message || 'Không lưu được bài tập. Vui lòng thử lại.');
     }
   };
 

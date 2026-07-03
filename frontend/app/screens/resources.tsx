@@ -76,9 +76,8 @@ export function TDocs({ p, t, auth }) {
       await hydrateFor('docs');
       paged.reload();
       closeCompose();
-    } catch {
-      LMS && LMS.addDoc({ name: form.name.trim(), type: form.ftype, folder: tag ?? 'Tư liệu' });
-      closeCompose();
+    } catch (e: any) {
+      toastError(e?.message || 'Không tạo được học liệu. Vui lòng thử lại.');
     } finally { setSaving(false); }
   };
 
@@ -128,8 +127,7 @@ export function TDocs({ p, t, auth }) {
   };
   const doDownload = (d: any) => {
     if (d.url) window.open(d.url, '_blank', 'noopener');
-    LMS && LMS.download(d.id);
-    // Refresh once the download is recorded so the shown ↓ count reflects the bump.
+    // Record the real download count then refresh; best-effort — no mock bump.
     filesApi.download(d.id).then(() => paged.reload()).catch(() => {});
   };
 
@@ -400,10 +398,9 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
             if (ctx.rubric) await rubricsApi.update(rubric.id, body);
             else await rubricsApi.create(body);
             await hydrateFor('rubrics');
-          } catch {
-            LMS && LMS.saveRubric(rubric);
-          } finally {
             setRoute('rubrics');
+          } catch (e: any) {
+            toastError(e?.message || 'Không lưu được rubric. Vui lòng thử lại.');
           }
         }}>Lưu rubric</Btn>
       </div>

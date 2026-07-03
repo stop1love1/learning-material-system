@@ -111,7 +111,7 @@ export class ParticipantsService {
     }
 
     const participant = await this.participantModel
-      .findByIdAndUpdate(convertStringToObjectId(id), patch, { new: true })
+      .findByIdAndUpdate(convertStringToObjectId(id), patch, { returnDocument: 'after' })
       .lean();
     if (!participant) throw new NotFoundException('Không tìm thấy thí sinh');
     return participant;

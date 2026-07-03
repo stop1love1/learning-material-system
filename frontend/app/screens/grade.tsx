@@ -5,7 +5,7 @@ import { DB } from '@/app/store/store';
 import { LMS, useLMS } from '@/app/store/store';
 import { attemptsApi, settingsApi } from '@/app/lib/api';
 import { loadSubmissions, loadSubmissionDetail } from '@/app/lib/sync/load-submissions';
-import { confirmDialog, toastSuccess } from '@/app/lib/ui/dialogs';
+import { confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { cardClass } from '@/app/helpers/shared';
 import { RubricMatrix } from '@/app/screens/resources';
 
@@ -205,10 +205,10 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
           feedback: feedback || '',
         });
         await loadSubmissions();
-      } catch {
+      } catch (e: any) {
+        toastError(e?.message || 'Không lưu được điểm. Vui lòng thử lại.');
       }
     }
-    if (LMS && s) LMS.gradeSubmission(s.id, finalScore, feedback);
   };
 
   if (!a) {

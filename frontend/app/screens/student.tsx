@@ -15,8 +15,8 @@ import { levelMeta, QuestionView, RichText } from '@/app/screens/bank';
 import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
-import { mapExercise } from '@/app/lib/sync/load-exercises';
-import { mapFile } from '@/app/lib/sync/load-library';
+import { mapExercise, typeVi } from '@/app/lib/sync/load-exercises';
+import { mapFile, loadDoc } from '@/app/lib/sync/load-library';
 import { EX_TYPE_OPTS, EX_STATUS_OPTS } from '@/app/screens/assign';
 import { ROUTES } from '@/app/configs/routes.config';
 import { withKeyword } from '@/app/helpers/related-href';
@@ -322,7 +322,7 @@ export function SOverview({ p, t, setRoute, go }) {
         <div className="flex flex-col gap-[22px]">
           <section className="rounded-xl border border-lms-line bg-(image:--lms-card-gradient) p-[22px]">
             <Icon name="book" size={22} stroke={p.accent} />
-            <h3 className="my-3 mb-1.5 font-lms-heading text-[19px] font-semibold text-lms-ink">Kho tài liệu</h3>
+            <h3 className="my-3 mb-1.5 font-lms-heading text-[19px] font-semibold text-lms-ink">Kho học liệu</h3>
             <p className="mb-4 mt-0 text-[13px] leading-normal text-lms-sub">Tìm tài liệu, sơ đồ tư duy để đọc và ôn tập.</p>
             <Btn p={p} icon="search" full onClick={() => setRoute('s-docs')}>Khám phá học liệu</Btn>
           </section>
@@ -356,6 +356,7 @@ function STaskRow({ task, p }) {
           {task.subject && <span className="rounded-md bg-lms-accent-soft px-2 py-[2px] font-semibold text-lms-accent">{task.subject}</span>}
           {task.type && <span>{task.type}</span>}
           <span className="inline-flex items-center gap-1"><Icon name="users" size={13} stroke={p.faint} /> {task.learners ?? 0} người đã làm</span>
+          <span className="inline-flex items-center gap-1"><Icon name="eye" size={13} stroke={p.faint} /> {task.views ?? 0} lượt xem</span>
           <span className="inline-flex items-center gap-1"><Icon name="assign" size={13} stroke={p.faint} /> {task.questions ?? 0} câu</span>
           <span className="inline-flex items-center gap-1"><Icon name="star" size={13} stroke={p.faint} /> {task.points} điểm</span>
           {task.due && <span className="inline-flex items-center gap-1"><Icon name="calendar" size={13} stroke={p.faint} /> hạn {task.due}</span>}
@@ -530,7 +531,7 @@ function buildSubmitAnswer(q: any, raw: any): any {
 }
 
 export function STask({ p, t, ctx, auth }) {
-  const task = DB.STUDENT_TASKS.find((x) => x.id === ctx.task) || DB.STUDENT_TASKS[0];
+  const task = DB.STUDENT_TASKS.find((x) => x.id === ctx.task);
   const [liveQs, setLiveQs] = React.useState(null);
   const [exType, setExType] = React.useState(null);
   const [cur, setCur] = React.useState(0);
@@ -542,23 +543,38 @@ export function STask({ p, t, ctx, auth }) {
   const [materials, setMaterials] = React.useState<any[]>([]);
   const [remaining, setRemaining] = React.useState<number | null>(null);
   const [scoreScale, setScoreScale] = React.useState(DEFAULT_SCORE_SCALE);
+  const [loadingEx, setLoadingEx] = React.useState(true);
+  const [meta, setMeta] = React.useState<any>(null);
   const autoSubmittedRef = React.useRef(false);
   const submitNowRef = React.useRef<() => void>(() => {});
 
   React.useEffect(() => {
-    if (!task) return;
+    const exId = ctx.task;
+    if (!exId) { setLoadingEx(false); return; }
     let alive = true;
-    setLiveQs(null); setExType(null); setCur(0); setAnswers({}); setResult(null); setSubmitError(null); setRemaining(null); setMaterials([]); setWs(null);
+    setLoadingEx(true);
+    setLiveQs(null); setExType(null); setMeta(null); setCur(0); setAnswers({}); setResult(null); setSubmitError(null); setRemaining(null); setMaterials([]); setWs(null);
     autoSubmittedRef.current = false;
     (async () => {
       try {
-        const ex = await exercisesApi.get(task.id);
+        const ex = await exercisesApi.get(exId);
         if (!alive || !ex) return;
-        const mapped = (ex.questions || []).map(mapApiQuestion).filter(Boolean);
+        setMeta({
+          title: ex.title ?? 'Bài tập',
+          type: typeVi(ex.type),
+          points: ex.points ?? 10,
+          questions: (ex.questions || []).length,
+          durationMinutes: Number(ex.durationMinutes) || 0,
+          maxAttempts: ex.maxAttempts ?? 1,
+          subject: ex.subject ?? '',
+          grade: ex.grade ?? '',
+          instructions: ex.instructions ?? '',
+        });
         setExType(ex.type ?? null);
+        const mapped = (ex.questions || []).map(mapApiQuestion).filter(Boolean);
         const mins = Number(ex.durationMinutes);
         if (Number.isFinite(mins) && mins > 0) setRemaining(mins * 60);
-        if (mapped.length) setLiveQs(mapped);
+        setLiveQs(mapped);
         const matIds: string[] = (ex.materialIds || []).map((m: any) => String(m?._id ?? m));
         const docs = matIds
           .map((id) => {
@@ -568,9 +584,10 @@ export function STask({ p, t, ctx, auth }) {
           .filter(Boolean);
         setMaterials(docs as any[]);
       } catch { /* exercise load failed */ }
+      finally { if (alive) setLoadingEx(false); }
     })();
     return () => { alive = false; };
-  }, [task?.id]);
+  }, [ctx.task]);
 
   React.useEffect(() => {
     if (remaining == null || result) return;
@@ -609,15 +626,19 @@ export function STask({ p, t, ctx, auth }) {
       </div>
     );
   }
-  if (!task) return null;
+  if (loadingEx) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3.5">
+          <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-lms-line border-t-lms-accent" />
+          <span className="text-[13px] text-lms-sub">Đang tải bài tập…</span>
+        </div>
+      </div>
+    );
+  }
 
-  const mockEssay = task.type === 'Tự luận';
-  const mockQs = mockEssay
-    ? [DB.QUESTIONS.find((q) => q.id === 'q5')]
-    : DB.QUESTIONS.filter((q) => ['q1', 'q2', 'q3', 'q6'].includes(q.id));
-
-  const essay = exType ? exType === 'essay' : mockEssay;
-  const qs = (liveQs && liveQs.length ? liveQs : mockQs).filter(Boolean);
+  const essay = exType === 'essay';
+  const qs = (liveQs || []).filter(Boolean);
   const cur2 = Math.min(cur, Math.max(0, qs.length - 1));
   const q = qs[cur2];
   const answered = Object.keys(answers).length;
@@ -632,7 +653,7 @@ export function STask({ p, t, ctx, auth }) {
     }
     setSubmitting(true);
     try {
-      const attempt = await attemptsApi.start(task.id);
+      const attempt = await attemptsApi.start(ctx.task);
       const attemptId = attempt?._id;
       if (!attemptId) throw new Error('no-attempt');
       const payload = liveQs.map((qq) => buildSubmitAnswer(qq, answers[qq.id]));
@@ -725,9 +746,17 @@ export function STask({ p, t, ctx, auth }) {
           <Icon name="x" size={16} stroke={p.sub} /> Thoát
         </Link>
         <div className="h-[26px] w-px bg-lms-line" />
-        <div className="flex-1">
-          <div className="text-[15px] font-semibold text-lms-ink">{task.title}</div>
-          <div className="text-xs text-lms-faint">{task.type} · {task.points} điểm</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold text-lms-ink">{meta?.title ?? task?.title ?? 'Bài tập'}</div>
+          <div className="mt-0.5 truncate text-xs text-lms-faint">
+            {[
+              meta?.type ?? task?.type,
+              meta?.subject ? `${meta.subject}${meta?.grade ? ` · ${meta.grade}` : ''}` : null,
+              `${meta?.points ?? task?.points ?? 10} điểm`,
+              essay ? null : `${qs.length} câu`,
+              `Tối đa ${meta?.maxAttempts ?? 1} lượt`,
+            ].filter(Boolean).join('  ·  ')}
+          </div>
         </div>
         {remaining != null && (
           <div className="flex items-center gap-2 rounded-[10px] border border-lms-line bg-lms-surface px-[13px] py-[7px]">
@@ -870,7 +899,7 @@ export function SDocs({ p, t }) {
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
       <div className="reveal mb-[22px] rounded-[18px] border border-lms-line bg-(image:--lms-hero-gradient) px-[30px] py-[34px] max-sm:px-4 max-sm:py-6">
         <h2 className="m-0 font-lms-heading text-[26px] font-bold tracking-[-0.4px] text-lms-ink">
-          Kho tài liệu <span className="text-lms-accent">học tập</span>
+          Kho <span className="text-lms-accent">học liệu</span>
         </h2>
         <p className="mt-2 mb-[18px] max-w-[520px] text-sm leading-normal text-lms-sub">
           Tìm tài liệu và sơ đồ tư duy để đọc, ôn tập và làm bài.
@@ -933,12 +962,6 @@ export function SDocs({ p, t }) {
   );
 }
 
-const DOC_BODY = [
-  'Tài liệu này tổng hợp những nội dung trọng tâm, được biên soạn bám sát chương trình hiện hành.',
-  'Phần đầu giới thiệu khái quát bài học, kèm sơ đồ hệ thống ý đơn giản, nhiều màu sắc để các em dễ ghi nhớ.',
-  'Phần thân hướng dẫn từng bước, có ví dụ minh hoạ gần gũi và gợi ý cách viết đoạn văn theo cấu trúc mở — thân — kết.',
-  'Cuối tài liệu là bộ câu hỏi tự luyện kèm đáp án, giúp các em tự kiểm tra mức độ nắm bài trước khi làm bài tập trên hệ thống.',
-];
 function MediaBlock({ d, p, m }) {
   const [url, setUrl] = React.useState(null);
   const [name, setName] = React.useState('');
@@ -976,7 +999,32 @@ function MediaBlock({ d, p, m }) {
   );
 }
 export function SDocReader({ p, t, ctx }) {
-  const d = DB.DOCS.find((x) => x.id === ctx.doc) || DB.DOCS[0];
+  useLMS();
+  const id = ctx.doc;
+  // Fetch the exact file by id on mount: loads docs missing from the first-page list
+  // AND triggers the backend viewCount $inc (GET /files/:id) so "lượt xem" goes up.
+  const [loading, setLoading] = React.useState(() => !DB.DOCS.find((x: any) => x.id === id));
+  React.useEffect(() => {
+    let alive = true;
+    if (!DB.DOCS.find((x: any) => x.id === id)) setLoading(true);
+    loadDoc(id).finally(() => {
+      if (!alive) return;
+      LMS.bump();
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [id]);
+
+  const d = DB.DOCS.find((x) => x.id === id);
+  // Still fetching and nothing to show yet: render loading rather than a wrong doc.
+  if (loading && !d) return (
+    <div className="flex min-h-[55vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3.5">
+        <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-lms-line border-t-lms-accent" />
+        <span className="text-[13px] text-lms-sub">Đang tải tài liệu…</span>
+      </div>
+    </div>
+  );
   if (!d) {
     return (
       <EmptyState
@@ -986,7 +1034,7 @@ export function SDocReader({ p, t, ctx }) {
         sub="Chưa có nội dung."
         action={
           <Link href={ROUTES.library} className="mt-1 inline-flex h-[34px] items-center gap-2 rounded-[11px] bg-lms-accent-soft px-3.5 text-[12.5px] font-semibold text-lms-accent no-underline">
-            <Icon name="arrowLeft" size={15} stroke={p.accent} sw={1.9} /> Về kho tài liệu
+            <Icon name="arrowLeft" size={15} stroke={p.accent} sw={1.9} /> Về kho học liệu
           </Link>
         }
       />
@@ -1000,7 +1048,7 @@ export function SDocReader({ p, t, ctx }) {
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
       <Link href={ROUTES.library} className="lms-link mb-4 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
-        <Icon name="arrowLeft" size={16} stroke={p.sub} /> Kho tài liệu
+        <Icon name="arrowLeft" size={16} stroke={p.sub} /> Kho học liệu
       </Link>
       <div className="mb-[22px] flex flex-wrap items-start gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft">
@@ -1013,13 +1061,12 @@ export function SDocReader({ p, t, ctx }) {
         {(DB.DOWNLOADS || []).includes(d.id)
           ? <Btn p={p} variant="soft" icon="check">Đã tải</Btn>
           : <Btn p={p} icon="download" onClick={async () => {
+              if (d.url) window.open(d.url, '_blank');
+              // Record the real download count best-effort — no mock fallback.
               try {
                 await filesApi.download(d.id);
-                if (d.url) window.open(d.url, '_blank');
                 await hydrateFor('s-doc');
-              } catch {
-                LMS && LMS.download(d.id); // logged-out (401) / API down → mock fallback
-              }
+              } catch { /* count best-effort */ }
             }}>Tải về</Btn>}
       </div>
 

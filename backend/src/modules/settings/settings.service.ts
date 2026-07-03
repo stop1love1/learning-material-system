@@ -152,7 +152,7 @@ export class SettingsService {
       }
     }
     return this.settingsModel
-      .findOneAndUpdate({ key: 'system' }, { $set: flattened }, { new: true, upsert: true })
+      .findOneAndUpdate({ key: 'system' }, { $set: flattened }, { returnDocument: 'after', upsert: true })
       .lean();
   }
 

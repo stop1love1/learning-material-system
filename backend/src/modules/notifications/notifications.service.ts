@@ -97,7 +97,7 @@ export class NotificationsService {
     const res = await this.notificationModel.findOneAndUpdate(
       { _id: convertStringToObjectId(id), userId: convertStringToObjectId(userId) },
       { isRead: true },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!res) throw new NotFoundException('Không tìm thấy thông báo');
     return { id: String(res._id), isRead: true };

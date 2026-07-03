@@ -75,7 +75,7 @@ export class FilesService {
       .findOneAndUpdate(
         { _id: convertStringToObjectId(id), ...this.visibilityFilter(viewer) },
         { $inc: { viewCount: 1 } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .populate({ path: 'userId', select: 'name avatar' })
       .populate({ path: 'folderId', select: 'name' })
@@ -133,7 +133,7 @@ export class FilesService {
       .findOneAndUpdate(
         { _id: fileId, ...this.visibilityFilter(viewer) },
         { $inc: { downloadCount: 1 } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .lean();
     if (!file) throw new NotFoundException('Không tìm thấy tài liệu');
