@@ -6,7 +6,7 @@ import mongoose, { HydratedDocument, Model, Types } from 'mongoose';
 export type FolderDocument = HydratedDocument<Folder>;
 
 /**
- * Thư mục trong Kho tài liệu (Giáo án, Phiếu học tập, Đề bài, Sơ đồ tư duy…). Cây phân cấp theo
+ * Thư mục trong Kho học liệu (Giáo án, Phiếu học tập, Đề bài, Sơ đồ tư duy…). Cây phân cấp theo
  * materialized-path (ancestors + depth) như reference `item`/`topic`.
  */
 @Schema({ collection: 'folders', timestamps: true, versionKey: false })

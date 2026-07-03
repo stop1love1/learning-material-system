@@ -5,7 +5,7 @@
 - **Đăng ký model:** [`src/database/database.module.ts`](../src/database/database.module.ts) (global) → mọi module inject được model bằng `@InjectModel(Material.name)`.
 - **Kết nối:** [`src/app.module.ts`](../src/app.module.ts) đọc `MONGODB_URI` từ `.env` (mặc định `mongodb://127.0.0.1:27017/lms`).
 
-## Trọng tâm: Kho tài liệu lưu **link ngoài** (không cần tự lưu trữ file)
+## Trọng tâm: Kho học liệu lưu **link ngoài** (không cần tự lưu trữ file)
 
 `Material` được thiết kế **external-link-first**:
 
@@ -27,8 +27,8 @@ Tài liệu được sắp xếp theo cây thư mục `MaterialFolder` (material
 | `users` | Tài khoản (student/teacher/admin) | — |
 | `classrooms` | Lớp học | `teacherId → User` |
 | `enrollments` | Thành viên lớp (n–n User↔Classroom) | `userId → User`, `classroomId → Classroom` (unique cặp) |
-| `material-folders` | Thư mục Kho tài liệu (cây) | `parentId → MaterialFolder`, `ownerId → User` |
-| `materials` | **Kho tài liệu (link ngoài)** | `folderId → MaterialFolder`, `ownerId → User` |
+| `material-folders` | Thư mục Kho học liệu (cây) | `parentId → MaterialFolder`, `ownerId → User` |
+| `materials` | **Kho học liệu (link ngoài)** | `folderId → MaterialFolder`, `ownerId → User` |
 | `questions` | Ngân hàng câu hỏi | `ownerId → User` |
 | `rubrics` | Rubric (nhúng `criteria[]` + `scale[]`) | `ownerId → User` |
 | `assignments` | Bài tập / giao bài | `classroomId`, `ownerId`, `rubricId?`, `questionIds[]`, `materialIds[]` |

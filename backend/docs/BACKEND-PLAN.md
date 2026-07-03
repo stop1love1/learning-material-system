@@ -25,7 +25,7 @@ backend/src/
 └── modules/                      # feature modules (controller/service/dto) — theo pattern rubric
     ├── auth/        # register · login · me  (JwtService + BcryptService + User)
     ├── users/       # admin: CRUD người dùng + phân quyền (role)
-    ├── library/     # Kho tài liệu: folders · files(link ngoài) · downloads("Của tôi")
+    ├── library/     # Kho học liệu: folders · files(link ngoài) · downloads("Của tôi")
     ├── question-bank/ # topics · questions (đa hình + 9 bảng chi tiết)
     ├── rubric/      # ★ kéo gần nguyên từ reference (schema khớp)
     ├── exercise/    # exercises · exercise-questions · attempts · participants · submissions · student-questions · self-assessment

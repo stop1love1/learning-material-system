@@ -154,11 +154,11 @@ export class Settings {
   @Prop({
     type: {
       badge: { type: String, default: 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ' },
-      heroTitle: { type: String, default: 'Học Tiếng Việt nhẹ nhàng, kho tài liệu mở cho tất cả.' },
+      heroTitle: { type: String, default: 'Học Tiếng Việt nhẹ nhàng, kho học liệu mở cho tất cả.' },
       heroSubtitle: {
         type: String,
         default:
-          'Mình chia sẻ miễn phí kho tài liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.',
+          'Mình chia sẻ miễn phí kho học liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.',
       },
       ctaLabel: { type: String, default: 'Khám phá' },
     },
@@ -202,7 +202,7 @@ export class Settings {
         content: {
           type: String,
           default:
-            '<p>Bạn có thể bắt đầu từ bốn khu vực chính:</p><ul><li><strong>Kho tài liệu</strong> — tìm và đọc tài liệu theo thư mục hoặc từ khoá; bấm “Tải về” để lưu bản trên Google Drive.</li><li><strong>Luyện tập</strong> — làm các bài trắc nghiệm; câu khách quan được chấm ngay, câu viết đoạn do giáo viên chấm.</li><li><strong>Tự đánh giá</strong> — dùng bảng tiêu chí (rubric) để tự chấm bài viết của mình.</li><li><strong>Bài viết</strong> — đọc các bài chia sẻ về phương pháp học Tiếng Việt.</li></ul>',
+            '<p>Bạn có thể bắt đầu từ bốn khu vực chính:</p><ul><li><strong>Kho học liệu</strong> — tìm và đọc tài liệu theo thư mục hoặc từ khoá; bấm “Tải về” để lưu bản trên Google Drive.</li><li><strong>Luyện tập</strong> — làm các bài trắc nghiệm; câu khách quan được chấm ngay, câu viết đoạn do giáo viên chấm.</li><li><strong>Tự đánh giá</strong> — dùng bảng tiêu chí (rubric) để tự chấm bài viết của mình.</li><li><strong>Bài viết</strong> — đọc các bài chia sẻ về phương pháp học Tiếng Việt.</li></ul>',
         },
       },
       contact: {

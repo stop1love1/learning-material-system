@@ -93,10 +93,10 @@ export function UserHome({ p, t }) {
             <Icon name="flame" size={14} stroke={p.accent} /> {hp?.badge || 'TÀI NGUYÊN HỌC TẬP · MIỄN PHÍ'}
           </span>
           <h1 className="m-0 max-w-[620px] font-lms-heading text-[clamp(30px,4.4vw,50px)] font-extrabold leading-[1.04] tracking-[-1.4px] text-lms-ink">
-            {hp?.heroTitle || 'Học Tiếng Việt nhẹ nhàng, kho tài liệu mở cho tất cả.'}
+            {hp?.heroTitle || 'Học Tiếng Việt nhẹ nhàng, kho học liệu mở cho tất cả.'}
           </h1>
           <p className="mt-[18px] mb-6 max-w-[480px] text-base leading-relaxed text-lms-sub">
-            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho tài liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
+            {hp?.heroSubtitle || 'Mình chia sẻ miễn phí kho học liệu và bài tập môn Tiếng Việt Tiểu học — ai cũng có thể đọc, luyện tập và tải về.'}
           </p>
           <form action={ROUTES.library} method="get" className="flex max-w-[540px] flex-wrap gap-2.5">
             <Field p={p} icon="search" name="q" value={heroQ} onChange={setHeroQ} placeholder="Tìm tài liệu, tác phẩm, chủ đề…" className="min-w-[200px] flex-1! h-[50px]! rounded-xl!" />

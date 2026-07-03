@@ -3,7 +3,7 @@
 > Bản **thiết kế để duyệt** (chưa hiện thực hết). Quyết định đã chốt: tái sử dụng tối đa
 > cấu trúc reference `edusoft-lms-api` → câu hỏi **tách bảng theo loại**, rubric **tách 4 bảng**,
 > bài làm theo **mô hình thi đầy đủ** (attempt/participant/submission). **Bỏ classroom**;
-> Kho tài liệu **lưu link ngoài**.
+> Kho học liệu **lưu link ngoài**.
 
 ## Nguyên tắc chung (tái dùng từ reference)
 - `@Schema({ collection, timestamps:true, versionKey:false })`, quan hệ bằng `ObjectId + ref`, sở hữu bằng `userId`.
@@ -20,7 +20,7 @@
 |------|-------------|
 | **users** | name, email(unique, match), password(select:false), role(`student\|teacher\|admin`), avatar(url), status(`active\|inactive`), lastActiveAt |
 
-## Nhóm 2 — Kho tài liệu = **folders + files** (link ngoài)  ·  tái dùng `item` + `chapter-attachment`
+## Nhóm 2 — Kho học liệu = **folders + files** (link ngoài)  ·  tái dùng `item` + `chapter-attachment`
 Mô hình cây thư mục/tập tin: **folders** lồng nhau, **files** nằm trong folder (file = link ngoài).
 | Bảng | Field chính |
 |------|-------------|
@@ -67,7 +67,7 @@ Mô hình cây thư mục/tập tin: **folders** lồng nhau, **files** nằm tr
 | **student-questions** *(đáp án từng câu)* | attemptId, questionId, studentId?/sessionId?, answer(Mixed), isCorrect, grades, shuffledOptionIndices[] |
 | **self-assessments** *(màn "Tự đánh giá" — học viên dùng rubric tự chấm bài mình)* | userId, rubricId, source(`file\|exercise\|text`), fileId?/exerciseId?/text, scores[]{criterionId,levelId,percent}, totalPercent, note |
 
-> Hỗ trợ cả người dùng đăng nhập (`studentId`) lẫn khách ẩn danh (`sessionId`) — đúng như reference (Kho tài liệu "truy cập tự do").
+> Hỗ trợ cả người dùng đăng nhập (`studentId`) lẫn khách ẩn danh (`sessionId`) — đúng như reference (Kho học liệu "truy cập tự do").
 
 ## Nhóm 6 — Nội dung  ·  tái dùng `article`
 | Bảng | Field chính |
