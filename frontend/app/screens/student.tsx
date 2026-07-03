@@ -77,12 +77,12 @@ export function UserHome({ p, t }) {
   const [heroQ, setHeroQ] = React.useState('');
   const [hp, setHp] = React.useState<any>(null);
   React.useEffect(() => { settingsApi.get().then((s) => setHp(s?.homepage)).catch(() => {}); }, []);
-  const featured = DB.DOCS.slice(0, 6);
+  const featured = DB.DOCS.slice(0, 10);
   const cats = (DB.DOC_FOLDERS || []).filter((f) => f !== 'Tất cả');
   const exercise = DB.STUDENT_TASKS.find((x) => x.status === 'todo') || DB.STUDENT_TASKS[0];
   const lead = DB.ARTICLES[0];
   const heroDoc = DB.DOCS[0];
-  const latestArticles = DB.ARTICLES.slice(0, 3);
+  const latestArticles = DB.ARTICLES.slice(0, 4);
   const catIcons = ['book', 'docs', 'video', 'rubric', 'report', 'bulb', 'pen', 'star'];
 
   return (
@@ -135,8 +135,10 @@ export function UserHome({ p, t }) {
           href={ROUTES.libraryItem(heroDoc.id)}
           className="col-5 reveal bento-tile hovlift flex cursor-pointer flex-col overflow-hidden border border-lms-line bg-lms-surface no-underline"
         >
-          <div className="flex h-[120px] items-end bg-(image:--lms-feature-gradient) p-4">
-            <Tag p={p} color="#fff" soft={false} className="border border-white/50 text-white">HỌC LIỆU NỔI BẬT</Tag>
+          <div className="relative flex h-[120px] items-end overflow-hidden bg-(image:--lms-feature-gradient) p-4">
+            {heroDoc.thumb && <img src={heroDoc.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />}
+            {heroDoc.thumb && <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />}
+            <Tag p={p} color="#fff" soft={false} className="relative border border-white/50 text-white">HỌC LIỆU NỔI BẬT</Tag>
           </div>
           <div className="p-5">
             <div className="line-clamp-2 font-lms-heading text-lg font-bold wrap-break-word leading-snug text-lms-ink">{heroDoc.name}</div>
@@ -218,12 +220,13 @@ export function UserHome({ p, t }) {
       >
         <div className="reveal mb-11 grid gap-4 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
           {featured.map((d) => {
-            const m = DOC_TYPE_META[d.type];
+            const m = DOC_TYPE_META[d.type] || DOC_TYPE_META.doc;
             return (
               <Link key={d.id} href={ROUTES.libraryItem(d.id)} className="bento-tile hovlift block cursor-pointer overflow-hidden border border-lms-line bg-lms-surface no-underline">
-                <div className="relative flex h-[92px] items-center justify-center bg-lms-accent-soft">
+                <div className="relative flex h-[92px] items-center justify-center overflow-hidden bg-lms-accent-soft">
                   <Icon name={m.icon} size={28} stroke={p.accent} sw={1.4} />
-                  <span className="absolute top-2.5 left-2.5"><Tag p={p} color={p.accent}>{m.label}</Tag></span>
+                  {d.thumb && <img src={d.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />}
+                  <span className={`absolute top-2.5 left-2.5 z-2 ${d.thumb ? 'rounded-[7px] bg-white/92 shadow-sm backdrop-blur-sm' : ''}`}><Tag p={p} color={p.accent}>{m.label}</Tag></span>
                 </div>
                 <div className="p-4">
                   <div className="min-h-9 text-[13.5px] font-semibold leading-snug text-lms-ink">{d.name}</div>
