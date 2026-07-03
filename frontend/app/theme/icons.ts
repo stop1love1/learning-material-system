@@ -7,7 +7,7 @@ export type IconName =
   | 'paperclip' | 'download' | 'upload' | 'eye' | 'filter' | 'send' | 'calendar'
   | 'clock' | 'more' | 'cloud' | 'folder' | 'flame' | 'target' | 'book' | 'sun'
   | 'moon' | 'grid' | 'list' | 'play' | 'link' | 'bulb' | 'video' | 'image'
-  | 'question' | 'award' | 'logout';
+  | 'question' | 'award' | 'logout' | 'phone' | 'mail';
 
 export const ICONS: Record<string, string> = {
   overview: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -67,4 +67,7 @@ export const ICONS: Record<string, string> = {
   question: 'M8 9h8M8 13h5M5 4h14a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1z',
   award: 'M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM9 13l-1.5 7L12 17l4.5 3L15 13',
   logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 16l4-4-4-4M9 12h11',
+  phone:
+    'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z',
+  mail: 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6',
 };

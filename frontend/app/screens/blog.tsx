@@ -193,15 +193,26 @@ export function SArticle({ p, t, ctx }) {
   const relatedKw = (Array.isArray(a.tags) && a.tags[0]) || a.cat || '';
   return (
     <div className="lms-content-pad mx-auto max-w-[760px] px-[30px] pt-7 pb-2">
-      <Link href={ROUTES.blog} className="lms-link mb-5 inline-flex items-center gap-1.5 text-[13px] text-lms-sub no-underline">
-        <Icon name="arrowLeft" size={16} stroke={p.sub} /> Blog
-      </Link>
-      <span className="mb-3.5 inline-block rounded-md px-[11px] py-1 text-xs font-bold" style={{ background: hexA(hue, 0.12), color: hue }}>{a.cat}</span>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Link href={ROUTES.blog} className="lms-link lms-mutelink inline-flex items-center gap-1.5 text-[13px] no-underline">
+          <Icon name="arrowLeft" size={16} stroke={p.sub} /> Blog
+        </Link>
+        <span className="inline-block rounded-md px-[11px] py-1 text-xs font-bold" style={{ background: hexA(hue, 0.12), color: hue }}>{a.cat}</span>
+      </div>
       <h1 className="m-0 font-lms-heading text-[clamp(24px,6vw,34px)] font-extrabold leading-[1.18] tracking-[-0.8px] text-lms-ink">{a.title}</h1>
-      <div className="my-5 flex items-center gap-[11px]">
-        <Avatar name={a.author} p={p} size={42} accent />
-        <div><div className="text-[13.5px] font-semibold text-lms-ink">{a.author}</div>
-          <div className="text-xs text-lms-faint">{a.date} · {a.read} đọc</div></div>
+      <div className="my-6 flex items-center gap-3.5 border-b border-lms-line-soft pb-6">
+        <div className="rounded-[14px] border border-lms-line bg-lms-surface p-0.5 shadow-[0_2px_10px_-4px_rgba(80,55,30,0.2)]">
+          <Avatar name={a.author} p={p} size={44} accent />
+        </div>
+        <div className="min-w-0">
+          <div className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-lms-accent">Tác giả</div>
+          <div className="mt-0.5 text-[14.5px] font-semibold text-lms-ink">{a.author}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-lms-faint">
+            <span className="inline-flex items-center gap-1.5"><Icon name="calendar" size={13} stroke={p.faint} /> {a.date}</span>
+            <span className="h-[3px] w-[3px] rounded-full bg-lms-line" />
+            <span className="inline-flex items-center gap-1.5"><Icon name="clock" size={13} stroke={p.faint} /> {a.read} đọc</span>
+          </div>
+        </div>
       </div>
       <div className="mb-7 h-[240px] rounded-[14px]" style={coverStyle(p, a)} />
       {a.html

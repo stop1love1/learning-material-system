@@ -45,12 +45,25 @@ function PublicFooter({ p, topics }: { p: any; topics: Array<{ label: string; hr
           <p className="m-0 max-w-[300px] text-[13px] leading-relaxed text-lms-sub">
             Kho học liệu mở miễn phí — tài liệu và bài tập cho học sinh, phụ huynh và thầy cô.
           </p>
-          <div className="mt-4 flex gap-[9px]">
-            {['globe', 'message', 'send'].map((ic) => (
-              <div key={ic} className="lms-row flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-[9px] border border-lms-line">
-                <Icon name={ic} size={15} stroke={p.sub} />
-              </div>
-            ))}
+          <div className="mt-4 flex flex-col gap-2 text-[13px] text-lms-sub">
+            <div className="flex items-center gap-2">
+              <Icon name="users" size={14} stroke={p.faint} />
+              <span>
+                Tác giả: <span className="font-semibold text-lms-ink">Trần Phương Thanh</span>
+              </span>
+            </div>
+            <a
+              href="tel:0972421266"
+              className="lms-foot-link flex w-fit items-center gap-2 no-underline transition-colors hover:text-lms-accent"
+            >
+              <Icon name="phone" size={14} stroke={p.faint} /> 0972 421 266
+            </a>
+            <a
+              href="mailto:tpthanh@daihocthudo.edu.vn"
+              className="lms-foot-link flex w-fit items-center gap-2 break-all no-underline transition-colors hover:text-lms-accent"
+            >
+              <Icon name="mail" size={14} stroke={p.faint} /> tpthanh@daihocthudo.edu.vn
+            </a>
           </div>
         </div>
         {col('Khám phá', [
@@ -168,10 +181,10 @@ export function PublicChrome({ children }: { children: ReactNode }) {
                   <div className="my-1 h-px bg-lms-line-soft" />
                   {auth.isStaff && (
                     <>
-                      <Link href={ROUTES.dashboard} className="lms-row flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] text-lms-ink no-underline">
+                      <Link href={ROUTES.dashboard} className="lms-row lms-mutelink flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] no-underline">
                         <Icon name="settings" size={16} stroke={p.sub} /> Khu vực quản trị
                       </Link>
-                      <Link href={ROUTES.account} className="lms-row flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] text-lms-ink no-underline">
+                      <Link href={ROUTES.account} className="lms-row lms-mutelink flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] no-underline">
                         <Icon name="users" size={16} stroke={p.sub} /> Tài khoản & hồ sơ
                       </Link>
                     </>

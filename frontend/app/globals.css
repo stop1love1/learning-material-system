@@ -176,6 +176,9 @@ img, svg, video, canvas { max-width: 100%; }
    antd's cssinjs selector is scoped. */
 .lms-foot-link { color: var(--lms-sub) !important; }
 .lms-foot-link:hover { color: var(--lms-accent) !important; }
+/* Muted link that must stay grey (matching an adjacent icon) instead of antd's accent
+   tint on bare `a`. Same !important reasoning as .lms-foot-link above. */
+.lms-mutelink { color: var(--lms-sub) !important; }
 
 .lms-rich > *:first-child { margin-top: 0; }
 .lms-rich p { margin: 0 0 1em; }

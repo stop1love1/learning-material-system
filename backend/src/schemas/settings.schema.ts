@@ -210,7 +210,7 @@ export class Settings {
         content: {
           type: String,
           default:
-            '<p>Nếu bạn cần hỗ trợ, góp ý hoặc muốn chia sẻ học liệu, hãy liên hệ với chúng tôi qua thông tin bên dưới (cập nhật trong phần Cài đặt của quản trị viên).</p><p>Rất mong nhận được ý kiến đóng góp để Vườn Văn ngày càng hữu ích.</p>',
+            '<p>Nếu bạn cần hỗ trợ, góp ý hoặc muốn chia sẻ học liệu, hãy liên hệ với tác giả qua thông tin bên dưới. Rất mong nhận được ý kiến đóng góp để Vườn Văn ngày càng hữu ích.</p><ul><li><strong>Tác giả:</strong> Trần Phương Thanh</li><li><strong>Điện thoại:</strong> <a href="tel:0972421266">0972 421 266</a></li><li><strong>Email:</strong> <a href="mailto:tpthanh@daihocthudo.edu.vn">tpthanh@daihocthudo.edu.vn</a></li></ul>',
         },
       },
       terms: {
