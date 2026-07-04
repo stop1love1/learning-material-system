@@ -63,7 +63,7 @@ describe('FoldersService', () => {
     });
 
     it('authed non-admin → public OR own merged into query', async () => {
-      await service.list({} as any, { userId: A, role: UserRole.Teacher });
+      await service.list({} as any, { userId: A, role: UserRole.Student });
       const q = lastFindQuery();
       expect(q.$or[0]).toEqual({ isPublic: true });
       expect(q.$or[1].userId.toString()).toBe(A);
@@ -118,7 +118,7 @@ describe('FoldersService', () => {
       const doc: any = { userId: oid(A), name: 'Old', save, toObject };
       folderModel.findById.mockResolvedValue(doc);
 
-      const res = await service.update(FOLDER_ID, { name: 'New', isPublic: false } as any, A, UserRole.Teacher);
+      const res = await service.update(FOLDER_ID, { name: 'New', isPublic: false } as any, A, UserRole.Student);
       expect(folderModel.findById.mock.calls[0][0].toString()).toBe(FOLDER_ID);
       expect(doc.name).toBe('New');
       expect(doc.isPublic).toBe(false);
@@ -129,20 +129,20 @@ describe('FoldersService', () => {
     it('resolves parentId to ObjectId in the patch', async () => {
       const doc: any = { userId: oid(A), save: jest.fn(), toObject: () => ({}) };
       folderModel.findById.mockResolvedValue(doc);
-      await service.update(FOLDER_ID, { parentId: FOLDER_ID } as any, A, UserRole.Teacher);
+      await service.update(FOLDER_ID, { parentId: FOLDER_ID } as any, A, UserRole.Student);
       expect(doc.parentId.toString()).toBe(FOLDER_ID);
     });
 
     it('clears parentId to null when explicitly null', async () => {
       const doc: any = { userId: oid(A), parentId: oid(FOLDER_ID), save: jest.fn(), toObject: () => ({}) };
       folderModel.findById.mockResolvedValue(doc);
-      await service.update(FOLDER_ID, { parentId: null } as any, A, UserRole.Teacher);
+      await service.update(FOLDER_ID, { parentId: null } as any, A, UserRole.Student);
       expect(doc.parentId).toBeNull();
     });
 
     it('404 when folder not found', async () => {
       folderModel.findById.mockResolvedValue(null);
-      await expect(service.update(FOLDER_ID, {} as any, A, UserRole.Teacher)).rejects.toBeInstanceOf(
+      await expect(service.update(FOLDER_ID, {} as any, A, UserRole.Student)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -150,7 +150,7 @@ describe('FoldersService', () => {
     it('403 when non-admin is not the owner', async () => {
       const doc: any = { userId: oid(B), save: jest.fn(), toObject: () => ({}) };
       folderModel.findById.mockResolvedValue(doc);
-      await expect(service.update(FOLDER_ID, { name: 'X' } as any, A, UserRole.Teacher)).rejects.toBeInstanceOf(
+      await expect(service.update(FOLDER_ID, { name: 'X' } as any, A, UserRole.Student)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
       expect(doc.save).not.toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe('FoldersService', () => {
       folderModel.findById.mockResolvedValue(doc);
       folderModel.exists.mockResolvedValue({ _id: oid('5f00000000000000000000c2') }); // has child folder
       fileModel.exists.mockResolvedValue(null);
-      await expect(service.remove(FOLDER_ID, A, UserRole.Teacher)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.remove(FOLDER_ID, A, UserRole.Student)).rejects.toBeInstanceOf(ConflictException);
       expect(doc.deleteOne).not.toHaveBeenCalled();
     });
 
@@ -179,7 +179,7 @@ describe('FoldersService', () => {
       folderModel.findById.mockResolvedValue(doc);
       folderModel.exists.mockResolvedValue(null);
       fileModel.exists.mockResolvedValue({ _id: oid('5f00000000000000000000f9') }); // has a file
-      await expect(service.remove(FOLDER_ID, A, UserRole.Teacher)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.remove(FOLDER_ID, A, UserRole.Student)).rejects.toBeInstanceOf(ConflictException);
       expect(doc.deleteOne).not.toHaveBeenCalled();
     });
 
@@ -189,7 +189,7 @@ describe('FoldersService', () => {
       folderModel.findById.mockResolvedValue(doc);
       folderModel.exists.mockResolvedValue(null);
       fileModel.exists.mockResolvedValue(null);
-      const res = await service.remove(FOLDER_ID, A, UserRole.Teacher);
+      const res = await service.remove(FOLDER_ID, A, UserRole.Student);
       expect(deleteOne).toHaveBeenCalled();
       expect(res).toEqual({ deleted: true });
       // emptiness checked against this folder's _id
@@ -199,13 +199,13 @@ describe('FoldersService', () => {
 
     it('404 when folder not found', async () => {
       folderModel.findById.mockResolvedValue(null);
-      await expect(service.remove(FOLDER_ID, A, UserRole.Teacher)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(FOLDER_ID, A, UserRole.Student)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('403 when non-admin is not the owner', async () => {
       const doc: any = { _id: oid(FOLDER_ID), userId: oid(B), deleteOne: jest.fn() };
       folderModel.findById.mockResolvedValue(doc);
-      await expect(service.remove(FOLDER_ID, A, UserRole.Teacher)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.remove(FOLDER_ID, A, UserRole.Student)).rejects.toBeInstanceOf(ForbiddenException);
       expect(folderModel.exists).not.toHaveBeenCalled();
     });
   });

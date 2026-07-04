@@ -55,14 +55,14 @@ export class FilesController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo tài liệu' })
   create(@Body() dto: CreateFileDto, @CurrentUser('sub') userId: string) {
     return this.filesService.create(dto, userId);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật tài liệu' })
   update(
     @Param('id') id: string,
@@ -74,7 +74,7 @@ export class FilesController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa tài liệu' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.filesService.remove(id, userId, role);

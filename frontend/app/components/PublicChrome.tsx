@@ -12,7 +12,7 @@ import { useLmsTheme } from '@/app/contexts/ThemeProvider';
 import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import { DB, useLMS } from '@/app/store/store';
 
-const ROLE_LABEL_VI: Record<string, string> = { admin: 'Quản trị viên', teacher: 'Giáo viên', student: 'Học viên' };
+const ROLE_LABEL_VI: Record<string, string> = { admin: 'Quản trị viên', student: 'Người dùng' };
 
 function PublicFooter({ p, topics }: { p: any; topics: Array<{ label: string; href?: string }> }) {
   const brand = useOrgBrand();

@@ -51,14 +51,14 @@ export class ExercisesController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo bài tập' })
   create(@Body() dto: CreateExerciseDto, @CurrentUser('sub') userId: string) {
     return this.exercisesService.create(dto, userId);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật bài tập' })
   update(
     @Param('id') id: string,
@@ -70,14 +70,14 @@ export class ExercisesController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa bài tập (gỡ luôn các câu hỏi liên kết)' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.exercisesService.remove(id, userId, role);
   }
 
   @Post(':id/questions')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Thêm câu hỏi vào bài tập' })
   addQuestion(
     @Param('id') id: string,
@@ -89,7 +89,7 @@ export class ExercisesController {
   }
 
   @Delete(':id/questions/:questionId')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Gỡ câu hỏi khỏi bài tập' })
   removeQuestion(
     @Param('id') id: string,

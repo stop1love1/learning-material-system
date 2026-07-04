@@ -35,7 +35,7 @@ export function TOverview({ p, t, setRoute, go }) {
 
       <div className={`lms-statstrip mb-6 flex py-[22px] ${cardClass(20)} p-0!`}>
         {[
-          { l: 'Học viên đang dạy', v: '95', d: '4 lớp', sp: [8, 10, 9, 12, 11, 14, 13, 16] },
+          { l: 'Người dùng đang dạy', v: '95', d: '4 lớp', sp: [8, 10, 9, 12, 11, 14, 13, 16] },
           { l: 'Bài tập đang mở', v: '4', d: '2 sắp đến hạn', sp: [5, 6, 6, 7, 9, 8, 10, 11] },
           { l: 'Bài chờ chấm', v: '19', d: 'Cần xử lý', sp: [12, 9, 14, 11, 16, 13, 18, 19] },
           { l: 'Tỷ lệ nộp bài', v: '86', u: '%', d: '↑ 3,2%', up: true, sp: [7, 8, 8, 9, 9, 10, 11, 12] },

@@ -39,7 +39,7 @@ export class ExercisesService {
       ...(dto.folderId ? { folderId: convertStringToObjectId(dto.folderId) } : {}),
     };
 
-    // Bài tập nháp (draft) chỉ chủ sở hữu / Admin được thấy — khách & học viên bị ẩn.
+    // Bài tập nháp (draft) chỉ chủ sở hữu / Admin được thấy — khách & người dùng bị ẩn.
     const isAdmin = viewer?.role === UserRole.Admin;
     const viewerId = viewer?.userId ? convertStringToObjectId(viewer.userId) : null;
     if (!isAdmin) {
@@ -126,7 +126,7 @@ export class ExercisesService {
       : await this.exerciseModel.findById(exerciseId).lean();
     if (!exercise) throw new NotFoundException('Không tìm thấy bài tập');
 
-    // Chủ bài tập (hoặc Admin) được xem đáp án đúng để biên tập. Khách / học viên / chủ
+    // Chủ bài tập (hoặc Admin) được xem đáp án đúng để biên tập. Khách / người dùng / chủ
     // khác → lược bỏ field đáp án đúng trong từng câu để không lộ đáp án trước khi nộp.
     const isOwner =
       viewer?.role === UserRole.Admin ||
@@ -153,7 +153,7 @@ export class ExercisesService {
 
   /**
    * Xóa các field ĐÁP ÁN ĐÚNG khỏi bản ghi chi tiết câu hỏi (đã populate, dạng lean)
-   * trước khi trả cho người KHÔNG phải chủ bài tập. Giữ lại mọi thứ học viên cần để
+   * trước khi trả cho người KHÔNG phải chủ bài tập. Giữ lại mọi thứ người dùng cần để
    * LÀM bài: đề/options/labels/statements/thứ tự hiển thị... Bao phủ cả 9 loại câu.
    */
   private sanitizeDetailForViewer(detail: any): void {

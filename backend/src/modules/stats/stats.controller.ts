@@ -9,7 +9,7 @@ import { UserRole } from '../../enums';
 @ApiTags('stats')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.Teacher, UserRole.Admin])
+@Roles([UserRole.Admin])
 @Controller('stats')
 export class StatsController {
   constructor(private readonly statsService: StatsService) {}

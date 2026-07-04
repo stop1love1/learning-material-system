@@ -19,7 +19,7 @@ export class AttemptsController {
   constructor(private readonly attemptsService: AttemptsService) {}
 
   @Get()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Danh sách lượt làm cần chấm (lọc exerciseId/studentId/pendingOnly)' })
   list(
     @Query() dto: ListAttemptsDto,
@@ -30,7 +30,7 @@ export class AttemptsController {
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'Các lượt làm của tôi (học viên) — trạng thái + điểm' })
+  @ApiOperation({ summary: 'Các lượt làm của tôi (người dùng) — trạng thái + điểm' })
   mine(@CurrentUser('sub') userId: string) {
     return this.attemptsService.listMine(userId);
   }
@@ -58,7 +58,7 @@ export class AttemptsController {
   }
 
   @Patch(':attemptId/grade')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Chấm điểm một lượt làm (điểm/nhận xét từng câu + tổng)' })
   grade(
     @Param('attemptId') attemptId: string,

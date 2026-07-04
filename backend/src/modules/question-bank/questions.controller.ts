@@ -34,14 +34,14 @@ export class QuestionsController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo câu hỏi' })
   create(@CurrentUser('sub') userId: string, @Body() dto: CreateQuestionDto) {
     return this.questionsService.create(userId, dto);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật câu hỏi (gốc + chi tiết)' })
   update(
     @Param('id') id: string,
@@ -53,7 +53,7 @@ export class QuestionsController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa câu hỏi (gốc + chi tiết)' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.questionsService.remove(id, userId, role);

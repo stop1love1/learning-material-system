@@ -26,7 +26,7 @@ export class StudentQuestion {
   sessionId: string | null;
 
   /**
-   * Đáp án học viên chọn/nhập — shape tùy loại câu hỏi:
+   * Đáp án người dùng chọn/nhập — shape tùy loại câu hỏi:
    *  single: number · multi: number[] · truefalse: boolean
    *  fill: string[] · essay: { text, fileUrls[] } · match: { left: right }[]
    */

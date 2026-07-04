@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = React.useState(false);
   // After an explicit login (not session-restore), staff go straight to the admin area.
   const redirectByRole = React.useCallback((role?: Role | '') => {
-    if (role === 'admin' || role === 'teacher') router.push(ROUTES.dashboard);
+    if (role === 'admin') router.push(ROUTES.dashboard);
   }, [router]);
 
   React.useEffect(() => {
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: user?.email ?? '',
     initials: user ? initialsOf(user.name) : '',
     role,
-    isStaff: role === 'teacher' || role === 'admin',
+    isStaff: role === 'admin',
     open: () => setOpen(true),
     login,
     verify2fa,

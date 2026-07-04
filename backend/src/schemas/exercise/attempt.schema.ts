@@ -47,7 +47,7 @@ export class Attempt {
 }
 
 export const AttemptSchema = SchemaFactory.createForClass(Attempt);
-// Mỗi học viên đăng nhập: 1 lượt/exercise theo attemptNumber.
+// Mỗi người dùng đăng nhập: 1 lượt/exercise theo attemptNumber.
 AttemptSchema.index(
   { exerciseId: 1, studentId: 1, attemptNumber: 1 },
   { unique: true, partialFilterExpression: { studentId: { $type: 'objectId' } } },

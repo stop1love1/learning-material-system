@@ -10,7 +10,7 @@ export class ListAttemptsDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsMongoId()
-  @ApiPropertyOptional({ type: String, description: 'Lọc theo học viên' })
+  @ApiPropertyOptional({ type: String, description: 'Lọc theo người dùng' })
   studentId?: string;
 
   @IsOptional()

@@ -24,14 +24,14 @@ export class TopicsController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo chủ đề' })
   create(@CurrentUser('sub') userId: string, @Body() dto: CreateTopicDto) {
     return this.topicsService.create(userId, dto);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật chủ đề' })
   update(
     @Param('id') id: string,
@@ -43,7 +43,7 @@ export class TopicsController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa chủ đề' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.topicsService.remove(id, userId, role);

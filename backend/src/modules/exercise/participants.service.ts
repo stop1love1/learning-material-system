@@ -56,7 +56,7 @@ export class ParticipantsService {
       query.attemptId = { $in: attempts.map((a) => a._id) };
     }
 
-    // Keyword lọc theo tên/email học viên: resolve user ids khớp rồi giới hạn studentId.
+    // Keyword lọc theo tên/email người dùng: resolve user ids khớp rồi giới hạn studentId.
     const safeKeyword = parseKeyword(keyword);
     if (safeKeyword) {
       const users = await this.userModel

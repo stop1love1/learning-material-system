@@ -8,7 +8,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../enums';
 
 // Class-level guards keep every route authed; @Roles is applied PER-METHOD so the
-// derived feed stays Teacher/Admin-only while the personal endpoints (/me, read,
+// derived feed stays Admin-only while the personal endpoints (/me, read,
 // read-all) are open to any authenticated user.
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -18,8 +18,8 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @Roles([UserRole.Teacher, UserRole.Admin])
-  @ApiOperation({ summary: 'Bảng tin hoạt động (tổng hợp từ sự kiện gần đây) — Teacher/Admin' })
+  @Roles([UserRole.Admin])
+  @ApiOperation({ summary: 'Bảng tin hoạt động (tổng hợp từ sự kiện gần đây) — Admin' })
   feed(@Query('limit') limit?: string) {
     const n = Math.min(50, Math.max(1, Number(limit) || 20));
     return this.notificationsService.feed(n);

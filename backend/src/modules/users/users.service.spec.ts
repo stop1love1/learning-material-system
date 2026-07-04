@@ -77,11 +77,11 @@ describe('UsersService', () => {
       mockFindChain([]);
       userModel.countDocuments.mockResolvedValue(0);
 
-      await service.list({ role: UserRole.Teacher, status: UserStatus.Active } as any);
+      await service.list({ role: UserRole.Student, status: UserStatus.Active } as any);
 
       const query = userModel.find.mock.calls[0][0];
       expect(query.$or).toBeUndefined();
-      expect(query.role).toBe(UserRole.Teacher);
+      expect(query.role).toBe(UserRole.Student);
       expect(query.status).toBe(UserStatus.Active);
     });
   });
@@ -140,7 +140,7 @@ describe('UsersService', () => {
 
     it('blocks self-demotion when currentUserId === id', async () => {
       await expect(
-        service.update(ID_A, { role: UserRole.Teacher } as any, ID_A),
+        service.update(ID_A, { role: UserRole.Student } as any, ID_A),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
     });

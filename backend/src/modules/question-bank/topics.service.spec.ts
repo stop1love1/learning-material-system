@@ -106,7 +106,7 @@ describe('TopicsService', () => {
         oid(),
         { title: 'New', description: 'desc', parentId: newParent } as any,
         oid(),
-        UserRole.Teacher,
+        UserRole.Student,
       );
 
       // mutated the loaded doc and called save() — NOT findOneAndUpdate
@@ -129,14 +129,14 @@ describe('TopicsService', () => {
       };
       topicModel.findOne.mockReturnValue(doc);
 
-      await service.update(oid(), { parentId: null } as any, oid(), UserRole.Teacher);
+      await service.update(oid(), { parentId: null } as any, oid(), UserRole.Student);
       expect(doc.parentId).toBeNull();
       expect(doc.save).toHaveBeenCalledTimes(1);
     });
 
     it('is owner-scoped for non-admins and throws NotFound on a miss', async () => {
       topicModel.findOne.mockReturnValue(null);
-      await expect(service.update(oid(), { title: 'x' } as any, oid(), UserRole.Teacher)).rejects.toBeInstanceOf(
+      await expect(service.update(oid(), { title: 'x' } as any, oid(), UserRole.Student)).rejects.toBeInstanceOf(
         NotFoundException,
       );
       const filter = topicModel.findOne.mock.calls[0][0];

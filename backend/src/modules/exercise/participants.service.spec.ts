@@ -75,7 +75,7 @@ describe('ParticipantsService', () => {
     it('throws NotFound when participant missing', async () => {
       participantModel.findById.mockReturnValue(chain(null));
       await expect(
-        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Teacher),
+        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -84,7 +84,7 @@ describe('ParticipantsService', () => {
       participantModel.findById.mockReturnValue(chain(participant));
       wireOwnership(OWNER_ID);
       await expect(
-        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Teacher),
+        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Student),
       ).resolves.toBe(participant);
     });
 
@@ -94,7 +94,7 @@ describe('ParticipantsService', () => {
       );
       wireOwnership(OTHER_ID); // exercise owned by someone else
       await expect(
-        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Teacher),
+        service.findOne(PARTICIPANT_ID, OWNER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
@@ -113,7 +113,7 @@ describe('ParticipantsService', () => {
     it('throws NotFound when participant missing', async () => {
       participantModel.findById.mockReturnValue(chain(null));
       await expect(
-        service.update(PARTICIPANT_ID, { isBanned: true } as any, OWNER_ID, UserRole.Teacher),
+        service.update(PARTICIPANT_ID, { isBanned: true } as any, OWNER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -123,7 +123,7 @@ describe('ParticipantsService', () => {
       );
       wireOwnership(OTHER_ID);
       await expect(
-        service.update(PARTICIPANT_ID, { isBanned: true } as any, OWNER_ID, UserRole.Teacher),
+        service.update(PARTICIPANT_ID, { isBanned: true } as any, OWNER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(participantModel.findByIdAndUpdate).not.toHaveBeenCalled();
     });
@@ -140,7 +140,7 @@ describe('ParticipantsService', () => {
         PARTICIPANT_ID,
         { isBanned: true, isFinished: true } as any,
         OWNER_ID,
-        UserRole.Teacher,
+        UserRole.Student,
       );
       expect(res).toBe(updated);
       const patch = participantModel.findByIdAndUpdate.mock.calls[0][1];
@@ -157,7 +157,7 @@ describe('ParticipantsService', () => {
       participantModel.find.mockReturnValue(chain([]));
       participantModel.countDocuments.mockResolvedValue(0);
 
-      await service.list({} as any, OWNER_ID, UserRole.Teacher);
+      await service.list({} as any, OWNER_ID, UserRole.Student);
 
       const exerciseFilter = exerciseModel.find.mock.calls[0][0];
       expect(exerciseFilter.userId.toString()).toBe(OWNER_ID);

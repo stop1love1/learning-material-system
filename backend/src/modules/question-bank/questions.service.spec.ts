@@ -201,7 +201,7 @@ describe('QuestionsService', () => {
       const userId = oid();
       questionModel.findOne.mockReturnValue(queryStub(null)); // not found under owner filter
 
-      await expect(service.findOne(id, userId, UserRole.Teacher)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(id, userId, UserRole.Student)).rejects.toBeInstanceOf(NotFoundException);
 
       const filter = questionModel.findOne.mock.calls[0][0];
       expect(filter).toHaveProperty('userId'); // owner-scoped
@@ -230,7 +230,7 @@ describe('QuestionsService', () => {
       );
       detailModels[MatchQuestion.name].findById.mockReturnValue(queryStub({ _id: detailId, pairs: [] }));
 
-      const res = await service.findOne(oid(), oid(), UserRole.Teacher);
+      const res = await service.findOne(oid(), oid(), UserRole.Student);
 
       expect(detailModels[MatchQuestion.name].findById).toHaveBeenCalledWith(detailId);
       expect(res.detail).toEqual({ _id: detailId, pairs: [] });
@@ -284,7 +284,7 @@ describe('QuestionsService', () => {
         oid(),
         { detail: { content: 'new', options: ['a'], junk: 'DROP ME' } } as any,
         oid(),
-        UserRole.Teacher,
+        UserRole.Student,
       );
 
       expect(base.save).toHaveBeenCalledTimes(1);
@@ -307,7 +307,7 @@ describe('QuestionsService', () => {
       detailModels[SingleChoiceQuestion.name].findById.mockReturnValue(queryStub({ _id: 'd' }));
       questionModel.findById.mockReturnValue(queryStub({ _id: base._id }));
 
-      await service.update(oid(), { title: 'New title' } as any, oid(), UserRole.Teacher);
+      await service.update(oid(), { title: 'New title' } as any, oid(), UserRole.Student);
 
       expect(base.save).toHaveBeenCalledTimes(1);
       expect(detailModels[SingleChoiceQuestion.name].findByIdAndUpdate).not.toHaveBeenCalled();
@@ -333,7 +333,7 @@ describe('QuestionsService', () => {
         oid(),
         { type: QuestionType.Essay, detail: { gradingType: 'manual' } } as any,
         oid(),
-        UserRole.Teacher,
+        UserRole.Student,
       );
 
       // new detail created in the ESSAY collection, linked to base._id
@@ -371,7 +371,7 @@ describe('QuestionsService', () => {
       });
       questionModel.findById.mockReturnValue(queryStub({}));
 
-      await service.update(oid(), { type: QuestionType.Match, detail: {} } as any, oid(), UserRole.Teacher);
+      await service.update(oid(), { type: QuestionType.Match, detail: {} } as any, oid(), UserRole.Student);
 
       expect(order).toEqual(['create-new', 'delete-old']);
     });
@@ -379,7 +379,7 @@ describe('QuestionsService', () => {
     it('throws NotFound when the base question is not found (owner-scoped miss)', async () => {
       questionModel.findOne.mockReturnValue(null);
       await expect(
-        service.update(oid(), { title: 'x' } as any, oid(), UserRole.Teacher),
+        service.update(oid(), { title: 'x' } as any, oid(), UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

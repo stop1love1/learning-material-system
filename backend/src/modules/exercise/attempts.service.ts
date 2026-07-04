@@ -500,7 +500,7 @@ export class AttemptsService {
         this.userModel.findById(exercise.userId).select('email name').lean(),
         this.userModel.findById(studentId).select('name email').lean(),
       ]);
-      const studentName = student?.name || student?.email || 'Một học viên';
+      const studentName = student?.name || student?.email || 'Một người dùng';
       const title = exercise.title || 'Bài tập';
 
       // Thông báo cá nhân cho chủ bài tập (không phụ thuộc cấu hình email).
@@ -546,7 +546,7 @@ export class AttemptsService {
       this.studentQuestionModel.find({ attemptId: id }).lean(),
     ]);
 
-    // Học viên (không phải tác giả): ẩn điểm khi showScoreAfter/showScoreImmediately tắt.
+    // Người dùng (không phải tác giả): ẩn điểm khi showScoreAfter/showScoreImmediately tắt.
     if (!isAuthor && submission) {
       const policy = await this.getAcademicPolicy();
       const revealScore = (exercise?.showScoreAfter ?? true) && policy.showScoreImmediately;
@@ -665,7 +665,7 @@ export class AttemptsService {
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
 
-    // Thông báo cho học viên rằng bài đã được chấm (best-effort).
+    // Thông báo cho người dùng rằng bài đã được chấm (best-effort).
     if (attempt.studentId) {
       await this.createNotification(attempt.studentId, {
         title: 'Bài của bạn đã được chấm',

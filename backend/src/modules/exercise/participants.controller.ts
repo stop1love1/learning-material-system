@@ -12,7 +12,7 @@ import { UserRole } from '../../enums';
 @ApiTags('exercise - participants')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.Teacher, UserRole.Admin])
+@Roles([UserRole.Admin])
 @Controller('participants')
 export class ParticipantsController {
   constructor(private readonly participantsService: ParticipantsService) {}

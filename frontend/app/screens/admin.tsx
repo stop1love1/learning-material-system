@@ -125,15 +125,14 @@ export function AOverview({ p, t }) {
 }
 
 
-const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Người dùng', student: 'Người dùng' };
+const ROLE_LABEL = { admin: 'Quản trị viên', student: 'Người dùng' };
 const fmtJoined = (d) => {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('vi-VN'); } catch { return '—'; }
 };
 
 const ROLE_OPTS = [
-  { value: 'student', label: 'Học viên' },
-  { value: 'teacher', label: 'Giáo viên' },
+  { value: 'student', label: 'Người dùng' },
   { value: 'admin', label: 'Quản trị viên' },
 ];
 const STATUS_OPTS = [
@@ -304,7 +303,7 @@ function UserFormModal({ p, mode, user, busy, onClose, onSave }) {
         <div className="grid grid-cols-2 gap-3">
           <div><label className={lblClass()}>VAI TRÒ</label>
             <Select p={p} value={roleVal} onChange={setRoleVal} className="mt-2"
-              options={[{ value: 'student', label: 'Học viên' }, { value: 'teacher', label: 'Giáo viên' }, { value: 'admin', label: 'Quản trị viên' }]} /></div>
+              options={[{ value: 'student', label: 'Người dùng' }, { value: 'admin', label: 'Quản trị viên' }]} /></div>
           <div><label className={lblClass()}>TRẠNG THÁI</label>
             <Select p={p} value={statusVal} onChange={setStatusVal} className="mt-2"
               options={[{ value: 'active', label: 'Hoạt động' }, { value: 'inactive', label: 'Tạm ngưng' }]} /></div>
@@ -435,7 +434,7 @@ export function AReports({ p, t }) {
 
 export function ASettings({ p, t, setTweak, resetTheme }) {
   const setT = setTweak || (() => {});
-  const [sec, setSec] = React.useState('appearance');
+  const [sec, setSec] = React.useState('brand');
 
   const ORG_DEFAULTS = { name: 'Vườn Văn', domain: 'vuonvan.edu.vn', timezone: 'hcm' };
   const tzToOpt = (tz) => (tz === 'Asia/Ho_Chi_Minh' || !tz ? 'hcm' : tz);
@@ -598,17 +597,15 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     }
     setSaving(false);
   }, [org, misc]);
+  // Gom 10 nhóm cài đặt thành 4 tab cho gọn. Mỗi tab hiển thị nhiều mục con xếp chồng
+  // (mỗi mục vẫn có nút Lưu riêng): Giao diện & Thương hiệu (giao diện + tổ chức) ·
+  // Nội dung & SEO (trang chủ + trang nội dung + SEO) · Đánh giá · Hệ thống (bảo mật +
+  // thông báo + tích hợp + dữ liệu & sao lưu).
   const SECTIONS = [
-    { id: 'appearance', icon: 'image', label: 'Giao diện' },
-    { id: 'org', icon: 'settings', label: 'Tổ chức' },
-    { id: 'homepage', icon: 'home', label: 'Trang chủ' },
-    { id: 'pages', icon: 'docs', label: 'Trang nội dung' },
-    { id: 'seo', icon: 'search', label: 'SEO' },
-    { id: 'academic', icon: 'grade', label: 'Cấu hình đánh giá' },
-    { id: 'security', icon: 'target', label: 'Bảo mật & đăng nhập' },
-    { id: 'notifications', icon: 'notify', label: 'Thông báo' },
-    { id: 'integration', icon: 'link', label: 'Tích hợp' },
-    { id: 'data', icon: 'cloud', label: 'Dữ liệu & sao lưu' },
+    { id: 'brand', icon: 'image', label: 'Giao diện & Thương hiệu' },
+    { id: 'content', icon: 'docs', label: 'Nội dung & SEO' },
+    { id: 'academic', icon: 'grade', label: 'Đánh giá' },
+    { id: 'system', icon: 'settings', label: 'Hệ thống' },
   ];
   const ACCENT_OPTS = [
     { k: 'grass', hex: '#3f9d5c', label: 'Xanh lá' },
@@ -646,7 +643,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
       </aside>
 
       <div className="flex flex-col gap-5">
-        {sec === 'appearance' && (
+        {sec === 'brand' && (
           <section className={cardClass(24)}>
             <H desc="Tuỳ chỉnh màu thương hiệu, phông chữ và bố cục — áp dụng tức thì cho toàn hệ thống và được lưu lại.">Giao diện & thương hiệu</H>
             <div className="mb-6 overflow-hidden rounded-xl border border-lms-line">
@@ -724,7 +721,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'org' && (
+        {sec === 'brand' && (
           <section className={cardClass(24)}>
             <H desc="Thông tin chung của trung tâm hiển thị trên toàn hệ thống.">Tổ chức</H>
             <div className="mb-[18px] flex items-center gap-4">
@@ -754,7 +751,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'security' && (
+        {sec === 'system' && (
           <section className={cardClass(24)}>
             <H desc="Chính sách đăng nhập và bảo vệ tài khoản toàn hệ thống.">Bảo mật & đăng nhập</H>
             <div className="mb-[18px] flex flex-col gap-2.5">
@@ -786,7 +783,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'notifications' && (
+        {sec === 'system' && (
           <section className={cardClass(24)}>
             <H desc="Kênh và quy tắc gửi thông báo cho người dùng.">Thông báo</H>
             <div className="mb-[18px] flex flex-col gap-2.5">
@@ -798,7 +795,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'integration' && (
+        {sec === 'system' && (
           <section className={cardClass(24)}>
             <H desc="Kết nối email, lưu trữ và API bên ngoài.">Tích hợp</H>
             <div className="mb-[18px] grid grid-cols-2 gap-4">
@@ -833,7 +830,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'homepage' && (
+        {sec === 'content' && (
           <section className={cardClass(24)}>
             <H desc="Nội dung hiển thị ngoài trang chủ công khai (admin tự chỉnh).">Trang chủ</H>
             <div className="flex flex-col gap-4">
@@ -849,7 +846,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'pages' && (
+        {sec === 'content' && (
           <section className={cardClass(24)}>
             <H desc="Nội dung 4 trang tĩnh ở chân trang: Giới thiệu, Hướng dẫn sử dụng, Liên hệ, Điều khoản.">Trang nội dung</H>
             <div className="mb-4 flex flex-wrap gap-2">
@@ -867,7 +864,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'seo' && (
+        {sec === 'content' && (
           <section className={cardClass(24)}>
             <H desc="Thẻ tiêu đề, mô tả và từ khóa cho trang công khai.">SEO</H>
             <div className="flex flex-col gap-4">
@@ -883,7 +880,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {sec === 'data' && (
+        {sec === 'system' && (
           <section className={cardClass(24)}>
             <H desc="Sao lưu tự động toàn hệ thống.">Dữ liệu & sao lưu</H>
             <div className="mb-[18px] grid grid-cols-2 gap-4">
@@ -902,7 +899,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
           </section>
         )}
 
-        {(sec === 'homepage' || sec === 'seo') && (
+        {sec === 'content' && (
           <div className="flex items-center justify-end gap-2.5">
             {saved && (
               <span className="flex items-center gap-1.5 font-mono text-[11.5px] text-lms-ok">

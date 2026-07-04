@@ -119,7 +119,7 @@ describe('ExercisesService', () => {
 
       // logged-in student/teacher (no status) → own drafts allowed via $or
       await service.list({} as any, { userId: oid().toString(), role: UserRole.Student });
-      await service.list({} as any, { userId: oid().toString(), role: UserRole.Teacher });
+      await service.list({} as any, { userId: oid().toString(), role: UserRole.Student });
       for (const call of [exerciseModel.find.mock.calls[1][0], exerciseModel.find.mock.calls[2][0]]) {
         expect(call.$or).toEqual([
           { status: { $ne: ExerciseStatus.Draft } },
@@ -228,7 +228,7 @@ describe('ExercisesService', () => {
       exerciseModel.findOneAndUpdate.mockReturnValue(leanChain(null));
 
       await expect(
-        service.update(oid().toString(), { title: 'x' } as any, userId, UserRole.Teacher),
+        service.update(oid().toString(), { title: 'x' } as any, userId, UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       const filter = exerciseModel.findOneAndUpdate.mock.calls[0][0];

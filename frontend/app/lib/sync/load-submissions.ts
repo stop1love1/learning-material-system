@@ -59,7 +59,7 @@ export async function loadSubmissions(): Promise<void> {
         attemptId: a._id,
         assignmentId: ex?._id ?? ex ?? '',
         studentId: student?._id ?? '',
-        name: student?.name ?? 'Học viên ẩn danh',
+        name: student?.name ?? 'Người dùng ẩn danh',
         code: codeFrom(student),
         at: atVi(a.submittedAt),
         status: graded ? 'graded' : 'ungraded',

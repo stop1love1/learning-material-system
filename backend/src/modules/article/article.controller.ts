@@ -33,14 +33,14 @@ export class ArticleController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo bài viết' })
   create(@CurrentUser('sub') userId: string, @Body() dto: CreateArticleDto) {
     return this.articleService.create(userId, dto);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật bài viết' })
   update(
     @Param('id') id: string,
@@ -52,7 +52,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa bài viết' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.articleService.remove(id, userId, role);

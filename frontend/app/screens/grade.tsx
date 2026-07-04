@@ -232,7 +232,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
           <div className="text-[15px] font-semibold text-lms-ink">{a.title}</div>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <EmptyState p={p} icon="grade" label="Chưa có bài nộp" sub="Khi học viên nộp bài, bài sẽ xuất hiện ở đây để bạn chấm." />
+          <EmptyState p={p} icon="grade" label="Chưa có bài nộp" sub="Khi người dùng nộp bài, bài sẽ xuất hiện ở đây để bạn chấm." />
         </div>
       </div>
     );
@@ -354,7 +354,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
               label={score ? Number(score).toFixed(1) : '—'} />
           </div>
           <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">NHẬN XÉT</div>
-          <textarea value={fb} onChange={(e) => setFb(e.target.value)} placeholder="Nhận xét cho học viên…"
+          <textarea value={fb} onChange={(e) => setFb(e.target.value)} placeholder="Nhận xét cho người dùng…"
             className="box-border w-full min-h-[86px] resize-y rounded-xl border border-lms-line bg-lms-surface p-3 text-[13px] leading-relaxed text-lms-ink outline-none" />
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {QUICK_COMMENTS.map((qc, i) => (

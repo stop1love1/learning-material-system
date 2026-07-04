@@ -242,7 +242,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
           </div></div>
       </div>
       <label className={lblClass()}>HƯỚNG DẪN (tuỳ chọn)</label>
-      <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Ghi chú cho học viên…" className="mt-2 box-border w-full min-h-[70px] resize-y rounded-xl border border-lms-line bg-lms-surface p-3 text-sm text-lms-ink outline-none" />
+      <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Ghi chú cho người dùng…" className="mt-2 box-border w-full min-h-[70px] resize-y rounded-xl border border-lms-line bg-lms-surface p-3 text-sm text-lms-ink outline-none" />
     </section>
   );
 
@@ -313,7 +313,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
           ['Cho phép nộp muộn', allowLate, setAllowLate],
           ['Xáo trộn thứ tự câu hỏi', shuffle, setShuffle],
           ['Hiện điểm ngay sau khi nộp', showScore, setShowScore],
-          ['Thông báo cho học viên', notify, setNotify],
+          ['Thông báo cho người dùng', notify, setNotify],
         ] as [string, boolean, (v: boolean) => void][]).map(([lab, on, setOn], i) => (
           <div key={i} className="flex items-center justify-between rounded-xl border border-lms-line bg-lms-raise px-3.5 py-[11px]">
             <span className="text-[13.5px] text-lms-ink">{lab}</span>

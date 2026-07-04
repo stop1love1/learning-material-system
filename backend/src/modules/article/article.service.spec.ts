@@ -126,7 +126,7 @@ describe('ArticleService', () => {
 
     it('scopes to the owner for non-admins', async () => {
       articleModel.findOneAndUpdate.mockReturnValue({ lean: jest.fn().mockResolvedValue({ _id: ARTICLE_ID }) });
-      await service.update(ARTICLE_ID, { title: 'X' } as any, USER_ID, UserRole.Teacher);
+      await service.update(ARTICLE_ID, { title: 'X' } as any, USER_ID, UserRole.Student);
 
       const filter = articleModel.findOneAndUpdate.mock.calls[0][0];
       expect(filter.userId).toEqual(new Types.ObjectId(USER_ID));
@@ -143,7 +143,7 @@ describe('ArticleService', () => {
     it('throws NotFoundException when no doc matches the owner filter', async () => {
       articleModel.findOneAndUpdate.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
       await expect(
-        service.update(ARTICLE_ID, { title: 'X' } as any, USER_ID, UserRole.Teacher),
+        service.update(ARTICLE_ID, { title: 'X' } as any, USER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
@@ -151,7 +151,7 @@ describe('ArticleService', () => {
   describe('remove', () => {
     it('deletes within the owner scope', async () => {
       articleModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
-      const res = await service.remove(ARTICLE_ID, USER_ID, UserRole.Teacher);
+      const res = await service.remove(ARTICLE_ID, USER_ID, UserRole.Student);
 
       const filter = articleModel.deleteOne.mock.calls[0][0];
       expect(filter.userId).toEqual(new Types.ObjectId(USER_ID));
@@ -161,7 +161,7 @@ describe('ArticleService', () => {
     it('throws NotFoundException when nothing was deleted', async () => {
       articleModel.deleteOne.mockResolvedValue({ deletedCount: 0 });
       await expect(
-        service.remove(ARTICLE_ID, USER_ID, UserRole.Teacher),
+        service.remove(ARTICLE_ID, USER_ID, UserRole.Student),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

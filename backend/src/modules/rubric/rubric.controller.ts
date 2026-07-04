@@ -32,21 +32,21 @@ export class RubricController {
   }
 
   @Post('rubrics')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo rubric (kèm mức điểm và tiêu chí)' })
   createRubric(@CurrentUser('sub') userId: string, @Body() dto: RubricDto) {
     return this.rubricService.createRubric(userId, dto);
   }
 
   @Patch('rubrics/:id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật rubric (đối soát mức điểm và tiêu chí)' })
   updateRubric(@CurrentUser('sub') userId: string, @Param('id') id: string, @Body() dto: RubricDto) {
     return this.rubricService.updateRubric(userId, id, dto);
   }
 
   @Delete('rubrics/:id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa rubric (kèm mức điểm và tiêu chí)' })
   deleteRubric(@CurrentUser('sub') userId: string, @Param('id') id: string) {
     return this.rubricService.deleteRubric(userId, id);
@@ -59,21 +59,21 @@ export class RubricController {
   }
 
   @Post('rubric-groups')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo nhóm rubric' })
   createRubricGroup(@CurrentUser('sub') userId: string, @Body() dto: RubricGroupDto) {
     return this.rubricService.createRubricGroup(userId, dto);
   }
 
   @Patch('rubric-groups/:id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật nhóm rubric' })
   updateRubricGroup(@CurrentUser('sub') userId: string, @Param('id') id: string, @Body() dto: RubricGroupDto) {
     return this.rubricService.updateRubricGroup(userId, id, dto);
   }
 
   @Delete('rubric-groups/:id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa nhóm rubric (gỡ rubric khỏi nhóm)' })
   deleteRubricGroup(@CurrentUser('sub') userId: string, @Param('id') id: string) {
     return this.rubricService.deleteRubricGroup(userId, id);

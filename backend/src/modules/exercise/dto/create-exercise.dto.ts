@@ -82,7 +82,7 @@ export class CreateExerciseDto {
   @IsMongoId()
   rubricId?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: 'Hướng dẫn / mô tả chi tiết cho học viên' })
+  @ApiPropertyOptional({ type: String, description: 'Hướng dẫn / mô tả chi tiết cho người dùng' })
   @IsOptional()
   @IsString()
   instructions?: string;

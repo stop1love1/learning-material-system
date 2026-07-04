@@ -74,12 +74,12 @@ describe('FilesService', () => {
     });
 
     it('viewer with empty userId → treated as anonymous (isPublic:true)', async () => {
-      await service.list({} as any, { userId: undefined, role: UserRole.Teacher });
+      await service.list({} as any, { userId: undefined, role: UserRole.Student });
       expect(visibilityClause(lastFindQuery())).toEqual({ isPublic: true });
     });
 
     it('authed non-admin → public OR own', async () => {
-      await service.list({} as any, { userId: A, role: UserRole.Teacher });
+      await service.list({} as any, { userId: A, role: UserRole.Student });
       const clause = visibilityClause(lastFindQuery());
       expect(clause.$or).toHaveLength(2);
       expect(clause.$or[0]).toEqual({ isPublic: true });
@@ -105,14 +105,14 @@ describe('FilesService', () => {
     });
 
     it('applies the visibility filter as the first $and clause', async () => {
-      await service.list({} as any, { userId: A, role: UserRole.Teacher });
+      await service.list({} as any, { userId: A, role: UserRole.Student });
       const q = lastFindQuery();
       expect(Array.isArray(q.$and)).toBe(true);
       expect(q.$and[0].$or[0]).toEqual({ isPublic: true });
     });
 
     it('runs keyword through parseKeyword — regex metacharacters are escaped', async () => {
-      await service.list({ keyword: 'a.*(b)[c]' } as any, { userId: A, role: UserRole.Teacher });
+      await service.list({ keyword: 'a.*(b)[c]' } as any, { userId: A, role: UserRole.Student });
       const q = lastFindQuery();
       // visibility is $and[0]; keyword is $and[1]
       const kw = q.$and[1];
@@ -122,7 +122,7 @@ describe('FilesService', () => {
     });
 
     it('omits the keyword clause when keyword is empty / whitespace', async () => {
-      await service.list({ keyword: '   ' } as any, { userId: A, role: UserRole.Teacher });
+      await service.list({ keyword: '   ' } as any, { userId: A, role: UserRole.Student });
       const q = lastFindQuery();
       expect(q.$and).toHaveLength(1); // only visibility
     });
@@ -152,7 +152,7 @@ describe('FilesService', () => {
     });
 
     it('passes the same query object to countDocuments as to find', async () => {
-      await service.list({} as any, { userId: A, role: UserRole.Teacher });
+      await service.list({} as any, { userId: A, role: UserRole.Student });
       expect(fileModel.countDocuments).toHaveBeenCalledWith(lastFindQuery());
     });
   });
@@ -160,7 +160,7 @@ describe('FilesService', () => {
   describe('findOne', () => {
     it('scopes the findOneAndUpdate match by the visibility filter and increments viewCount', async () => {
       fileModel.findOneAndUpdate.mockReturnValue(makeChain({ _id: oid(FILE_ID), name: 'X', folderId: null }));
-      await service.findOne(FILE_ID, { userId: A, role: UserRole.Teacher });
+      await service.findOne(FILE_ID, { userId: A, role: UserRole.Student });
       const [match, update] = fileModel.findOneAndUpdate.mock.calls[0];
       expect(match._id.toString()).toBe(FILE_ID);
       expect(match.$or[0]).toEqual({ isPublic: true }); // visibility merged into match
@@ -171,7 +171,7 @@ describe('FilesService', () => {
       // The scoped findOneAndUpdate matches nothing → null. Because the filter is part of
       // the match, no document is modified, so viewCount cannot be bumped.
       fileModel.findOneAndUpdate.mockReturnValue(makeChain(null));
-      await expect(service.findOne(FILE_ID, { userId: B, role: UserRole.Teacher })).rejects.toBeInstanceOf(
+      await expect(service.findOne(FILE_ID, { userId: B, role: UserRole.Student })).rejects.toBeInstanceOf(
         NotFoundException,
       );
       const [match] = fileModel.findOneAndUpdate.mock.calls[0];
@@ -198,7 +198,7 @@ describe('FilesService', () => {
   describe('download', () => {
     it('private non-owner file → 404, no downloadCount bump, no Download row created', async () => {
       fileModel.findOneAndUpdate.mockReturnValue(makeChain(null));
-      await expect(service.download(FILE_ID, { userId: B, role: UserRole.Teacher })).rejects.toBeInstanceOf(
+      await expect(service.download(FILE_ID, { userId: B, role: UserRole.Student })).rejects.toBeInstanceOf(
         NotFoundException,
       );
       const [match, update] = fileModel.findOneAndUpdate.mock.calls[0];
@@ -212,7 +212,7 @@ describe('FilesService', () => {
     it('visible file → bumps downloadCount and upserts a single Download row', async () => {
       fileModel.findOneAndUpdate.mockReturnValue(makeChain({ _id: oid(FILE_ID) }));
       downloadModel.updateOne.mockResolvedValue({ upsertedCount: 1 });
-      const res = await service.download(FILE_ID, { userId: A, role: UserRole.Teacher });
+      const res = await service.download(FILE_ID, { userId: A, role: UserRole.Student });
       expect(res).toEqual({ ok: true });
 
       const [match, update] = fileModel.findOneAndUpdate.mock.calls[0];
@@ -303,7 +303,7 @@ describe('FilesService', () => {
       const toObject = jest.fn().mockReturnValue({ _id: oid(FILE_ID), name: 'Renamed' });
       const doc: any = { name: 'Old', folderId: null, save, toObject };
       fileModel.findOne.mockResolvedValue(doc);
-      const res = await service.update(FILE_ID, { name: 'Renamed' } as any, A, UserRole.Teacher);
+      const res = await service.update(FILE_ID, { name: 'Renamed' } as any, A, UserRole.Student);
       const filter = fileModel.findOne.mock.calls[0][0];
       expect(filter._id.toString()).toBe(FILE_ID);
       expect(filter.userId.toString()).toBe(A); // owner-scoped
@@ -321,14 +321,14 @@ describe('FilesService', () => {
 
     it('throws 404 when no matching (owned) file', async () => {
       fileModel.findOne.mockResolvedValue(null);
-      await expect(service.update(FILE_ID, {} as any, A, UserRole.Teacher)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.update(FILE_ID, {} as any, A, UserRole.Student)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('non-admin delete is owner-scoped and returns deleted:true', async () => {
       fileModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
-      const res = await service.remove(FILE_ID, A, UserRole.Teacher);
+      const res = await service.remove(FILE_ID, A, UserRole.Student);
       const filter = fileModel.deleteOne.mock.calls[0][0];
       expect(filter.userId.toString()).toBe(A);
       expect(res).toEqual({ deleted: true });
@@ -336,7 +336,7 @@ describe('FilesService', () => {
 
     it('throws 404 when nothing was deleted', async () => {
       fileModel.deleteOne.mockResolvedValue({ deletedCount: 0 });
-      await expect(service.remove(FILE_ID, A, UserRole.Teacher)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(FILE_ID, A, UserRole.Student)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

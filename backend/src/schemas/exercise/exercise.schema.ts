@@ -67,7 +67,7 @@ export class Exercise {
   @ApiProperty({ type: String, nullable: true })
   rubricId: Types.ObjectId | null;
 
-  /** Hướng dẫn / mô tả chi tiết hiển thị cho học viên khi làm bài. */
+  /** Hướng dẫn / mô tả chi tiết hiển thị cho người dùng khi làm bài. */
   @Prop({ type: String, default: null })
   @ApiProperty({ type: String, nullable: true })
   instructions: string | null;
@@ -82,7 +82,7 @@ export class Exercise {
   @ApiProperty({ type: Boolean })
   allowLateSubmit: boolean;
 
-  /** Hiển thị điểm cho học viên ngay sau khi nộp. */
+  /** Hiển thị điểm cho người dùng ngay sau khi nộp. */
   @Prop({ type: Boolean, default: true })
   @ApiProperty({ type: Boolean })
   showScoreAfter: boolean;

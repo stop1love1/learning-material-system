@@ -26,14 +26,14 @@ export class ExerciseFoldersController {
   }
 
   @Post()
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Tạo thư mục' })
   create(@Body() dto: CreateExerciseFolderDto, @CurrentUser('sub') userId: string) {
     return this.foldersService.create(dto, userId);
   }
 
   @Patch(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Cập nhật thư mục' })
   update(
     @Param('id') id: string,
@@ -45,7 +45,7 @@ export class ExerciseFoldersController {
   }
 
   @Delete(':id')
-  @Roles([UserRole.Teacher, UserRole.Admin])
+  @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Xóa thư mục (chặn nếu còn thư mục con hoặc bài tập)' })
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string, @CurrentUser('role') role: UserRole) {
     return this.foldersService.remove(id, userId, role);

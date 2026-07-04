@@ -36,7 +36,7 @@ export function NotifyScreen({ p }: { p: Palette; t?: Tweaks }) {
   );
 }
 
-const ROLE_VI: Record<string, string> = { admin: 'Quản trị viên', teacher: 'Giáo viên', student: 'Học viên' };
+const ROLE_VI: Record<string, string> = { admin: 'Quản trị viên', student: 'Người dùng' };
 
 // Toggle tuỳ chọn cá nhân — lưu localStorage (prefs phía client, không có backend theo người dùng).
 function PrefToggle({ p, label, prefKey, def }: { p: Palette; label: React.ReactNode; prefKey: string; def?: boolean }) {
@@ -114,9 +114,9 @@ export function SettingsScreen({ p, t }: { p: Palette; t: Tweaks }) {
       <section className={`mb-5 ${cardClass(24)}`}>
         <h3 className="mb-3.5 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Tuỳ chọn</h3>
         {[
-          { lab: 'Nhận email khi học viên nộp bài', key: 'notify-submit', def: true },
+          { lab: 'Nhận email khi người dùng nộp bài', key: 'notify-submit', def: true },
           { lab: 'Nhắc nhở bài chưa chấm hằng ngày', key: 'remind-grading', def: true },
-          { lab: 'Cho phép học viên xem điểm ngay', key: 'show-score', def: false },
+          { lab: 'Cho phép người dùng xem điểm ngay', key: 'show-score', def: false },
         ].map((o) => (
           <div key={o.key} className="mb-2.5">
             <PrefToggle p={p} label={o.lab} prefKey={o.key} def={o.def} />

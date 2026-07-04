@@ -4,10 +4,9 @@ import { DB } from '@/app/store/store';
 import { usersApi } from '@/app/lib/api';
 import { formatDateVi } from '@/app/helpers/format-date';
 
-// Admin screen buckets teacher/student as 'Người dùng', admin as 'Quản trị viên'.
+// Hai vai trò: admin = 'Quản trị viên', còn lại = 'Người dùng'.
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Quản trị viên',
-  teacher: 'Người dùng',
   student: 'Người dùng',
 };
 

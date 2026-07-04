@@ -3,7 +3,7 @@ export type HeadingFont = 'baloo' | 'jakarta' | 'sora' | 'system';
 export type Density = 'compact' | 'regular';
 export type AssignFlow = 'wizard' | 'single';
 export type RubricStyle = 'matrix' | 'cards';
-export type Role = 'student' | 'teacher' | 'admin';
+export type Role = 'student' | 'admin';
 
 export interface Tweaks {
   accent: AccentKey | string;
@@ -50,7 +50,7 @@ export interface Auth {
   email: string; // '' khi chưa đăng nhập
   initials: string;
   role: Role | ''; // '' khi chưa đăng nhập
-  isStaff: boolean; // true khi role là 'teacher' hoặc 'admin'
+  isStaff: boolean; // true khi role là 'admin'
   open: () => void;
   login: (email: string, password: string) => Promise<{ needs2fa?: boolean; email?: string; devOtp?: string }>;
   verify2fa: (email: string, code: string) => Promise<void>;
