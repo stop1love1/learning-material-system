@@ -11,6 +11,14 @@ function driveThumb(url: string, size = 480): string | null {
   const id = driveId(url);
   return id ? `https://lh3.googleusercontent.com/d/${id}=w${size}` : null;
 }
+// Fallback preview for any external web link (no stored thumbnailUrl, not a Drive
+// file): a screenshot of the page via WordPress mShots. Best-effort — the card's
+// onError hides a broken image and falls back to the file icon.
+function linkThumb(url: string): string | null {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  if (driveId(url)) return null;
+  return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=480&h=300`;
+}
 
 /** Map /files record → Doc shape (shared by loader + paged hook). */
 export function mapFile(f: Record<string, any>): Record<string, any> {
@@ -33,7 +41,7 @@ export function mapFile(f: Record<string, any>): Record<string, any> {
     views: f.viewCount ?? 0,
     url: f.url ?? '',
     desc: f.description ?? '',
-    thumb: f.thumbnailUrl || driveThumb(f.url),
+    thumb: f.thumbnailUrl || driveThumb(f.url) || linkThumb(f.url),
   };
 }
 
