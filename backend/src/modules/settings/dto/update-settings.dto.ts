@@ -262,6 +262,11 @@ export class IntegrationSettingsDto {
   @IsOptional()
   @IsString()
   googleApiKey?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  aiGemUrl?: string;
 }
 
 export class DataSettingsDto {

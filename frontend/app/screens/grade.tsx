@@ -8,6 +8,7 @@ import { loadSubmissions, loadSubmissionDetail } from '@/app/lib/sync/load-submi
 import { confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 import { cardClass } from '@/app/helpers/shared';
 import { RubricMatrix } from '@/app/screens/resources';
+import { AskAiButton } from '@/app/components/AskAiButton';
 
 // Grading is against the global academic score scale (settings.academic.scoreScale),
 // NOT exercise.points. Fall back to 10 when settings are unavailable.
@@ -289,6 +290,8 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
             <div className="mb-3.5 flex items-center gap-2.5">
               <Tag p={p} color={p.sub}>BÀI LÀM</Tag>
               <span className="font-mono text-[11px] text-lms-faint">{sub.wordcount} chữ</span>
+              <div className="flex-1" />
+              <AskAiButton p={p} label="Tham khảo AI" copyText={sub.text} className="shrink-0" />
             </div>
             {/* Essay answers are rich text (HTML from the editor); render safely. */}
             {/[<][a-z]/i.test(sub.text || '')

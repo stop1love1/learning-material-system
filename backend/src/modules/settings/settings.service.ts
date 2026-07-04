@@ -125,6 +125,7 @@ export class SettingsService {
       integration: {
         googleClientId: integration.googleClientId ?? null,
         googleApiKey: integration.googleApiKey ?? null,
+        aiGemUrl: integration.aiGemUrl ?? null,
       },
     };
   }

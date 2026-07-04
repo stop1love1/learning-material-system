@@ -123,6 +123,9 @@ export class Settings {
       // /settings — cho phép cấu hình runtime, đổi khoá không cần build lại.
       googleClientId: { type: String, default: null },
       googleApiKey: { type: String, default: null },
+      // Link tới Gemini Gem (trợ lý AI góp ý bài viết). Công khai phía client (chỉ là URL
+      // deep-link mở tab mới) nên KHÔNG redact và có mặt trong public view. Trống → ẩn nút.
+      aiGemUrl: { type: String, default: 'https://gemini.google.com/gem/35bda094c89a?usp=sharing' },
     },
     default: {},
     _id: false,
@@ -137,6 +140,7 @@ export class Settings {
     apiKey: string | null;
     googleClientId: string | null;
     googleApiKey: string | null;
+    aiGemUrl: string | null;
   };
 
   @Prop({

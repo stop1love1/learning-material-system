@@ -8,6 +8,7 @@ import { lblClass, cardClass } from '@/app/helpers/shared';
 import { usersApi, settingsApi, statsApi } from '@/app/lib/api';
 import { refreshOrgBrand } from '@/app/components/Brand';
 import { refreshGoogleConfig } from '@/app/lib/google-config';
+import { refreshAiGemUrl } from '@/app/lib/ai-gem';
 import { promptDialog, confirmDialog, toastSuccess, toastError, notifySuccess } from '@/app/lib/ui/dialogs';
 import { hydrateFor } from '@/app/lib/sync/hydrate';
 import { downloadCsv, downloadJson } from '@/app/helpers/export';
@@ -453,7 +454,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
   const [academic, setAcademic] = React.useState({ scoreScale: 10, passThreshold: 5, rounding: 'half', allowResubmit: true, showScoreImmediately: true });
   const [security, setSecurity] = React.useState({ twoFactor: true, passwordRotationDays: 0, lockoutThreshold: 5, allowSelfRegister: true, ssoEnabled: true });
   const [notifications, setNotifications] = React.useState({ emailOnSubmit: true, remindUngraded: true, weeklyDigest: false });
-  const [integration, setIntegration] = React.useState({ smtpHost: '', smtpPort: 587, smtpUser: '', smtpFrom: '', storageProvider: 's3', apiKey: '', googleClientId: '', googleApiKey: '' });
+  const [integration, setIntegration] = React.useState({ smtpHost: '', smtpPort: 587, smtpUser: '', smtpFrom: '', storageProvider: 's3', apiKey: '', googleClientId: '', googleApiKey: '', aiGemUrl: '' });
   const [data, setData] = React.useState({ autoBackup: true, backupFrequency: 'daily', encryptBackups: true });
   const [restoring, setRestoring] = React.useState(false);
   const restoreInputRef = React.useRef(null);
@@ -494,7 +495,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     try {
       await settingsApi.update(group);
       if (group && group.org) refreshOrgBrand(); // logo/name changed → refresh chrome
-      if (group && group.integration) refreshGoogleConfig(); // Google keys changed → refresh picker
+      if (group && group.integration) { refreshGoogleConfig(); refreshAiGemUrl(); } // Google keys / Gem link changed → refresh
       setSaved(true);
       if (typeof window !== 'undefined') window.setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -820,10 +821,15 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
                 <div><label className={lblClass()}>GOOGLE API KEY</label><Field p={p} value={integration.googleApiKey || ''} onChange={(v) => setIntegration((o) => ({ ...o, googleApiKey: v }))} placeholder="AIza…" mono className="mt-2" /></div>
               </div>
             </div>
+            <div className="mt-6 border-t border-lms-line-soft pt-5">
+              <div className="mb-1 text-[13.5px] font-semibold text-lms-ink">Trợ lý AI góp ý (Gemini Gem)</div>
+              <p className="mb-3.5 mt-0 text-[12.5px] leading-relaxed text-lms-sub">Dán link Gemini Gem để hiện nút “Nhờ AI góp ý” ở trang Tự đánh giá và màn Chấm bài. Để trống sẽ ẩn nút.</p>
+              <div><label className={lblClass()}>LINK GEMINI GEM</label><Field p={p} value={integration.aiGemUrl || ''} onChange={(v) => setIntegration((o) => ({ ...o, aiGemUrl: v }))} placeholder="https://gemini.google.com/gem/…" mono className="mt-2" /></div>
+            </div>
             {/* Omit apiKey: GET /settings redacts it to null, so re-sending it here would $set
                 null over the real stored key. The dedicated “Tạo lại” (regenApiKey) path saves
                 the key on its own. */}
-            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, googleClientId: integration.googleClientId, googleApiKey: integration.googleApiKey } })} />
+            <SaveRow onSave={() => saveGroup({ integration: { smtpHost: integration.smtpHost, smtpPort: integration.smtpPort, smtpUser: integration.smtpUser, smtpFrom: integration.smtpFrom, storageProvider: integration.storageProvider, googleClientId: integration.googleClientId, googleApiKey: integration.googleApiKey, aiGemUrl: integration.aiGemUrl } })} />
           </section>
         )}
 
