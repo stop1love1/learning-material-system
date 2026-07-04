@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Icon, Tag, Pill, Avatar, Btn, Field, Select, EmptyState } from '@/app/components/ui';
+import { Icon, IconBtn, Tag, Pill, Avatar, Btn, Field, Select, EmptyState } from '@/app/components/ui';
 import { hexA } from '@/app/theme/palette';
 import { DB, LMS, useLMS } from '@/app/store/store';
 import { lblClass, cardClass } from '@/app/helpers/shared';
@@ -325,25 +325,26 @@ export function ABlog({ p, t, setRoute }) {
       </div>
       <div className="lms-stagger grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {DB.ARTICLES.filter((a) => { const k = kw.trim().toLowerCase(); return !k || (a.title || '').toLowerCase().includes(k) || (a.cat || '').toLowerCase().includes(k); }).map((a) => (
-          <div key={a.id} className={`lms-card overflow-hidden ${cardClass(16)} p-0!`}>
-            <div className="flex h-[90px] items-end p-3" style={coverStyle(p, a)}>
-              <span className="rounded-[5px] bg-white/90 px-[9px] py-[3px] text-[10.5px] font-bold" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
+          <div key={a.id} className={`lms-card hovlift flex flex-col overflow-hidden ${cardClass(16)} p-0!`}>
+            <div className="flex h-[96px] items-end p-3" style={coverStyle(p, a)}>
+              <span className="rounded-[6px] bg-white/90 px-[9px] py-[3px] text-[10.5px] font-bold shadow-sm" style={{ color: coverHue(p, a.cover) }}>{a.cat}</span>
             </div>
-            <div className="p-4">
-              <div className="text-[14.5px] font-semibold leading-snug text-lms-ink">{a.title}</div>
-              <div className="my-2 text-[11.5px] text-lms-faint">{a.author} · {a.date} · 👁 {a.views ?? 0}</div>
-              <div className="flex gap-2">
-                <Btn p={p} variant="ghost" size="sm" icon="pen" onClick={() => openCompose(a)}>Sửa</Btn>
-                <Link href={ROUTES.blogPost(a.id)} className="lms-btn inline-flex h-[34px] items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-3 text-[12.5px] font-semibold text-lms-ink no-underline">
-                  <Icon name="eye" size={15} stroke={p.sub} sw={1.9} /> Xem
+            <div className="flex flex-1 flex-col p-4">
+              <div className="line-clamp-2 min-h-[42px] text-[14.5px] font-semibold leading-snug text-lms-ink">{a.title}</div>
+              <div className="mt-1.5 text-[11.5px] text-lms-faint">{a.author} · {a.date} · 👁 {a.views ?? 0}</div>
+              <div className="mt-auto flex items-center gap-1 border-t border-lms-line-soft pt-3">
+                <Tag p={p} color={p.ok}>Đã đăng</Tag>
+                <div className="flex-1" />
+                <IconBtn name="pen" p={p} size={34} title="Sửa" onClick={() => openCompose(a)} />
+                <Link href={ROUTES.blogPost(a.id)} title="Xem" aria-label="Xem"
+                  className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-lms-line bg-lms-surface no-underline transition-colors hover:bg-lms-raise">
+                  <Icon name="eye" size={16} stroke={p.sub} sw={1.8} />
                 </Link>
-                <Btn p={p} variant="ghost" size="sm" icon="trash" onClick={async () => {
+                <IconBtn name="trash" p={p} size={34} title="Xoá" onClick={async () => {
                   if (!(await confirmDialog({ title: `Xoá bài viết “${a.title}”?`, okText: 'Xoá', danger: true }))) return;
                   try { await articlesApi.remove(a.id); await hydrateFor('a-blog'); toastSuccess('Đã xoá bài viết.'); }
                   catch (e: any) { toastError(e?.message || 'Không xoá được bài viết.'); }
-                }}>Xoá</Btn>
-                <div className="flex-1" />
-                <Tag p={p} color={p.ok}>Đã đăng</Tag>
+                }} />
               </div>
             </div>
           </div>

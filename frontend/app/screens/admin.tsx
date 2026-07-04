@@ -86,6 +86,25 @@ export function AOverview({ p, t }) {
         ))}
       </div>
 
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { l: 'Câu hỏi', v: fmt(s.questions ?? 0), ic: 'bank' },
+          { l: 'Lượt làm bài', v: fmt(s.attempts ?? 0), ic: 'play' },
+          { l: 'Bài nộp', v: fmt(s.submissions ?? 0), ic: 'send' },
+          { l: 'Chờ chấm', v: fmt(s.ungraded ?? 0), ic: 'grade', warn: (s.ungraded ?? 0) > 0 },
+        ].map((m, i) => (
+          <div key={i} className={`${cardClass(16)} p-4! flex items-center gap-3`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft">
+              <Icon name={m.ic} size={18} stroke={(m as any).warn ? p.warn : p.accent} />
+            </div>
+            <div className="min-w-0">
+              <div className={`font-lms-heading text-[22px] font-bold leading-none ${(m as any).warn ? 'text-lms-warn' : 'text-lms-ink'}`}>{m.v}</div>
+              <div className="mt-1 text-[11.5px] text-lms-faint">{m.l}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 items-start gap-[22px] min-[961px]:grid-cols-[1.6fr_1fr]">
         <section className={`${cardClass(20)} p-[22px]!`}>
           <div className="mb-[18px] flex items-start justify-between">
@@ -382,12 +401,40 @@ export function AReports({ p, t }) {
     : [{ label: 'T2', value: 0 }, { label: 'T3', value: 0 }, { label: 'T4', value: 0 }, { label: 'T5', value: 0 }, { label: 'T6', value: 0 }, { label: 'T7', value: 0 }]
   ).map((b) => ({ ...b, color: p.accent }));
   const maxBar = Math.max(10, ...bars.map((b) => b.value));
+  const distBars = (Array.isArray(r.distribution) ? r.distribution : []).map((d: any) => ({ label: d.label, value: d.count, color: p.accent }));
+  const maxDist = Math.max(1, ...distBars.map((b) => b.value));
+  const summaryTiles = [
+    { l: 'Tổng bài nộp', v: fmt(r.totalSubmissions ?? 0), ic: 'send' },
+    { l: 'Đã chấm', v: fmt(r.gradedCount ?? 0), ic: 'grade' },
+    { l: 'Tỉ lệ chấm', v: `${r.submissionRate ?? 0}%`, ic: 'report' },
+    { l: 'Điểm trung bình', v: r.avgScore != null ? String(r.avgScore) : '—', ic: 'star' },
+  ];
   return (
     <div className="mx-auto max-w-none px-[30px] lms-content-pad pb-10 pt-6">
+      <div className="mb-[22px]">
+        <h2 className="m-0 font-lms-heading text-[26px] font-semibold text-lms-ink">Báo cáo & Thống kê</h2>
+        <p className="mt-1 text-[13px] text-lms-sub">Số liệu chấm bài, điểm số và hoạt động luyện tập.</p>
+      </div>
+      <div className="mb-[22px] grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {summaryTiles.map((m, i) => (
+          <div key={i} className={`${cardClass(16)} p-4! flex items-center gap-3`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft"><Icon name={m.ic} size={18} stroke={p.accent} /></div>
+            <div className="min-w-0"><div className="font-lms-heading text-[22px] font-bold leading-none text-lms-ink">{m.v}</div><div className="mt-1 text-[11.5px] text-lms-faint">{m.l}</div></div>
+          </div>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-[22px]">
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Lượt làm bài theo ngày</h3>
           <Bars data={bars} w={520} h={160} track={p.sink} labelColor={p.faint} max={maxBar} />
+        </section>
+        <section className={`${cardClass(20)} p-[22px]!`}>
+          <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Phân bố điểm bài nộp</h3>
+          {distBars.length ? (
+            <Bars data={distBars} w={520} h={160} track={p.sink} labelColor={p.faint} max={maxDist} />
+          ) : (
+            <div className="py-10 text-center text-[13px] text-lms-faint">Chưa có dữ liệu điểm.</div>
+          )}
         </section>
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Học liệu theo chủ đề</h3>

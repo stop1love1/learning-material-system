@@ -48,6 +48,35 @@ export class RubricService {
           as: 'criterions',
         },
       },
+      // "Dùng X lần" = số bài tập + câu tự luận đang dùng rubric này (số liệu thật,
+      // vì usedCount lưu trong bảng không được cập nhật tự động).
+      {
+        $lookup: {
+          from: 'exercises',
+          let: { rid: '$_id' },
+          pipeline: [{ $match: { $expr: { $eq: ['$rubricId', '$$rid'] } } }, { $count: 'n' }],
+          as: 'exUse',
+        },
+      },
+      {
+        $lookup: {
+          from: 'essay-questions',
+          let: { rid: '$_id' },
+          pipeline: [{ $match: { $expr: { $eq: ['$rubricId', '$$rid'] } } }, { $count: 'n' }],
+          as: 'eqUse',
+        },
+      },
+      {
+        $addFields: {
+          usedCount: {
+            $add: [
+              { $ifNull: [{ $arrayElemAt: ['$exUse.n', 0] }, 0] },
+              { $ifNull: [{ $arrayElemAt: ['$eqUse.n', 0] }, 0] },
+            ],
+          },
+        },
+      },
+      { $project: { exUse: 0, eqUse: 0 } },
     ];
     const [records, total] = await Promise.all([
       this.rubricModel.aggregate(pipeline),

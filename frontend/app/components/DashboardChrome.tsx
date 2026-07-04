@@ -154,12 +154,6 @@ function Rail({ p, t, activeKey, open, onNavigate }: { p: any; t: any; activeKey
                 >
                   <Icon name={it.icon} size={17} stroke={on ? p.accent : p.faint} sw={1.7} />
                   <span className="flex-1">{it.label}</span>
-                  {(() => {
-                    const badge = badgeFor(it.key) ?? it.badge ?? null;
-                    return badge != null ? (
-                      <span className={`rounded-[20px] px-[7px] py-px font-mono text-[10.5px] font-semibold ${on ? 'bg-lms-accent-soft text-lms-accent' : 'bg-lms-sink text-lms-faint'}`}>{badge}</span>
-                    ) : null;
-                  })()}
                 </Link>
               );
             })}

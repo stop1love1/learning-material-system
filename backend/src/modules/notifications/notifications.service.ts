@@ -113,11 +113,14 @@ export class NotificationsService {
   }
 
   async feed(limit = 20): Promise<Feed[]> {
+    // Kéo đủ mục từ mỗi nguồn để trang Nhật ký có dữ liệu tìm kiếm / lọc / phân trang.
+    const per = Math.min(80, Math.max(8, Math.ceil(limit / 3)));
+    const perUsers = Math.max(6, Math.ceil(per * 0.6));
     const [exercises, articles, files, users, ungraded] = await Promise.all([
-      this.exerciseModel.find({}).sort({ createdAt: -1 }).limit(8).select('title createdAt').lean(),
-      this.articleModel.find({}).sort({ createdAt: -1 }).limit(8).select('title createdAt').lean(),
-      this.fileModel.find({}).sort({ createdAt: -1 }).limit(8).select('name createdAt').lean(),
-      this.userModel.find({}).sort({ createdAt: -1 }).limit(6).select('name createdAt').lean(),
+      this.exerciseModel.find({}).sort({ createdAt: -1 }).limit(per).select('title createdAt').lean(),
+      this.articleModel.find({}).sort({ createdAt: -1 }).limit(per).select('title createdAt').lean(),
+      this.fileModel.find({}).sort({ createdAt: -1 }).limit(per).select('name createdAt').lean(),
+      this.userModel.find({}).sort({ createdAt: -1 }).limit(perUsers).select('name createdAt').lean(),
       this.submissionModel.countDocuments({ isGraded: false }),
     ]);
 

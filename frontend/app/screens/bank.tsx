@@ -293,6 +293,7 @@ export function TBank({ p, t, setRoute, go }) {
   };
   const duplicate = async (src) => {
     if (!src) return;
+    if (!(await confirmDialog({ title: 'Nhân bản câu hỏi này?', content: 'Một bản sao sẽ được tạo trong ngân hàng câu hỏi.', okText: 'Nhân bản' }))) return;
     const detail: Record<string, any> = {};
     if (src.type === 'single') detail.options = src.options || [];
     else if (src.type === 'multi') detail.options = src.options || [];

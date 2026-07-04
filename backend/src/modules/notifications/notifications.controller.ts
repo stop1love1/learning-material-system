@@ -21,7 +21,7 @@ export class NotificationsController {
   @Roles([UserRole.Admin])
   @ApiOperation({ summary: 'Bảng tin hoạt động (tổng hợp từ sự kiện gần đây) — Admin' })
   feed(@Query('limit') limit?: string) {
-    const n = Math.min(50, Math.max(1, Number(limit) || 20));
+    const n = Math.min(300, Math.max(1, Number(limit) || 20));
     return this.notificationsService.feed(n);
   }
 

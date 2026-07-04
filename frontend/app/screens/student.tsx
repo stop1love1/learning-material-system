@@ -142,7 +142,7 @@ export function UserHome({ p, t }) {
           </div>
           <div className="p-5">
             <div className="line-clamp-2 font-lms-heading text-lg font-bold wrap-break-word leading-snug text-lms-ink">{heroDoc.name}</div>
-            <div className="mt-2 truncate text-[12.5px] text-lms-faint">{heroDoc.folder} · {heroDoc.size}</div>
+            <div className="mt-2 truncate text-[12.5px] text-lms-faint">{heroDoc.folder} · 👁 {heroDoc.views ?? 0} · ↓ {heroDoc.downloads ?? 0}</div>
           </div>
         </Link>
         )}
@@ -174,7 +174,7 @@ export function UserHome({ p, t }) {
           <div className="mb-2.5 text-xs font-bold tracking-[0.3px] text-lms-accent">BÀI VIẾT MỚI</div>
           <div className="font-lms-heading text-[17px] font-bold leading-snug text-lms-ink">{lead.title}</div>
           <p className="mt-2.5 mb-0 text-[12.5px] leading-snug text-lms-sub">{lead.excerpt}</p>
-          <div className="mt-auto pt-3.5 text-xs text-lms-faint">{lead.read} đọc →</div>
+          <div className="mt-auto pt-3.5 text-xs text-lms-faint">👁 {lead.views ?? 0} lượt xem · {lead.read} đọc →</div>
         </Link>
         )}
 
@@ -230,7 +230,7 @@ export function UserHome({ p, t }) {
                 </div>
                 <div className="p-4">
                   <div className="min-h-9 text-[13.5px] font-semibold leading-snug text-lms-ink">{d.name}</div>
-                  <div className="mt-2.5 font-mono text-[11px] text-lms-faint">{d.folder} · {d.size}</div>
+                  <div className="mt-2.5 font-mono text-[11px] text-lms-faint">{d.folder} · 👁 {d.views ?? 0} · ↓ {d.downloads ?? 0}</div>
                 </div>
               </Link>
             );
@@ -252,7 +252,7 @@ export function UserHome({ p, t }) {
               <span className="mb-2.5 inline-block rounded-md bg-lms-accent-soft px-[9px] py-[3px] text-[11px] font-bold text-lms-accent">{a.cat}</span>
               <h3 className="m-0 font-lms-heading text-[17px] font-bold leading-snug text-lms-ink">{a.title}</h3>
               <p className="my-2 text-[13px] leading-snug text-lms-sub">{a.excerpt}</p>
-              <div className="text-[11.5px] text-lms-faint">{a.author} · {a.read} đọc</div>
+              <div className="text-[11.5px] text-lms-faint">{a.author} · 👁 {a.views ?? 0} lượt xem · {a.read} đọc</div>
             </Link>
           ))}
         </div>
@@ -430,7 +430,11 @@ export function STasks({ p, t }) {
     const s = (DB.STUDENT_TASKS || []).find((x: any) => x.id === id);
     return s?.status ?? 'todo';
   };
-  const list = records.map((e) => ({ ...e, status: myStatusOf(e.id), score: undefined }));
+  // Ẩn bài người dùng đã làm (đã nộp / đã chấm) khỏi danh sách luyện tập — chỉ hiện bài chưa làm.
+  const DONE_STATUS = new Set(['done', 'graded']);
+  const list = records
+    .map((e) => ({ ...e, status: myStatusOf(e.id), score: undefined }))
+    .filter((task) => !DONE_STATUS.has(task.status));
 
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
