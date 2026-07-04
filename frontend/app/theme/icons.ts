@@ -7,7 +7,7 @@ export type IconName =
   | 'paperclip' | 'download' | 'upload' | 'eye' | 'filter' | 'send' | 'calendar'
   | 'clock' | 'more' | 'cloud' | 'folder' | 'flame' | 'target' | 'book' | 'sun'
   | 'moon' | 'grid' | 'list' | 'play' | 'link' | 'bulb' | 'video' | 'image'
-  | 'question' | 'award' | 'logout' | 'phone' | 'mail';
+  | 'question' | 'award' | 'logout' | 'phone' | 'mail' | 'sparkles';
 
 export const ICONS: Record<string, string> = {
   overview: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -70,4 +70,7 @@ export const ICONS: Record<string, string> = {
   phone:
     'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z',
   mail: 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6',
+  // Sparkles — biểu tượng AI chuẩn (cùng kiểu hình Gemini dùng).
+  sparkles:
+    'M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0zM20 3v4M22 5h-4M4 17v2M5 18H3',
 };

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Baloo_2, Plus_Jakarta_Sans, Sora, Be_Vietnam_Pro, DM_Mono } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { LmsProviders } from "@/app/contexts/LmsProviders";
+import { AiGemFab } from "@/app/components/AiGemFab";
 import "./globals.css";
 
 const baloo = Baloo_2({ subsets: ["latin", "vietnamese"], variable: "--font-baloo", display: "swap" });
@@ -52,7 +53,10 @@ export default function RootLayout({
     >
       <body>
         <AntdRegistry>
-          <LmsProviders>{children}</LmsProviders>
+          <LmsProviders>
+            {children}
+            <AiGemFab />
+          </LmsProviders>
         </AntdRegistry>
       </body>
     </html>

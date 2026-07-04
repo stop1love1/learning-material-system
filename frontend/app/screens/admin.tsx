@@ -67,7 +67,7 @@ export function AOverview({ p, t }) {
     ? [0, 0.25, 0.5, 0.75, 1].map((f) => fmtMd(dates[Math.round(f * (dates.length - 1))]))
     : ['01/06', '08/06', '15/06', '22/06', '30/06'];
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-[30px]">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pb-10 pt-[30px]">
       <h2 className="mb-1.5 mt-0 font-lms-heading text-[30px] font-medium tracking-tight text-lms-ink">
         Toàn cảnh <span className="text-lms-accent">hệ thống</span>
       </h2>
@@ -189,7 +189,7 @@ export function AUsers({ p, t }) {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-6">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pb-10 pt-6">
       <div className="mb-5 grid grid-cols-2 gap-4">
         {counts.map(([r, ic, col, v]) => (
           <div key={r} className={`${cardClass(16)} p-[18px]! flex items-center gap-3.5`}>
@@ -383,7 +383,7 @@ export function AReports({ p, t }) {
   ).map((b) => ({ ...b, color: p.accent }));
   const maxBar = Math.max(10, ...bars.map((b) => b.value));
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pb-10 pt-6">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pb-10 pt-6">
       <div className="grid grid-cols-2 gap-[22px]">
         <section className={`${cardClass(20)} p-[22px]!`}>
           <h3 className="mb-4 mt-0 font-lms-heading text-[19px] font-medium text-lms-ink">Lượt làm bài theo ngày</h3>
@@ -630,7 +630,7 @@ export function ASettings({ p, t, setTweak, resetTheme }) {
     </div>
   );
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-1 items-start gap-6 px-[30px] lms-content-pad pb-10 pt-6 min-[961px]:grid-cols-[230px_1fr]">
+    <div className="mx-auto grid max-w-none grid-cols-1 items-start gap-6 px-[30px] lms-content-pad pb-10 pt-6 min-[961px]:grid-cols-[230px_1fr]">
       <aside className={`${cardClass(16)} p-2! sticky top-0`}>
         {SECTIONS.map((s) => {
           const on = sec === s.id;

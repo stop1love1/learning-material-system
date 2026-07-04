@@ -76,7 +76,7 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
   };
 
   return (
-    <div className="lms-content-pad mx-auto flex max-w-[1480px] gap-6 px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto flex max-w-none gap-6 px-[30px] pt-6 pb-10">
       <aside className="hidden w-[240px] shrink-0 lg:block">
         <FolderTree
           nodes={treeNodes}
@@ -328,7 +328,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   );
 
   return (
-    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+    <div className="lms-content-pad mx-auto max-w-none px-[30px] pt-[22px] pb-10">
       <div onClick={() => setRoute('assignments')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Bài tập
       </div>

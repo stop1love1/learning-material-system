@@ -189,7 +189,7 @@ export function TDocs({ p, t, auth }) {
   );
 
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-[26px] px-[30px] lms-content-pad pt-6 pb-10 min-[961px]:grid-cols-[210px_1fr]">
+    <div className="mx-auto grid max-w-none grid-cols-1 gap-[26px] px-[30px] lms-content-pad pt-6 pb-10 min-[961px]:grid-cols-[210px_1fr]">
       <aside>
         <Btn p={p} icon="plus" full onClick={openCompose}>Thêm tài liệu</Btn>
         <div className="mt-[18px] px-1.5 pb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">THƯ MỤC</div>
@@ -326,13 +326,13 @@ export function TRubrics({ p, t, setRoute, go }) {
   const [kw, setKw] = React.useState('');
   const k = kw.trim().toLowerCase();
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+    <div className="px-[30px] lms-content-pad pt-6 pb-10">
       <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="w-[260px]" />
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="w-[300px] max-sm:w-full" />
         <div className="flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('rubric-edit')}>Tạo rubric</Btn>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {DB.RUBRICS.filter((r) => !k || (r.name || '').toLowerCase().includes(k)).map((r) => (
           <div key={r.id} onClick={() => go('rubric-edit', { rubric: r.id })} className={`lms-card ${cardClass(24)} cursor-pointer`}>
             <div className="mb-3.5 flex items-start justify-between">
@@ -376,7 +376,7 @@ export function TRubricEdit({ p, t, ctx, setRoute }) {
   const delLevel = (i) => setRubric((r) => ({ ...r, scale: (r.scale || []).filter((_, j) => j !== i) }));
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[22px] pb-10">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pt-[22px] pb-10">
       <div onClick={() => setRoute('rubrics')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Rubrics
       </div>

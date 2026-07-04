@@ -16,7 +16,7 @@ export function TOverview({ p, t, setRoute, go }) {
     { icon: 'assign', label: 'Giao bài tập', sub: 'Phát cho lớp', route: 'assign-new' },
   ];
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[30px] pb-10">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pt-[30px] pb-10">
       <div className="mb-[26px] flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-2.5 font-mono text-[11.5px] tracking-wide text-lms-faint">THỨ HAI · 22 THÁNG 6, 2026</div>

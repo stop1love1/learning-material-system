@@ -348,7 +348,7 @@ export function TBank({ p, t, setRoute, go }) {
 
   if (!q) {
     return (
-      <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+      <div className="mx-auto max-w-none px-[30px] lms-content-pad pt-6 pb-10">
         {bankToolbar}
         {filterPanel}
         <div className="grid grid-cols-1 items-start gap-[26px] min-[961px]:grid-cols-[230px_1fr]">
@@ -364,7 +364,7 @@ export function TBank({ p, t, setRoute, go }) {
   }
   const tm = typeMeta(q.type), lm = levelMeta(q.level);
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-6 pb-10">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pt-6 pb-10">
       {bankToolbar}
       {filterPanel}
       <div className="grid grid-cols-1 items-start gap-[26px] min-[961px]:grid-cols-[230px_1fr]">
@@ -488,7 +488,7 @@ export function TBankEdit({ p, t, setRoute }) {
   const showOptions = type === 'single' || type === 'multi';
 
   return (
-    <div className="mx-auto max-w-[1480px] px-[30px] lms-content-pad pt-[22px] pb-10">
+    <div className="mx-auto max-w-none px-[30px] lms-content-pad pt-[22px] pb-10">
       <div onClick={() => setRoute('bank')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
         <Icon name="arrowLeft" size={16} stroke={p.sub} /> Ngân hàng câu hỏi
       </div>

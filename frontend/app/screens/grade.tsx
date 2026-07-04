@@ -37,7 +37,7 @@ export function TGrade({ p, t, go }) {
   );
 
   return (
-    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-none px-[30px] pt-6 pb-10">
       <div className={`${cardClass(24)} mb-[22px] flex items-center gap-5 border-lms-accent/30 bg-lms-accent-soft`}>
         <div className="flex h-14 w-14 items-center justify-center rounded-[15px] bg-lms-accent">
           <Icon name="grade" size={28} stroke="#fff" /></div>
@@ -214,7 +214,7 @@ export function TGradeOne({ p, t, ctx, setRoute }) {
 
   if (!a) {
     return (
-      <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+      <div className="lms-content-pad mx-auto max-w-none px-[30px] pt-6 pb-10">
         <div className={`${cardClass(20)} mt-10`}>
           <EmptyState p={p} icon="grade" label="Không có bài tập" sub="Chưa có nội dung." action={<Btn p={p} variant="soft" size="sm" icon="arrowLeft" onClick={() => setRoute('grade')} className="mt-1">Về hàng chờ</Btn>} />
         </div>

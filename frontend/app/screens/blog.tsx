@@ -264,7 +264,7 @@ export function ABlog({ p, t, setRoute }) {
 
   if (mode === 'compose') {
     return (
-      <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-[22px] pb-10">
+      <div className="lms-content-pad mx-auto max-w-none px-[30px] pt-[22px] pb-10">
         <div onClick={() => setMode('list')} className="lms-link mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-lms-sub">
           <Icon name="arrowLeft" size={16} stroke={p.sub} /> Quản lý bài viết
         </div>
@@ -318,7 +318,7 @@ export function ABlog({ p, t, setRoute }) {
   }
 
   return (
-    <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
+    <div className="lms-content-pad mx-auto max-w-none px-[30px] pt-6 pb-10">
       <div className="mb-[22px] flex items-center gap-2.5">
         <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm bài viết…" className="min-w-0 flex-1" />
         <Btn p={p} icon="plus" onClick={() => openCompose(null)}>Viết bài mới</Btn>

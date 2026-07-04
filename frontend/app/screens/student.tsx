@@ -14,7 +14,6 @@ import { DocCardMini } from '@/app/screens/teacher';
 import { levelMeta, QuestionView, RichText } from '@/app/screens/bank';
 import { Pagination } from '@/app/components/Pagination';
 import { FilterSelect } from '@/app/components/FilterSelect';
-import { AskAiButton } from '@/app/components/AskAiButton';
 import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapExercise, typeVi } from '@/app/lib/sync/load-exercises';
 import { mapFile, loadDoc } from '@/app/lib/sync/load-library';
@@ -1199,7 +1198,6 @@ export function SSelfCheck({ p, t }) {
         <div className="flex-1 text-[13.5px] leading-normal text-lms-ink">
           Tự đánh giá giúp bạn nhìn lại bài làm theo từng tiêu chí trước khi nộp. Chọn mức phù hợp ở mỗi tiêu chí để xem điểm tự chấm.
         </div>
-        <AskAiButton p={p} label="Nhờ AI góp ý" className="shrink-0" />
       </div>
 
       <div className="mb-[18px]">

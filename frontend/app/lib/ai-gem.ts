@@ -46,3 +46,30 @@ export function useAiGemUrl(): string | null {
   }, []);
   return cache;
 }
+
+/**
+ * Mở link Gem trong cửa sổ popup nhỏ, canh GÓC PHẢI-DƯỚI màn hình. Phải gọi ĐỒNG BỘ ngay
+ * trong cú click (trước mọi await) để giữ "user activation" → tránh bị chặn popup. Không
+ * nhúng iframe được vì Gemini chặn framing (X-Frame-Options).
+ */
+export function openGemWindow(url: string): void {
+  if (!url || typeof window === 'undefined') return;
+  const w = 460;
+  const h = 680;
+  // Canh đúng MÀN HÌNH đang mở trình duyệt: phải cộng offset availLeft/availTop, nếu không
+  // với màn hình đôi popup sẽ nhảy sang màn hình bên trái.
+  const scr = window.screen as any;
+  const availLeft = typeof scr.availLeft === 'number' ? scr.availLeft : 0;
+  const availTop = typeof scr.availTop === 'number' ? scr.availTop : 0;
+  const availW = scr.availWidth || scr.width;
+  const availH = scr.availHeight || scr.height;
+  const left = Math.round(availLeft + availW - w - 24);
+  const top = Math.round(availTop + availH - h - 24);
+  const win = window.open(url, 'gemini-gem', `popup=1,width=${w},height=${h},left=${left},top=${top}`);
+  if (win) {
+    win.opener = null; // chống reverse-tabnabbing (không dùng noopener để giữ được popup)
+    try { win.focus(); } catch {}
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer'); // popup bị chặn → fallback mở tab
+  }
+}
