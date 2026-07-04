@@ -54,7 +54,7 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 'bank': return ROUTES.questionBank;
     case 'bank-edit': return patch && patch.question ? `${ROUTES.questionNew}?id=${patch.question}` : ROUTES.questionNew;
     case 'assignments': return ROUTES.assignments;
-    case 'assign-new': return ROUTES.assignmentNew;
+    case 'assign-new': return patch && patch.id ? `${ROUTES.assignmentNew}?id=${patch.id}` : ROUTES.assignmentNew;
     case 'rubrics': return ROUTES.rubrics;
     case 'rubric-edit': return patch && patch.rubric ? ROUTES.rubricEdit(patch.rubric) : ROUTES.rubricNew;
     case 'a-blog': return ROUTES.dashBlog;

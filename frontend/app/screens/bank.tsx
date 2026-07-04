@@ -223,18 +223,20 @@ export function QuestionView({ q, p, mode = 'preview', answer, onAnswer }: any) 
 }
 
 export function TBank({ p, t, setRoute, go }) {
-  const [type, setType] = React.useState('all');
   const [sel, setSel] = React.useState<string | undefined>(undefined);
   const [showFilter, setShowFilter] = React.useState(false);
-  const [level, setLevel] = React.useState('all');
-  const [selTopic, setSelTopic] = React.useState<string | null>(null);
 
   // Server-side paged (type/level/topic/keyword filters via API) + antd Pagination.
   const paged = usePagedResource<any>({ fetcher: questionsApi.list, mapper: mapQuestion, pageSize: 10 });
   const list = paged.records;
-  const pickType = (v: string) => { setType(v); paged.setFilter('type', v === 'all' ? '' : v); };
-  const pickLevel = (v: string) => { setLevel(v); paged.setFilter('level', v === 'all' ? '' : v); };
-  const pickTopic = (id: string | null) => { setSelTopic(id); paged.setFilter('topicId', id || ''); };
+  // Display state derived from paged.filters (single source of truth) so a reload — which
+  // restores filters from the URL (?f_…) — keeps the active chip / selected topic.
+  const type = paged.filters.type || 'all';
+  const level = paged.filters.level || 'all';
+  const selTopic = (paged.filters.topicId as string) || null;
+  const pickType = (v: string) => paged.setFilter('type', v === 'all' ? '' : v);
+  const pickLevel = (v: string) => paged.setFilter('level', v === 'all' ? '' : v);
+  const pickTopic = (id: string | null) => paged.setFilter('topicId', id || '');
 
   const addRootTopic = async () => {
     const title = (await promptDialog({ title: 'Chủ đề mới', label: 'Tên chủ đề', placeholder: 'vd: Luyện từ và câu — Lớp 4' }))?.trim();
@@ -258,7 +260,7 @@ export function TBank({ p, t, setRoute, go }) {
     if (!(await confirmDialog({ title: `Xoá chủ đề “${node.name}”?`, okText: 'Xoá', danger: true }))) return;
     try {
       await topicsApi.remove(node.id);
-      if (selTopic === node.id) setSelTopic(null);
+      if (selTopic === node.id) paged.setFilter('topicId', '');
       await hydrateFor('bank');
       toastSuccess('Đã xoá chủ đề.');
     } catch (e: any) {
@@ -283,6 +285,12 @@ export function TBank({ p, t, setRoute, go }) {
   }, [q?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const qFull = q ? { ...q, ...(detailMap[q.id] || {}) } : q;
 
+  const deleteQuestion = async (qq: any) => {
+    if (!qq) return;
+    if (!(await confirmDialog({ title: 'Xoá câu hỏi này?', content: 'Câu hỏi sẽ bị gỡ khỏi ngân hàng.', okText: 'Xoá', danger: true }))) return;
+    try { await questionsApi.remove(qq.id); setSel(undefined); await hydrateFor('bank'); paged.reload(); toastSuccess('Đã xoá câu hỏi.'); }
+    catch (e: any) { toastError(e?.message || 'Không xoá được câu hỏi.'); }
+  };
   const duplicate = async (src) => {
     if (!src) return;
     const detail: Record<string, any> = {};
@@ -413,6 +421,7 @@ export function TBank({ p, t, setRoute, go }) {
               <div className="flex gap-1.5">
                 <IconBtn name="pen" p={p} size={32} onClick={() => (go ? go('bank-edit', { question: q.id }) : setRoute('bank-edit'))} title="Sửa" />
                 <IconBtn name="copy" p={p} size={32} title="Nhân bản" onClick={() => duplicate(q)} />
+                <IconBtn name="trash" p={p} size={32} title="Xoá" onClick={() => deleteQuestion(q)} />
               </div>
             </div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.5px] text-lms-faint">CHỦ ĐỀ · {q.topic.toUpperCase()}</div>

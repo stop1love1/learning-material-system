@@ -37,7 +37,6 @@ export const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp
 
 export function TDocs({ p, t, auth }) {
   useLMS();
-  const [selId, setSelId] = React.useState<string | null>(null);
   const [view, setView] = React.useState('grid');
   const tree: any[] = DB.DOC_FOLDER_TREE || [];
   const canManage = !!(auth && auth.isStaff);
@@ -46,7 +45,9 @@ export function TDocs({ p, t, auth }) {
   const { records: docs, loading, error } = paged;
   const kw = paged.keyword;
   const setKw = paged.setKeyword;
-  const onSelectFolder = (id: string | null) => { setSelId(id); paged.setFilter('folderId', id); };
+  // Selected folder derived from paged.filters so a reload restores the tree selection.
+  const selId = (paged.filters.folderId as string) || null;
+  const onSelectFolder = (id: string | null) => paged.setFilter('folderId', id);
   const folderCounts = React.useMemo(() => {
     const m: Record<string, number> = {};
     for (const d of DB.DOCS) { if (d.folderId != null) m[String(d.folderId)] = (m[String(d.folderId)] || 0) + 1; }
@@ -61,23 +62,32 @@ export function TDocs({ p, t, auth }) {
   const folderOptions = [{ value: '', label: 'Không có thư mục' }, ...tree.map((n) => ({ value: n.id, label: n.name }))];
   const blankForm = () => ({ name: '', ftype: 'pdf', url: '', folderId: selId ?? '', desc: '' });
   const [composing, setComposing] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState(blankForm);
   const [saving, setSaving] = React.useState(false);
   const setF = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-  const openCompose = () => { setForm(blankForm()); setComposing(true); };
-  const closeCompose = () => { setComposing(false); setForm(blankForm()); };
+  const openCompose = () => { setEditingId(null); setForm(blankForm()); setComposing(true); };
+  const openEdit = (d: any) => {
+    setEditingId(d.id);
+    setForm({ name: d.name || '', ftype: d.type || 'pdf', url: d.url || '', folderId: d.folderId != null ? String(d.folderId) : '', desc: d.desc || '' });
+    setComposing(true);
+  };
+  const closeCompose = () => { setComposing(false); setEditingId(null); setForm(blankForm()); };
   const saveDoc = async () => {
     if (!form.name.trim() || !form.url.trim()) return;
     setSaving(true);
     const folderId = form.folderId || null;
     const tag = folderId ? (tree.find((n) => n.id === folderId)?.name) : undefined;
+    const body = { name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: tag ? [tag] : [], description: form.desc };
     try {
-      await filesApi.create({ name: form.name.trim(), fileType: form.ftype, source: 'external', url: form.url.trim(), folderId, tags: tag ? [tag] : [], description: form.desc });
+      if (editingId) await filesApi.update(editingId, body);
+      else await filesApi.create(body);
       await hydrateFor('docs');
       paged.reload();
       closeCompose();
+      toastSuccess(editingId ? 'Đã cập nhật học liệu.' : 'Đã thêm học liệu.');
     } catch (e: any) {
-      toastError(e?.message || 'Không tạo được học liệu. Vui lòng thử lại.');
+      toastError(e?.message || 'Không lưu được học liệu. Vui lòng thử lại.');
     } finally { setSaving(false); }
   };
 
@@ -151,6 +161,7 @@ export function TDocs({ p, t, auth }) {
         { ic: 'eye', lab: 'Mở tài liệu', fn: () => openDoc(d), disabled: !d.url },
         { ic: 'link', lab: 'Sao chép liên kết', fn: () => copyLink(d), disabled: !d.url },
         { ic: 'download', lab: 'Tải về', fn: () => doDownload(d) },
+        { ic: 'pen', lab: 'Sửa', fn: () => openEdit(d) },
         { ic: 'trash', lab: 'Xoá', fn: () => deleteDoc(d), danger: true },
       ].map((m) => (
         <button key={m.lab} disabled={m.disabled} onClick={() => { setMenuFor(null); m.fn(); }}
@@ -167,7 +178,7 @@ export function TDocs({ p, t, auth }) {
       <div onClick={(e) => e.stopPropagation()}
         className="w-full max-w-[620px] max-h-[88vh] overflow-y-auto bg-lms-surface rounded-2xl border border-lms-line p-6 shadow-[0_24px_70px_rgba(0,0,0,.22)]">
         <div className="flex items-center justify-between mb-[18px]">
-          <h2 className="m-0 font-lms-heading text-xl font-bold text-lms-ink">Thêm tài liệu</h2>
+          <h2 className="m-0 font-lms-heading text-xl font-bold text-lms-ink">{editingId ? 'Sửa tài liệu' : 'Thêm tài liệu'}</h2>
           <button onClick={closeCompose} className="cursor-pointer border-0 bg-transparent text-lg leading-none text-lms-sub">✕</button>
         </div>
         <label className={lblClass()}>TÊN TÀI LIỆU</label>
@@ -182,7 +193,7 @@ export function TDocs({ p, t, auth }) {
         <div className="mt-2"><RichEditor value={form.desc} onChange={(v) => setF('desc', v)} placeholder="Mô tả ngắn về tài liệu: dùng để làm gì, phù hợp lớp nào…" /></div>
         <div className="flex justify-end gap-2.5 mt-[18px]">
           <Btn p={p} variant="ghost" onClick={closeCompose}>Huỷ</Btn>
-          <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : 'Lưu tài liệu'}</Btn>
+          <Btn p={p} icon="check" onClick={saveDoc}>{saving ? 'Đang lưu…' : editingId ? 'Cập nhật' : 'Lưu tài liệu'}</Btn>
         </div>
       </div>
     </div>
@@ -210,10 +221,9 @@ export function TDocs({ p, t, auth }) {
       </aside>
 
       <div>
-        <div className="mb-[18px] flex flex-wrap items-center gap-2.5">
-          <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" className="w-[260px]" />
+        <div className="mb-[18px] flex items-center gap-2.5">
+          <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm tài liệu…" className="min-w-0 flex-1" />
           <GoogleDrivePicker p={p} onPicked={importDriveDocs} label="Google Drive" />
-          <div className="flex-1" />
           <Segmented p={p} value={view} onChange={setView} options={[{ value: 'grid', icon: 'grid' }, { value: 'list', icon: 'list' }]} />
         </div>
 
@@ -325,11 +335,15 @@ export function RubricMatrix({ rubric, p, mode = 'view', selected, onSelect }: a
 export function TRubrics({ p, t, setRoute, go }) {
   const [kw, setKw] = React.useState('');
   const k = kw.trim().toLowerCase();
+  const deleteRubric = async (r: any) => {
+    if (!(await confirmDialog({ title: `Xoá rubric “${r.name}”?`, content: 'Rubric và các tiêu chí/mức bên trong sẽ bị xoá.', okText: 'Xoá', danger: true }))) return;
+    try { await rubricsApi.remove(r.id); await hydrateFor('rubrics'); LMS.bump(); toastSuccess('Đã xoá rubric.'); }
+    catch (e: any) { toastError(e?.message || 'Không xoá được rubric.'); }
+  };
   return (
     <div className="px-[30px] lms-content-pad pt-6 pb-10">
-      <div className="mb-[22px] flex flex-wrap items-center gap-2.5">
-        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="w-[300px] max-sm:w-full" />
-        <div className="flex-1" />
+      <div className="mb-[22px] flex items-center gap-2.5">
+        <Field p={p} icon="search" value={kw} onChange={setKw} placeholder="Tìm rubric…" className="min-w-0 flex-1" />
         <Btn p={p} icon="plus" onClick={() => setRoute('rubric-edit')}>Tạo rubric</Btn>
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
@@ -343,6 +357,9 @@ export function TRubrics({ p, t, setRoute, go }) {
                   <h3 className="m-0 font-lms-heading text-lg font-semibold leading-tight text-lms-ink">{r.name}</h3>
                   <div className="mt-[3px] font-mono text-[11.5px] text-lms-faint">{r.criteria.length} tiêu chí · {r.scale.length} mức · dùng {r.used} lần</div>
                 </div>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <IconBtn name="trash" p={p} size={32} title="Xoá" onClick={() => deleteRubric(r)} />
               </div>
             </div>
             <div className="flex flex-col gap-[7px]">

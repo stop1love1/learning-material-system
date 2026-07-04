@@ -417,9 +417,10 @@ export function STasks({ p, t }) {
 
   const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
   const { records, loading, error } = paged;
-  const [sortKey, setSortKey] = React.useState('date:desc');
+  const sortKey = paged.filters.sortBy
+    ? `${paged.filters.sortBy}:${paged.filters.order || 'desc'}`
+    : `date:${paged.filters.order || 'desc'}`;
   const changeSort = (v: string) => {
-    setSortKey(v);
     const [by, order] = v.split(':');
     paged.setFilter('sortBy', by === 'date' ? '' : by); // date desc = default, no param
     paged.setFilter('order', order);
@@ -867,14 +868,20 @@ export function SDocs({ p, t }) {
   const searchParams = useSearchParams();
   const paged = usePagedResource<any>({ fetcher: filesApi.list, mapper: mapFile });
   const { records: list, loading, error } = paged;
-  const [folderName, setFolderName] = React.useState('Tất cả');
-  const [fileType, setFileType] = React.useState('');
-  const [sortKey, setSortKey] = React.useState('date:desc');
+  // Display state is DERIVED from paged.filters (single source of truth) so a reload —
+  // which restores filters from the URL (?f_…) — also restores the active chip + dropdowns.
+  const tree: any[] = (DB as any).DOC_FOLDER_TREE || [];
+  const folderName = paged.filters.folderId
+    ? (tree.find((x: any) => x.id === paged.filters.folderId)?.name || 'Tất cả')
+    : 'Tất cả';
+  const fileType = paged.filters.fileType || '';
+  const sortKey = paged.filters.sortBy
+    ? `${paged.filters.sortBy}:${paged.filters.order || 'desc'}`
+    : `date:${paged.filters.order || 'desc'}`;
 
   const pickFolder = React.useCallback((f: string) => {
-    setFolderName(f);
-    const tree: any[] = (DB as any).DOC_FOLDER_TREE || [];
-    const id = f === 'Tất cả' ? '' : (tree.find((x: any) => x.name === f)?.id || '');
+    const t: any[] = (DB as any).DOC_FOLDER_TREE || [];
+    const id = f === 'Tất cả' ? '' : (t.find((x: any) => x.name === f)?.id || '');
     paged.setFilter('folderId', id);
   }, [paged]);
 
@@ -890,9 +897,8 @@ export function SDocs({ p, t }) {
     }
   }, [folderParam, list.length, pickFolder]);
 
-  const changeFileType = (v: string) => { setFileType(v); paged.setFilter('fileType', v); };
+  const changeFileType = (v: string) => paged.setFilter('fileType', v);
   const changeSort = (v: string) => {
-    setSortKey(v);
     const [by, order] = v.split(':');
     paged.setFilter('sortBy', by === 'date' ? '' : by); // date desc = default, no param
     paged.setFilter('order', order);

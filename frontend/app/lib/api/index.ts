@@ -90,6 +90,7 @@ export const exercisesApi = {
   update: (id: string, body: any) => api.patch(`/exercises/${id}`, body),
   remove: (id: string) => api.del(`/exercises/${id}`),
   addQuestion: (id: string, body: any) => api.post(`/exercises/${id}/questions`, body),
+  removeQuestion: (id: string, questionId: string) => api.del(`/exercises/${id}/questions/${questionId}`),
   startAttempt: (exerciseId: string) => api.post('/attempts/start', { exerciseId }),
   submitAttempt: (attemptId: string, answers: any[]) => api.post(`/attempts/${attemptId}/submit`, { answers }),
   result: (attemptId: string) => api.get(`/attempts/${attemptId}/result`),

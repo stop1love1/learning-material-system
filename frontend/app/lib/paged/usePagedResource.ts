@@ -71,14 +71,24 @@ export function usePagedResource<T, R = any>({
 
   const [keyword, setKeywordState] = React.useState(() => searchParams?.get('q') || '');
   const [debouncedKw, setDebouncedKw] = React.useState(() => searchParams?.get('q') || '');
-  const [filters, setFilters] = React.useState<Params>(initialFilters);
+  // Init filters from the URL (f_<key>=…) merged over initialFilters so a reload restores them.
+  const [filters, setFilters] = React.useState<Params>(() => {
+    const out: Params = { ...initialFilters };
+    if (searchParams) {
+      searchParams.forEach((v, k) => {
+        if (k.startsWith('f_') && v !== '' && v !== 'all') out[k.slice(2)] = v;
+      });
+    }
+    return out;
+  });
+  const filterKey = JSON.stringify(filters);
   const [reloadTick, setReloadTick] = React.useState(0);
 
   // Persist page + debounced keyword to the URL (?page=, ?q=) so reload/back
   // restores them. Reads live window.location so it merges with any other params
   // a screen may own (e.g. ?activeTab=).
   const syncUrl = React.useCallback(
-    (page: number, q: string) => {
+    (page: number, q: string, flt: Params) => {
       if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       if (page <= 1) params.delete('page');
@@ -86,15 +96,24 @@ export function usePagedResource<T, R = any>({
       const kw = (q || '').trim();
       if (!kw) params.delete('q');
       else params.set('q', kw);
+      // Filters go in as f_<key>= so a reload/back restores them; the f_ prefix keeps them
+      // from clashing with screen-owned params (e.g. ?activeTab). Clear stale f_ first.
+      for (const key of Array.from(params.keys())) {
+        if (key.startsWith('f_')) params.delete(key);
+      }
+      for (const [k, v] of Object.entries(flt)) {
+        if (v == null || v === '' || v === 'all') continue;
+        params.set(`f_${k}`, String(v));
+      }
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname],
   );
   React.useEffect(() => {
-    syncUrl(current, debouncedKw);
+    syncUrl(current, debouncedKw, filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, debouncedKw]);
+  }, [current, debouncedKw, filterKey]);
 
   const fetcherRef = React.useRef(fetcher);
   const mapperRef = React.useRef(mapper);
@@ -123,8 +142,6 @@ export function usePagedResource<T, R = any>({
 
   const setPage = React.useCallback((n: number) => setCurrent(Math.max(1, n)), []);
   const reload = React.useCallback(() => setReloadTick((n) => n + 1), []);
-
-  const filterKey = JSON.stringify(filters);
 
   const seqRef = React.useRef(0);
   React.useEffect(() => {

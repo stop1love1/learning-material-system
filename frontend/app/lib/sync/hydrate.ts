@@ -29,7 +29,8 @@ const BY_ROUTE: Record<string, Loader[]> = {
   rubrics: [loadRubrics],
   'rubric-edit': [loadRubrics],
   assignments: [loadExercises],
-  'assign-new': [loadExercises],
+  // The assign wizard needs the question bank (quiz picker) + rubrics (rubric select).
+  'assign-new': [loadExercises, loadQuestions, loadRubrics],
   grade: [loadExercises, loadSubmissions],
   'grade-one': [loadExercises, loadSubmissions],
   'a-blog': [loadArticles],

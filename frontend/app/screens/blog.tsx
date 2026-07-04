@@ -14,7 +14,7 @@ import { usePagedResource } from '@/app/lib/paged/usePagedResource';
 import { mapArticle, loadArticle } from '@/app/lib/sync/load-articles';
 import { ROUTES } from '@/app/configs/routes.config';
 import { withKeyword } from '@/app/helpers/related-href';
-import { toastError } from '@/app/lib/ui/dialogs';
+import { confirmDialog, toastSuccess, toastError } from '@/app/lib/ui/dialogs';
 
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -337,6 +337,11 @@ export function ABlog({ p, t, setRoute }) {
                 <Link href={ROUTES.blogPost(a.id)} className="lms-btn inline-flex h-[34px] items-center gap-2 rounded-[11px] border border-lms-line bg-lms-surface px-3 text-[12.5px] font-semibold text-lms-ink no-underline">
                   <Icon name="eye" size={15} stroke={p.sub} sw={1.9} /> Xem
                 </Link>
+                <Btn p={p} variant="ghost" size="sm" icon="trash" onClick={async () => {
+                  if (!(await confirmDialog({ title: `Xoá bài viết “${a.title}”?`, okText: 'Xoá', danger: true }))) return;
+                  try { await articlesApi.remove(a.id); await hydrateFor('a-blog'); toastSuccess('Đã xoá bài viết.'); }
+                  catch (e: any) { toastError(e?.message || 'Không xoá được bài viết.'); }
+                }}>Xoá</Btn>
                 <div className="flex-1" />
                 <Tag p={p} color={p.ok}>Đã đăng</Tag>
               </div>

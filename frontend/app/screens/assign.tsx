@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { Icon, Tag, Pill, Btn, Field, Select, Progress } from '@/app/components/ui';
+import { useSearchParams } from 'next/navigation';
+import { Icon, Tag, Pill, Btn, IconBtn, Field, Select, Progress } from '@/app/components/ui';
 import { DB } from '@/app/store/store';
 import { LMS } from '@/app/store/store';
 import { exercisesApi, exerciseFoldersApi } from '@/app/lib/api';
@@ -28,17 +29,23 @@ export const EX_STATUS_OPTS = [
 ];
 
 export function TAssignments({ p, t, setRoute, go, auth }) {
-  const [selFolder, setSelFolder] = React.useState<string | null>(null);
-
   const canManage = !!auth?.isStaff;
   const folders = (DB as any).EX_FOLDERS || [];
 
   const paged = usePagedResource<any>({ fetcher: exercisesApi.list, mapper: mapExercise });
   const { records: list, loading, error } = paged;
+  // Selected folder derived from paged.filters so a reload restores the tree selection.
+  const selFolder = (paged.filters.folderId as string) || null;
 
   const refresh = async () => { await hydrateFor('assignments'); paged.reload(); };
 
-  const onSelectFolder = (id: string | null) => { setSelFolder(id); paged.setFilter('folderId', id); };
+  const deleteExercise = async (a: any) => {
+    if (!(await confirmDialog({ title: `Xoá bài tập “${a.title}”?`, content: 'Bài tập và các câu hỏi liên kết sẽ bị gỡ.', okText: 'Xoá', danger: true }))) return;
+    try { await exercisesApi.remove(a.id); await refresh(); toastSuccess('Đã xoá bài tập.'); }
+    catch (e: any) { toastError(e?.message || 'Không xoá được bài tập.'); }
+  };
+
+  const onSelectFolder = (id: string | null) => paged.setFilter('folderId', id);
 
   const folderCounts: Record<string, number> = {};
   for (const a of DB.ASSIGNMENTS) {
@@ -132,6 +139,10 @@ export function TAssignments({ p, t, setRoute, go, auth }) {
                 </div>
                 <Progress p={p} value={pct} height={6} />
               </div>
+              <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                <IconBtn name="pen" p={p} size={34} title="Sửa" onClick={() => go('assign-new', { id: a.id })} />
+                <IconBtn name="trash" p={p} size={34} title="Xoá" onClick={() => deleteExercise(a)} />
+              </div>
               <div className="min-w-[110px] text-center">
                 {a.submitted > a.graded ? <Btn p={p} variant="soft" size="sm" icon="grade" onClick={() => go('grade-one', { assignment: a.id })}>Chấm {a.submitted - a.graded}</Btn>
                   : <Tag p={p} color={p.ok}>Đã chấm xong</Tag>}
@@ -171,6 +182,42 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const [folder, setFolder] = React.useState<string>(ctx?.folderId ? String(ctx.folderId) : '');
   const exFolders = (DB as any).EX_FOLDERS || [];
 
+  // Edit mode: ?id=<exerciseId> → nạp bài tập có sẵn vào wizard (giống mẫu sửa câu hỏi).
+  const editId = useSearchParams().get('id');
+  const [origQ, setOrigQ] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    if (!editId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const ex: any = await exercisesApi.get(editId);
+        if (!alive || !ex) return;
+        setTitle(ex.title || '');
+        setKind(ex.type || 'quiz');
+        setPoints(ex.points ?? 10);
+        setRubric(ex.rubricId ? String(ex.rubricId?._id ?? ex.rubricId) : 'none');
+        setInstructions(ex.instructions || '');
+        setFolder(ex.folderId ? String(ex.folderId?._id ?? ex.folderId) : '');
+        setAllowLate(!!ex.allowLateSubmit);
+        setShuffle(ex.shuffleQuestions !== false);
+        setShowScore(!!ex.showScoreAfter);
+        setNotify(ex.notifyOnAssign !== false);
+        if (ex.dueDate) {
+          const d = new Date(ex.dueDate);
+          if (!isNaN(d.getTime())) {
+            const pad = (n: number) => String(n).padStart(2, '0');
+            setDue(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+          }
+        }
+        const qids = (ex.questions || []).map((q: any) => String(q._id ?? q.questionId ?? q.id)).filter(Boolean);
+        setPicked(qids); setOrigQ(qids);
+        const mats = (ex.materialIds || []).map((m: any) => String(m?._id ?? m)).filter(Boolean);
+        if (mats.length) setDocs(mats);
+      } catch { /* không nạp được → giữ form trống */ }
+    })();
+    return () => { alive = false; };
+  }, [editId]);
+
   const togglePick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const toggleDoc = (id) => setDocs(docs.includes(id) ? docs.filter((x) => x !== id) : [...docs, id]);
   const visible = (s) => wizard ? step === s : true;
@@ -204,13 +251,26 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const save = async (status: string) => {
     const body = buildBody(status);
     try {
-      const ex: any = await exercisesApi.create(body);
-      const exId = ex?._id ?? ex?.id;
-      if (exId && kind === 'quiz') {
-        // Pass an explicit incrementing order so ExerciseQuestion rows keep the picked
-        // sequence instead of all defaulting to 0.
-        for (let i = 0; i < picked.length; i++) {
-          try { await exercisesApi.addQuestion(exId, { questionId: picked[i], order: i }); } catch { /* skip invalid ids */ }
+      if (editId) {
+        // Cập nhật bài tập có sẵn + đồng bộ câu hỏi (thêm mới / gỡ bỏ) cho bài trắc nghiệm.
+        await exercisesApi.update(editId, body);
+        if (kind === 'quiz') {
+          const removeIds = origQ.filter((id) => !picked.includes(id));
+          const addIds = picked.filter((id) => !origQ.includes(id));
+          for (const id of removeIds) { try { await exercisesApi.removeQuestion(editId, id); } catch { /* ignore */ } }
+          for (let i = 0; i < addIds.length; i++) {
+            try { await exercisesApi.addQuestion(editId, { questionId: addIds[i], order: origQ.length + i }); } catch { /* skip invalid ids */ }
+          }
+        }
+      } else {
+        const ex: any = await exercisesApi.create(body);
+        const exId = ex?._id ?? ex?.id;
+        if (exId && kind === 'quiz') {
+          // Pass an explicit incrementing order so ExerciseQuestion rows keep the picked
+          // sequence instead of all defaulting to 0.
+          for (let i = 0; i < picked.length; i++) {
+            try { await exercisesApi.addQuestion(exId, { questionId: picked[i], order: i }); } catch { /* skip invalid ids */ }
+          }
         }
       }
       await hydrateFor('assignments');
@@ -360,7 +420,7 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
         {wizard && step > 0 && <Btn p={p} variant="ghost" icon="arrowLeft" onClick={() => setStep(step - 1)}>Quay lại</Btn>}
         {wizard && step < 2
           ? <Btn p={p} iconRight="arrowRight" onClick={() => setStep(step + 1)}>Tiếp tục</Btn>
-          : <><Btn p={p} variant="ghost" onClick={() => save('draft')}>Lưu nháp</Btn><Btn p={p} variant="accent" icon="send" onClick={() => save('open')}>Đăng bài luyện tập</Btn></>}
+          : <><Btn p={p} variant="ghost" onClick={() => save('draft')}>Lưu nháp</Btn><Btn p={p} variant="accent" icon="send" onClick={() => save('open')}>{editId ? 'Cập nhật bài tập' : 'Đăng bài luyện tập'}</Btn></>}
       </div>
     </div>
   );
