@@ -47,9 +47,12 @@ export class FilesService {
     };
     const sortField = SORT_FIELD[dto.sortBy as string] || 'createdAt';
     const sortDir: 1 | -1 = dto.order === 'asc' ? 1 : -1;
+    // Tiebreaker on _id (unique) so pagination is deterministic even when many files
+    // share the same createdAt — otherwise tied rows reshuffle between pages and the
+    // same file can appear on more than one page ("duplicate").
     const listQuery = this.fileModel
       .find(query)
-      .sort({ [sortField]: sortDir })
+      .sort({ [sortField]: sortDir, _id: sortDir })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .populate({ path: 'userId', select: 'name avatar' })
