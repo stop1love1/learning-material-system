@@ -7,6 +7,7 @@ export const NAV_BY_ROLE: Record<string, Array<{ group: string; items: Array<{ k
       { key: 's-selfcheck', icon: 'rubric', label: 'Tự đánh giá' },
       { key: 'blog', icon: 'docs', label: 'Bài viết' },
       { key: 's-mine', icon: 'star', label: 'Của tôi' },
+      { key: 's-results', icon: 'award', label: 'Kết quả' },
     ] },
   ],
   admin: [

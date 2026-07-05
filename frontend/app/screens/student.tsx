@@ -349,7 +349,7 @@ export function SOverview({ p, t, setRoute, go }) {
   );
 }
 
-function STaskRow({ task, p }) {
+function STaskRow({ task, p, onClick = undefined }) {
   const tone = taskTone(p, task.status);
   const body = (
     <>
@@ -386,6 +386,22 @@ function STaskRow({ task, p }) {
       </Link>
     );
   }
+  if (onClick) {
+    // Bài đã làm (đã nộp / đã chấm): bấm để xem chi tiết + điểm ở trang "Kết quả".
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+        style={{ background: p.surface }}
+        className="lms-card hovlift flex cursor-pointer items-center gap-4 rounded-xl border border-lms-line px-5 py-4"
+      >
+        {body}
+        <Icon name="chevronRight" size={18} stroke={p.faint} />
+      </div>
+    );
+  }
   return (
     <div className="lms-card flex cursor-default items-center gap-4 rounded-xl border border-lms-line bg-lms-surface px-5 py-4">
       {body}
@@ -393,17 +409,6 @@ function STaskRow({ task, p }) {
   );
 }
 
-const EX_GRADE_OPTS = [
-  { value: 'Lớp 4', label: 'Lớp 4' },
-  { value: 'Lớp 5', label: 'Lớp 5' },
-  { value: 'Lớp 4–5', label: 'Lớp 4–5' },
-];
-const EX_SUBJECT_OPTS = [
-  { value: 'Tiếng Việt', label: 'Tiếng Việt' },
-  { value: 'Hoạt động Viết', label: 'Hoạt động Viết' },
-  { value: 'Đọc hiểu', label: 'Đọc hiểu' },
-  { value: 'Luyện từ và câu', label: 'Luyện từ và câu' },
-];
 const EX_SORT_OPTS = [
   { value: 'date:desc', label: 'Mới nhất' },
   { value: 'date:asc', label: 'Cũ nhất' },
@@ -444,10 +449,8 @@ export function STasks({ p, t }) {
         <Field p={p} icon="search" value={paged.keyword} onChange={paged.setKeyword} placeholder="Tìm bài tập…" className="w-[240px]" />
         <FilterSelect label="HÌNH THỨC" p={p} value={paged.filters.type} options={EX_TYPE_OPTS} onChange={(v) => paged.setFilter('type', v)} />
         <FilterSelect label="TRẠNG THÁI" p={p} value={paged.filters.status} options={EX_STATUS_OPTS} onChange={(v) => paged.setFilter('status', v)} />
-        <FilterSelect label="LỚP" p={p} value={paged.filters.grade} options={EX_GRADE_OPTS} onChange={(v) => paged.setFilter('grade', v)} />
-        <FilterSelect label="MÔN" p={p} value={paged.filters.subject} options={EX_SUBJECT_OPTS} onChange={(v) => paged.setFilter('subject', v)} />
         {folderOpts.length > 0 && (
-          <FilterSelect label="THƯ MỤC" p={p} value={paged.filters.folderId} options={folderOpts} onChange={(v) => paged.setFilter('folderId', v)} />
+          <FilterSelect label="CHỦ ĐỀ" p={p} value={paged.filters.folderId} options={folderOpts} onChange={(v) => paged.setFilter('folderId', v)} />
         )}
         <div className="flex-1" />
         <span className="shrink-0 font-mono text-[11.5px] text-lms-faint">Sắp xếp</span>
@@ -1295,71 +1298,250 @@ function useMyAttempts() {
   }), [rows]);
 }
 
-export function SResults({ p, t }) {
-  const attempts = useMyAttempts();
-  const [open, setOpen] = React.useState(0);
+function saAnswerText(answer: any): string {
+  if (answer == null) return '';
+  if (typeof answer === 'string') return answer;
+  if (typeof answer === 'number' || typeof answer === 'boolean') return String(answer);
+  if (Array.isArray(answer)) return answer.map(saAnswerText).filter(Boolean).join(', ');
+  if (typeof answer === 'object' && typeof answer.text === 'string') return answer.text;
+  return '';
+}
+function fmtDateTimeVi(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  return `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()} · ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
 
-  const graded = attempts.filter((a) => a.status === 'graded' && a.score != null);
+export function SResults({ p, t, setRoute, auth }) {
+  useLMS();
+  const attempts = useMyAttempts();
+  const sp = useSearchParams();
+  const focusEx = sp?.get('ex') || '';
+  const [openId, setOpenId] = React.useState('');
+  const [detail, setDetail] = React.useState<Record<string, any>>({});
+  const [selfs, setSelfs] = React.useState<any[]>([]);
+
+  // Lượt làm đã nộp/đã chấm (bỏ lượt còn đang làm dở).
+  const list = attempts.filter((a) => a.status === 'submitted' || a.status === 'graded');
+
+  // Bài tự đánh giá của tôi (GET /self-assessments → chỉ trả về của người đang đăng nhập).
+  React.useEffect(() => {
+    let alive = true;
+    selfAssessmentsApi
+      .list()
+      .then((res: any) => {
+        if (!alive) return;
+        setSelfs(Array.isArray(res) ? res : res?.records ?? []);
+      })
+      .catch(() => { if (alive) setSelfs([]); });
+    return () => { alive = false; };
+  }, []);
+
+  // Mở sẵn lượt làm ứng với ?ex= (khi bấm một bài từ trang "Của tôi").
+  React.useEffect(() => {
+    if (!focusEx || openId || !list.length) return;
+    const m = list.find((a) => a.exerciseId === focusEx);
+    if (m) setOpenId(m.id);
+  }, [focusEx, list.length]);
+
+  // Nạp chi tiết từng câu (đáp án của bạn, đúng/sai, nhận xét) khi mở một lượt làm.
+  React.useEffect(() => {
+    if (!openId || detail[openId]) return;
+    let alive = true;
+    setDetail((d) => ({ ...d, [openId]: { loading: true } }));
+    attemptsApi
+      .result(openId)
+      .then((res: any) => {
+        if (!alive) return;
+        const sqs: any[] = res?.studentQuestions ?? [];
+        const questions = sqs.map((sq: any, i: number) => ({
+          idx: i + 1,
+          answer: saAnswerText(sq.answer),
+          isCorrect: typeof sq.isCorrect === 'boolean' ? sq.isCorrect : null,
+          grades: typeof sq.grades === 'number' ? sq.grades : null,
+          feedback: sq.feedback ?? '',
+        }));
+        setDetail((d) => ({ ...d, [openId]: { loading: false, questions, feedback: res?.submission?.feedback ?? '' } }));
+      })
+      .catch(() => {
+        if (alive) setDetail((d) => ({ ...d, [openId]: { loading: false, error: 'Không tải được chi tiết bài làm.' } }));
+      });
+    return () => { alive = false; };
+  }, [openId]);
+
+  const graded = list.filter((a) => a.status === 'graded' && a.score != null);
   const pcts = graded
     .map((a) => (a.percent != null ? a.percent : a.points ? Math.round((a.score / a.points) * 100) : null))
     .filter((x): x is number => x != null);
   const avgPct = pcts.length ? Math.round(pcts.reduce((s, x) => s + x, 0) / pcts.length) : null;
-  const avgScore = graded.length
-    ? Math.round((graded.reduce((s, a) => s + a.score, 0) / graded.length) * 10) / 10
-    : null;
+  const avgScore = graded.length ? Math.round((graded.reduce((s, a) => s + a.score, 0) / graded.length) * 10) / 10 : null;
   const trend = [...graded].reverse().map((a) => a.score).slice(-6);
 
-  if (graded.length === 0) {
+  const rubricName = (id: any) => (DB.RUBRICS || []).find((r: any) => r.id === String(id))?.name || 'Rubric';
+  const exTitle = (id: any) => {
+    const s = String(id ?? '');
+    return (DB.STUDENT_TASKS || []).find((x: any) => x.id === s)?.title
+      || ((DB as any).ASSIGNMENTS || []).find((x: any) => x.id === s)?.title
+      || '';
+  };
+  const statusTag = (st: string) => (st === 'graded' ? { c: p.ok, l: 'Đã chấm' } : { c: p.accent, l: 'Chờ chấm' });
+  const correctTag = (ok: boolean | null) => (ok == null ? null : ok ? { c: p.ok, l: 'Đúng' } : { c: p.danger, l: 'Chưa đúng' });
+
+  if (auth && !auth.loggedIn) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3.5 p-[30px] text-center">
+        <p className="m-0 max-w-[440px] text-[14.5px] leading-relaxed text-lms-sub">Cần đăng nhập để xem kết quả bài làm và bài tự đánh giá của bạn.</p>
+        <div className="flex gap-2.5">
+          <Btn p={p} icon="logout" onClick={() => auth.open()}>Đăng nhập</Btn>
+          <Btn p={p} variant="ghost" onClick={() => setRoute && setRoute('s-tasks')}>Tới luyện tập</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  if (list.length === 0 && selfs.length === 0) {
     return (
       <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-        <EmptyState p={p} icon="award" label="Chưa có kết quả đã chấm" sub="Khi bài của bạn được chấm, điểm và nhận xét sẽ hiện ở đây." />
+        <EmptyState p={p} icon="award" label="Chưa có kết quả" sub="Khi bạn làm bài luyện tập hoặc tự đánh giá, điểm và nhận xét sẽ hiển thị ở đây." />
       </div>
     );
   }
 
   return (
     <div className="lms-content-pad mx-auto max-w-[1480px] px-[30px] pt-6 pb-10">
-      <div className="mb-6 flex flex-wrap gap-4">
-        {avgScore != null && (
-          <div className={`${cardClass(20)} flex flex-1 items-center gap-4 p-[22px]`}>
-            <Ring value={avgPct ?? 0} size={62} thickness={7} p={p} color={p.accent} label={avgScore.toFixed(1)} />
-            <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div>
-              <div className="font-lms-heading text-[22px] font-semibold text-lms-ink">
-                {avgScore >= 8 ? 'Rất tốt' : avgScore >= 6.5 ? 'Khá tốt' : 'Cần cố gắng'}
-              </div></div>
-          </div>
-        )}
-        {trend.length >= 2 && (
-          <div className={`${cardClass(20)} flex-1 p-[22px]`}>
-            <div className="mb-2.5 text-[12.5px] text-lms-sub">Tiến triển {trend.length} bài gần nhất</div>
-            <Spark data={trend} w={200} h={40} stroke={p.accent} fill={p.accentSoft} sw={2.2} />
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-3">
-        {graded.map((g, i) => (
-          <div key={g.id} className={`${cardClass(20)} overflow-hidden p-0`}>
-            <div onClick={() => setOpen(open === i ? -1 : i)} className="lms-row flex cursor-pointer items-center gap-4 px-5 py-4">
-              <div className="flex-1"><div className="text-[14.5px] font-semibold text-lms-ink">{g.title}</div>
-                <div className="mt-[3px] text-xs text-lms-faint">{[g.type, g.percent != null ? `${g.percent}% đúng` : null].filter(Boolean).join(' · ')}</div></div>
-              <span className={`font-lms-heading text-[26px] font-semibold ${g.score >= 8 ? 'text-lms-ok' : 'text-lms-ink'}`}>{g.score}</span>
-              <Icon name={open === i ? 'chevronDown' : 'chevronRight'} size={18} stroke={p.faint} />
+      {(avgScore != null || trend.length >= 2) && (
+        <div className="mb-6 flex flex-wrap gap-4">
+          {avgScore != null && (
+            <div className={`${cardClass(20)} flex flex-1 items-center gap-4 p-[22px]`}>
+              <Ring value={avgPct ?? 0} size={62} thickness={7} p={p} color={p.accent} label={avgScore.toFixed(1)} />
+              <div><div className="text-[13px] text-lms-sub">Điểm trung bình</div>
+                <div className="font-lms-heading text-[22px] font-semibold text-lms-ink">
+                  {avgScore >= 8 ? 'Rất tốt' : avgScore >= 6.5 ? 'Khá tốt' : 'Cần cố gắng'}
+                </div></div>
             </div>
-            {open === i && (
-              <div className="border-t border-lms-line px-5 pb-5">
-                <div className="mt-4 flex gap-3 rounded-xl border border-lms-line bg-lms-raise p-3.5">
-                  <Icon name="checkCircle" size={20} stroke={p.ok} />
-                  <div><div className="mb-[3px] text-xs font-semibold text-lms-ink">Kết quả</div>
-                    <div className="text-[13px] leading-normal text-lms-sub">
-                      Bạn đạt <strong className="text-lms-ink">{g.score}</strong>/{g.points} điểm
-                      {g.percent != null ? ` (${g.percent}% câu đúng).` : '.'}
-                    </div></div>
+          )}
+          {trend.length >= 2 && (
+            <div className={`${cardClass(20)} flex-1 p-[22px]`}>
+              <div className="mb-2.5 text-[12.5px] text-lms-sub">Tiến triển {trend.length} bài gần nhất</div>
+              <Spark data={trend} w={200} h={40} stroke={p.accent} fill={p.accentSoft} sw={2.2} />
+            </div>
+          )}
+        </div>
+      )}
+
+      <h3 className="mb-3.5 font-lms-heading text-[21px] font-extrabold tracking-[-0.4px] text-lms-ink">Bài luyện tập đã làm</h3>
+      {list.length === 0 ? (
+        <EmptyState p={p} icon="assign" label="Chưa làm bài nào" sub="Hãy thử một bài luyện tập để theo dõi tiến bộ của bạn." />
+      ) : (
+        <div className="mb-9 flex flex-col gap-3">
+          {list.map((a) => {
+            const st = statusTag(a.status);
+            const d = detail[a.id];
+            const open = openId === a.id;
+            return (
+              <div key={a.id} className={`${cardClass(20)} overflow-hidden p-0`}>
+                <div onClick={() => setOpenId(open ? '' : a.id)} className="lms-row flex cursor-pointer items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-1 text-[14.5px] font-semibold text-lms-ink">{a.title}</div>
+                    <div className="mt-[3px] flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-lms-faint">
+                      <Tag p={p} color={st.c}>{st.l}</Tag>
+                      {a.type && <span>{a.type}</span>}
+                      {a.percent != null && <span>{a.percent}% đúng</span>}
+                      {a.submittedAt && <span>{fmtDateTimeVi(a.submittedAt)}</span>}
+                    </div>
+                  </div>
+                  {a.status === 'graded' && a.score != null ? (
+                    <span className={`font-lms-heading text-[26px] font-semibold ${a.score >= 8 ? 'text-lms-ok' : 'text-lms-ink'}`}>{a.score}</span>
+                  ) : (
+                    <span className="text-[12.5px] text-lms-sub">Chờ chấm</span>
+                  )}
+                  <Icon name={open ? 'chevronDown' : 'chevronRight'} size={18} stroke={p.faint} />
+                </div>
+                {open && (
+                  <div className="border-t border-lms-line px-5 pb-5 pt-4">
+                    {d?.loading && <div className="py-3 text-center text-[13px] text-lms-faint">Đang tải chi tiết…</div>}
+                    {d?.error && <div className="py-2 text-[13px] text-lms-danger">{d.error}</div>}
+                    {d && !d.loading && !d.error && (
+                      <>
+                        {a.status === 'graded' && a.score != null && (
+                          <div className="mb-3 flex gap-3 rounded-xl border border-lms-line bg-lms-raise p-3.5">
+                            <Icon name="checkCircle" size={20} stroke={p.ok} />
+                            <div><div className="mb-[3px] text-xs font-semibold text-lms-ink">Kết quả</div>
+                              <div className="text-[13px] leading-normal text-lms-sub">
+                                Bạn đạt <strong className="text-lms-ink">{a.score}</strong>/{a.points} điểm
+                                {a.percent != null ? ` (${a.percent}% câu đúng).` : '.'}
+                              </div></div>
+                          </div>
+                        )}
+                        {!d.questions || d.questions.length === 0 ? (
+                          <div className="py-2 text-[13px] text-lms-faint">Không có chi tiết từng câu.</div>
+                        ) : (
+                          <div className="flex flex-col gap-2.5">
+                            {d.questions.map((qq: any) => {
+                              const ct = correctTag(qq.isCorrect);
+                              return (
+                                <div key={qq.idx} className="rounded-xl border border-lms-line bg-lms-surface p-3.5">
+                                  <div className="mb-1.5 flex items-center gap-2">
+                                    <span className="text-[12.5px] font-semibold text-lms-ink">Câu {qq.idx}</span>
+                                    {ct && <Tag p={p} color={ct.c}>{ct.l}</Tag>}
+                                    {qq.grades != null && <span className="text-[11.5px] text-lms-faint">· {qq.grades} điểm</span>}
+                                  </div>
+                                  {qq.answer && <div className="text-[13px] leading-normal text-lms-sub"><span className="text-lms-faint">Bài làm của bạn: </span>{qq.answer}</div>}
+                                  {qq.feedback && <div className="mt-2 rounded-lg border border-lms-accent/25 bg-lms-accent-soft p-2.5 text-[12.5px] leading-normal text-lms-ink"><span className="font-semibold">Nhận xét: </span>{qq.feedback}</div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {d.feedback && (
+                          <div className="mt-3 rounded-xl border border-lms-accent/25 bg-lms-accent-soft p-3.5 text-[13px] leading-normal text-lms-ink"><span className="font-semibold">Nhận xét chung: </span>{d.feedback}</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <h3 className="mb-3.5 font-lms-heading text-[21px] font-extrabold tracking-[-0.4px] text-lms-ink">Tự đánh giá của tôi</h3>
+      {selfs.length === 0 ? (
+        <EmptyState p={p} icon="rubric" label="Chưa có bài tự đánh giá" sub="Vào mục Tự đánh giá để tự chấm bài viết của bạn theo rubric." />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {selfs.map((s: any) => {
+            const score10 = typeof s.totalPercent === 'number' ? Math.round(s.totalPercent) / 10 : null;
+            const ext = exTitle(s.exerciseId);
+            return (
+              <div key={s._id} className={`${cardClass(20)} p-[18px]`}>
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-lms-accent-soft">
+                    <Icon name="rubric" size={20} stroke={p.accent} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14.5px] font-semibold text-lms-ink">{rubricName(s.rubricId)}</div>
+                    <div className="mt-[3px] flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-lms-faint">
+                      {ext && <span>{ext}</span>}
+                      {s.createdAt && <span>{fmtDateTimeVi(s.createdAt)}</span>}
+                    </div>
+                    {(s.note || s.text) && <div className="mt-2 text-[13px] leading-normal text-lms-sub">{s.note || s.text}</div>}
+                  </div>
+                  {score10 != null && (
+                    <div className="text-center">
+                      <div className={`font-lms-heading text-[22px] font-semibold ${score10 >= 8 ? 'text-lms-ok' : 'text-lms-ink'}`}>{score10.toFixed(1)}</div>
+                      <div className="text-[10px] text-lms-faint">/10</div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1380,7 +1562,14 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
   const name = (auth && auth.name) || 'bạn';
   const first = name.split(' ').slice(-1)[0];
   const downloaded = (DB.DOWNLOADS || []).map((id) => DB.DOCS.find((d) => d.id === id)).filter(Boolean);
-  const tasks = DB.STUDENT_TASKS.filter((x) => x.status === 'done' || x.status === 'graded');
+  const attempts = useMyAttempts();
+  // Ghép điểm + trạng thái chấm thực tế (từ /attempts/me) vào danh sách bài đã làm.
+  const tasks = DB.STUDENT_TASKS
+    .filter((x) => x.status === 'done' || x.status === 'graded')
+    .map((x) => {
+      const at = attempts.find((a) => a.exerciseId === x.id);
+      return at ? { ...x, score: at.score ?? null, status: at.status === 'graded' ? 'graded' : x.status } : x;
+    });
   const scored = tasks.filter((x) => x.score != null);
   const avg = scored.length ? (scored.reduce((s, x) => s + x.score, 0) / scored.length) : null;
   const stats = [
@@ -1445,7 +1634,7 @@ export function SLibrary({ p, t, setRoute, go, auth }) {
         <EmptyState p={p} icon="assign" label="Chưa làm bài nào" sub="Hãy thử một bài luyện tập để theo dõi tiến bộ của bạn." />
       ) : (
         <div className="flex flex-col gap-3">
-          {tasks.map((task) => <STaskRow key={task.id} task={task} p={p} />)}
+          {tasks.map((task) => <STaskRow key={task.id} task={task} p={p} onClick={() => go('s-results', { exercise: task.id })} />)}
         </div>
       )}
     </div>

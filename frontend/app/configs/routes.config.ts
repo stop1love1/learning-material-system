@@ -5,6 +5,7 @@ export const ROUTES = {
   practice: '/luyen-tap',
   practiceItem: (id: string) => `/luyen-tap/${id}`,
   selfCheck: '/tu-danh-gia',
+  results: '/ket-qua',
   blog: '/bai-viet',
   blogPost: (id: string) => `/bai-viet/${id}`,
   myLibrary: '/cua-toi',
@@ -42,6 +43,7 @@ export function routeToHref(key: string, patch?: Patch): string {
     case 's-tasks': return ROUTES.practice;
     case 's-task': return ROUTES.practiceItem(id('task'));
     case 's-selfcheck': return ROUTES.selfCheck;
+    case 's-results': return patch && patch.exercise ? `${ROUTES.results}?ex=${patch.exercise}` : ROUTES.results;
     case 'blog': return ROUTES.blog;
     case 'article': return ROUTES.blogPost(id('article'));
     case 's-mine': return ROUTES.myLibrary;
@@ -97,6 +99,7 @@ export function resolvePath(pathname: string): { routeKey: string; navKey: strin
   if (/^\/luyen-tap\/[^/]+/.test(seg)) return r('s-task', 's-tasks');
   if (seg.startsWith('/luyen-tap')) return r('s-tasks', 's-tasks');
   if (seg.startsWith('/tu-danh-gia')) return r('s-selfcheck', 's-selfcheck');
+  if (seg.startsWith('/ket-qua')) return r('s-results', 's-results');
   if (/^\/bai-viet\/[^/]+/.test(seg)) return r('article', 'blog');
   if (seg.startsWith('/bai-viet')) return r('blog', 'blog');
   if (seg.startsWith('/cua-toi')) return r('s-mine', 's-mine');
