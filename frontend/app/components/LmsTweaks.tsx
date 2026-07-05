@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useLmsTheme } from '@/app/contexts/ThemeProvider';
+import { useLmsAuth } from '@/app/contexts/AuthProvider';
 import {
   TweaksPanel,
   TweakSection,
@@ -24,6 +25,9 @@ const ACCENT_SWATCH_DEFAULT = 'border-2 border-transparent';
 
 export function LmsTweaks() {
   const { t, setTweak, resetTheme } = useLmsTheme();
+  const auth = useLmsAuth();
+  // Bảng Tweaks chỉ dành cho admin — người dùng thường không thấy nút/panel này.
+  if (!auth.isStaff) return null;
   return (
     <TweaksPanel>
       <TweakSection label="Màu & Typography" />
