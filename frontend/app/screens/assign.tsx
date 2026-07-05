@@ -170,6 +170,8 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
   const [title, setTitle] = React.useState('');
   const [kind, setKind] = React.useState('quiz');
   const [picked, setPicked] = React.useState<string[]>([]);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [pickerKw, setPickerKw] = React.useState('');
   const [docs, setDocs] = React.useState<string[]>([]);
   const [points, setPoints] = React.useState(10);
   const [rubric, setRubric] = React.useState('none');
@@ -209,7 +211,9 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
             setDue(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
           }
         }
-        const qids = (ex.questions || []).map((q: any) => String(q._id ?? q.questionId ?? q.id)).filter(Boolean);
+        // ex.questions are ExerciseQuestion links: q.questionId (or q.question._id) is the
+        // BASE question id (q._id is the link row id — not what the picker/reconcile use).
+        const qids = (ex.questions || []).map((q: any) => String(q.questionId ?? q.question?._id ?? q._id ?? q.id)).filter(Boolean);
         setPicked(qids); setOrigQ(qids);
         const mats = (ex.materialIds || []).map((m: any) => String(m?._id ?? m)).filter(Boolean);
         if (mats.length) setDocs(mats);
@@ -314,20 +318,33 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
         {kind === 'quiz' && <Tag p={p} color={p.accent}>{picked.length} câu đã chọn</Tag>}
       </div>
       {kind === 'quiz' ? (
-        <div className="flex flex-col gap-2">
-          {DB.QUESTIONS.map((q) => {
-            const on = picked.includes(q.id), tm = typeMeta(q.type);
-            return (
-              <div key={q.id} onClick={() => togglePick(q.id)} className={`lms-row flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-[11px] ${on ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-[1.8px] ${on ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'}`}>
-                  {on && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}</span>
-                <Icon name={tm.icon} size={16} stroke={p.faint} />
-                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] text-lms-ink">{q.stem}</span>
-                <Tag p={p} color={p.sub}>{tm.short}</Tag>
-              </div>
-            );
-          })}
-          <Btn p={p} variant="quiet" size="sm" icon="plus" className="mt-1.5 pl-0!" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi mới</Btn>
+        <div>
+          {picked.length === 0 ? (
+            <div className="flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-lms-line bg-lms-raise py-10 text-center">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-lms-accent-soft"><Icon name="bank" size={20} stroke={p.accent} /></div>
+              <div className="text-[13.5px] text-lms-sub">Chưa chọn câu hỏi nào cho bài tập.</div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {picked.map((id, i) => {
+                const q = DB.QUESTIONS.find((x) => x.id === id);
+                const tm = q ? typeMeta(q.type) : null;
+                return (
+                  <div key={id} className="lms-row flex items-center gap-3 rounded-xl border border-lms-line bg-lms-surface px-3.5 py-[11px]">
+                    <span className="w-5 shrink-0 text-center font-mono text-[11px] text-lms-faint">{i + 1}</span>
+                    {tm && <Icon name={tm.icon} size={16} stroke={p.faint} />}
+                    <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] text-lms-ink">{q ? q.stem : 'Câu hỏi đã chọn'}</span>
+                    {tm && <Tag p={p} color={p.sub}>{tm.short}</Tag>}
+                    <IconBtn name="x" p={p} size={30} title="Bỏ chọn" onClick={() => togglePick(id)} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Btn p={p} variant="soft" icon="plus" onClick={() => { setPickerKw(''); setPickerOpen(true); }}>Chọn câu hỏi</Btn>
+            <Btn p={p} variant="quiet" size="sm" icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi mới</Btn>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -422,6 +439,47 @@ export function TAssignNew({ p, t, setRoute, ctx }) {
           ? <Btn p={p} iconRight="arrowRight" onClick={() => setStep(step + 1)}>Tiếp tục</Btn>
           : <><Btn p={p} variant="ghost" onClick={() => save('draft')}>Lưu nháp</Btn><Btn p={p} variant="accent" icon="send" onClick={() => save('open')}>{editId ? 'Cập nhật bài tập' : 'Đăng bài luyện tập'}</Btn></>}
       </div>
+
+      {pickerOpen && (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget) setPickerOpen(false); }}
+          className="fixed inset-0 z-100 flex items-center justify-center bg-[rgba(15,23,38,0.5)] p-5 backdrop-blur-[2px]">
+          <div className="flex max-h-[85vh] w-full max-w-[640px] flex-col overflow-hidden rounded-2xl border border-lms-line bg-lms-surface shadow-[0_24px_70px_rgba(0,0,0,.28)]">
+            <div className="flex items-center justify-between border-b border-lms-line px-5 py-4">
+              <h3 className="m-0 font-lms-heading text-lg font-bold text-lms-ink">Chọn câu hỏi từ ngân hàng</h3>
+              <div className="flex items-center gap-2.5">
+                <Tag p={p} color={p.accent}>{picked.length} đã chọn</Tag>
+                <IconBtn name="x" p={p} size={32} onClick={() => setPickerOpen(false)} />
+              </div>
+            </div>
+            <div className="border-b border-lms-line px-5 py-3">
+              <Field p={p} icon="search" value={pickerKw} onChange={setPickerKw} placeholder="Tìm câu hỏi…" />
+            </div>
+            <div className="lms-scroll flex-1 overflow-y-auto p-3">
+              {(() => {
+                const kw = pickerKw.trim().toLowerCase();
+                const qlist = (DB.QUESTIONS || []).filter((q: any) => !kw || (q.stem || '').toLowerCase().includes(kw));
+                if (qlist.length === 0) return <div className="py-10 text-center text-[13px] text-lms-faint">Không tìm thấy câu hỏi.</div>;
+                return qlist.map((q: any) => {
+                  const on = picked.includes(q.id), tm = typeMeta(q.type);
+                  return (
+                    <div key={q.id} onClick={() => togglePick(q.id)} className={`lms-row mb-1.5 flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-[11px] ${on ? 'border-lms-accent bg-lms-accent-soft' : 'border-lms-line bg-lms-surface'}`}>
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-[1.8px] ${on ? 'border-lms-accent bg-lms-accent' : 'border-lms-faint bg-transparent'}`}>
+                        {on && <Icon name="check" size={12} stroke="#fff" sw={2.5} />}</span>
+                      <Icon name={tm.icon} size={16} stroke={p.faint} />
+                      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] text-lms-ink">{q.stem}</span>
+                      <Tag p={p} color={p.sub}>{tm.short}</Tag>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <div className="flex items-center justify-between border-t border-lms-line px-5 py-3">
+              <Btn p={p} variant="quiet" size="sm" icon="plus" onClick={() => setRoute('bank-edit')}>Soạn câu hỏi mới</Btn>
+              <Btn p={p} variant="accent" icon="check" onClick={() => setPickerOpen(false)}>Xong ({picked.length})</Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
