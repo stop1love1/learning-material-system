@@ -77,7 +77,9 @@ export function UserHome({ p, t }) {
   const [heroQ, setHeroQ] = React.useState('');
   const [hp, setHp] = React.useState<any>(null);
   React.useEffect(() => { settingsApi.get().then((s) => setHp(s?.homepage)).catch(() => {}); }, []);
-  const featured = DB.DOCS.slice(0, 10);
+  const featured = [...DB.DOCS]
+    .sort((a, b) => (b.views ?? 0) - (a.views ?? 0) || (b.downloads ?? 0) - (a.downloads ?? 0))
+    .slice(0, 10);
   const cats = (DB.DOC_FOLDERS || []).filter((f) => f !== 'Tất cả');
   const exercise = DB.STUDENT_TASKS.find((x) => x.status === 'todo') || DB.STUDENT_TASKS[0];
   const lead = DB.ARTICLES[0];
